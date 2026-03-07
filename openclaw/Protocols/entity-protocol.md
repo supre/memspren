@@ -4,9 +4,7 @@ Governs creation and updating of all entities in the vault.
 Read `Protocols/linking-protocol.md` before writing any file.
 
 All file paths are relative to `vault_path` stored in config.md.
-Use the **Write** tool to create files, **Read** to load them,
-**Edit** to update frontmatter properties, and append new content
-by reading the file and writing back the full updated content.
+All vault file operations use obsidian-cli (create, read, append, property updates).
 
 ---
 
@@ -17,6 +15,7 @@ by reading the file and writing back the full updated content.
 - Always check if entity already exists before creating
 - Every entity gets YAML frontmatter and at least one `[[link]]`
 - One concept per file — atomize
+- Use obsidian-cli for all vault operations
 - **File naming:** Convert user input to readable title case (e.g., "My Project" not "my-project", "John Smith" not "john-smith")
 
 ---
@@ -25,12 +24,17 @@ by reading the file and writing back the full updated content.
 
 Before creating any entity, check whether it already exists:
 
+**Use obsidian-cli search:**
+```bash
+obsidian vault="[vault_name]" search query="[entity name]"
 ```
-MMVP: Check if the file already exists at its expected path
-      (e.g. People/jason.md, Work/Projects/second brain.md)
 
-Phase 2: Search Context-Docs/index.md Node Registry for a match
+Or **read** the expected path directly:
+```bash
+obsidian vault="[vault_name]" read path="Work/Projects/[Project Name].md"
 ```
+
+**Note:** Always use readable title case for file names (not snake_case).
 
 If a match is found → load the existing file → append, do not create.
 If no match → confirm with user → create new file.
@@ -48,7 +52,7 @@ If user says no → capture inline in daily log only.
 
 ### Project
 
-**Folder:** `Work/Projects/[project name].md`
+**Folder:** `Work/Projects/[Project Name].md` (use readable title case from user input)
 **When to create:** User mentions active work with a goal and delivery intent.
 **When to update:** Any mention of progress, blockers, tools, people, costs.
 
@@ -75,7 +79,7 @@ last_modified: [TODAY]
 
 ## Vision
 [Why this project matters — link to Vision or Strategy if relevant]
-[[Strategy/Quarterly Goals|Quarterly Goals]]
+[[Strategy/quarterly-goals|Quarterly Goals]]
 
 ## Objectives
 - [ ] [Specific goal with deadline]
@@ -98,14 +102,36 @@ last_modified: [TODAY]
 ## Open Questions
 ```
 
-→ **Create:** Write the filled template to `{vault_path}/Work/Projects/<project-name>.md`
+→ **Create using obsidian-cli:**
+```bash
+obsidian vault="[vault_name]" create \
+  path="Work/Projects/[Project Name].md" \
+  content="---\nnode_type: project\ncreated: [TODAY]\nstatus: active\ndeadline: [date]\nconnected: []\ntags: []\nlast_modified: [TODAY]\n---\n\n# [Project Name]\n\n## Vision\n[content]\n\n## Objectives\n- [ ] [goal]\n\n## Progress Notes\n\n### [TODAY]\n[note]\n\n## Resources and Tools\n\n## People\n\n## Linked Ideas\n\n## Open Questions"
+```
+
+**Note:** Replace `[Project Name]` with the user's input in readable title case. Example: "Marketing Campaign 2026" not "marketing-campaign-2026".
 
 **When updating:**
-- Read the file
+- **Read** the file using obsidian-cli:
+  ```bash
+  obsidian vault="[vault_name]" read path="Work/Projects/[Project Name].md"
+  ```
 - Append a new `### [TODAY]` section under `## Progress Notes`
-- Update `last_modified` in frontmatter (Edit tool or full rewrite)
-- Add the log entry path to the `connected:` array in frontmatter
-- Write the updated file back
+- Update `last_modified` in frontmatter
+- Add the log entry path to the `connected:` array:
+  ```bash
+  python scripts/update_connected.py \
+    --vault "[vault_name]" \
+    --file "Work/Projects/[Project Name].md" \
+    --add "Log/Daily/YYYY-MM-DD.md"
+  ```
+- **Write** the updated file back using obsidian-cli:
+  ```bash
+  obsidian vault="[vault_name]" create \
+    path="Work/Projects/[Project Name].md" \
+    content="[full updated content]" \
+    overwrite
+  ```
 
 **Idle check:** If `last_modified` is older than
 `project_idle_threshold_days` in config.md, flag in
@@ -115,7 +141,7 @@ next check-in synthesis.
 
 ### Idea
 
-**Folder:** `Work/Ideas/[Idea Name].md`
+**Folder:** `Work/Ideas/[Idea Name].md` (use readable title case from user input)
 **When to create:** User surfaces a new thought, concept, or possibility
 that isn't a project yet.
 **When to update:** User adds context, connects it to something, or
@@ -160,20 +186,43 @@ last_modified: [TODAY]
 [Initial capture]
 ```
 
-→ **Create:** Write the filled template to `{vault_path}/Work/Ideas/<idea-name>.md`
+→ **Create using obsidian-cli:**
+```bash
+obsidian vault="[vault_name]" create \
+  path="Work/Ideas/[Idea Name].md" \
+  content="---\nnode_type: idea\ncreated: [TODAY]\nstatus: active\nmaturity: seed\nconnected: []\ntags: []\nlast_modified: [TODAY]\n---\n\n# [Idea Name]\n\n## Core Thought\n[content]\n\n## Why It Matters\n[content]\n\n## Connections\n\n## Open Questions\n\n## Notes Log\n\n### [TODAY]\n[initial capture]"
+```
+
+**Note:** Replace `[Idea Name]` with the user's input in readable title case. Example: "Podcast Interview Series" not "podcast-interview-series".
 
 **When updating:**
-- Read the file
+- **Read** the file
 - Append a new `### [TODAY]` section under `## Notes Log`
 - Update `last_modified` in frontmatter
-- Write the updated file back
+- **Write** the updated file back with overwrite
 
 **Maturity values:** `seed` → `developing` → `ready` → `converted`
 
-Update maturity in frontmatter as the idea grows (use Edit tool).
+Update maturity in frontmatter as the idea grows using:
+```bash
+obsidian vault="[vault_name]" property:set \
+  path="Work/Ideas/[Idea Name].md" \
+  property=maturity \
+  value=developing
+```
 
 When converting to project:
-1. Update `status: converted`, `maturity: converted`, add `converted_to: Work/Projects/<project-name>.md` in frontmatter
+1. Update maturity and status:
+   ```bash
+   obsidian vault="[vault_name]" property:set \
+     path="Work/Ideas/[Idea Name].md" \
+     property=status \
+     value=converted
+   obsidian vault="[vault_name]" property:set \
+     path="Work/Ideas/[Idea Name].md" \
+     property=converted_to \
+     value="Work/Projects/[Project Name].md"
+   ```
 2. Create new project file with `[[link]]` back to this idea
 3. Do not move or delete idea file
 
@@ -181,7 +230,7 @@ When converting to project:
 
 ### Person
 
-**Folder:** `People/[Firstname Lastname].md`
+**Folder:** `People/[First Name Last Name].md` (use readable title case from user input)
 **When to create:** User mentions someone by name in a meaningful context —
 worked with them, talked to them, they influenced something.
 **When to update:** Any new interaction, connection to a project, or
@@ -223,14 +272,26 @@ last_modified: [TODAY]
 [Anything else worth knowing]
 ```
 
-→ **Create:** Write the filled template to `{vault_path}/People/<firstname-lastname>.md`
+→ **Create using obsidian-cli:**
+```bash
+obsidian vault="[vault_name]" create \
+  path="People/[First Name Last Name].md" \
+  content="---\nnode_type: person\ncreated: [TODAY]\nstatus: active\nconnected: []\ntags: []\nlast_modified: [TODAY]\n---\n\n# [Full Name]\n\n## Who They Are\n[content]\n\n## Connected To\n\n## Interaction Log\n\n### [TODAY]\n[interaction note]\n\n## Notes"
+```
+
+**Note:** Replace `[First Name Last Name]` with the actual name in readable format. Example: "Sarah Johnson" not "sarah-johnson".
 
 **When updating — append to Interaction Log only:**
-- Read the file
-- Append a new `### [TODAY]` section under `## Interaction Log`
+- **Read** the file
+- Append a new `### [TODAY]` section under `## Interaction Log`:
+  ```bash
+  obsidian vault="[vault_name]" append \
+    path="People/[First Name Last Name].md" \
+    content="\n### [TODAY]\n[interaction note]"
+  ```
 - Update `last_modified` in frontmatter
-- Add the log entry path to the `connected:` array
-- Write the updated file back
+- Add the log entry path to the `connected:` array using helper script
+- **Write** the updated file back
 
 Never overwrite existing interaction entries.
 
@@ -256,18 +317,26 @@ No confirmation needed for tasks. Add immediately.
   created: [TODAY]
 ```
 
-→ **Add task:** Read `{vault_path}/Tasks/tasks-inbox.md`, append the new task under `## Active Tasks`, write back.
+→ **Add task using obsidian-cli append:**
+```bash
+obsidian vault="[vault_name]" append \
+  path=Tasks/tasks-inbox.md \
+  content="\n- [ ] [Task description]\n  priority: high | medium | low\n  due: [date]\n  tags: #project\n  created: [TODAY]"
+```
 
 **Completing a task:**
-- Read tasks-inbox.md
+- **Read** tasks-inbox.md using obsidian-cli
 - Change `- [ ]` to `- [x]` on the matching line
 - Add `completed: [TODAY]` beneath it
-- Write the file back
+- **Write** the file back with overwrite
 
 **Blocked task:**
-- Read tasks-inbox.md
-- Add `status: blocked` and `blocked_reason: [why]` beneath the task line
-- Write back
+- **Append** status info:
+  ```bash
+  obsidian vault="[vault_name]" append \
+    path=Tasks/tasks-inbox.md \
+    content="\n  status: blocked\n  blocked_reason: [why]"
+  ```
 - Flag in hot-memory if blocking an active project
 
 > **Phase 2:** Completed tasks older than `task_archive_after_days`
@@ -278,7 +347,7 @@ No confirmation needed for tasks. Add immediately.
 
 ### Learning
 
-**Folder:** `Notes/Learnings/[Learning Topic].md`
+**Folder:** `Notes/Learnings/[Learning Topic].md` (use readable title case from user input)
 **When to create:** User shares something they learned, read, watched,
 or understood for the first time.
 **When to update:** User adds more to the same topic or connects it
@@ -323,13 +392,29 @@ last_modified: [TODAY]
 [Full capture of the learning]
 ```
 
-→ **Create:** Write the filled template to `{vault_path}/Notes/Learnings/<learning-topic>.md`
+→ **Create using obsidian-cli:**
+```bash
+obsidian vault="[vault_name]" create \
+  path="Notes/Learnings/[Learning Topic].md" \
+  content="---\nnode_type: learning\ncreated: [TODAY]\nstatus: active\nsource: [source]\nconnected: []\ntags: []\nlast_modified: [TODAY]\n---\n\n# [Learning Topic]\n\n## The Core Insight\n[content]\n\n## Why It Matters\n[content]\n\n## Source\n[source]\n\n## Connected To\n\n## Notes Log\n\n### [TODAY]\n[full capture]"
+```
+
+**Note:** Replace `[Learning Topic]` with the user's input in readable title case. Example: "Machine Learning Fundamentals" not "machine-learning-fundamentals".
 
 **When updating:**
-- Read the file
+- **Read** the file:
+  ```bash
+  obsidian vault="[vault_name]" read path="Notes/Learnings/[Learning Topic].md"
+  ```
 - Append a new `### [TODAY]` section under `## Notes Log`
 - Update `last_modified` in frontmatter
-- Write the updated file back
+- **Write** the file back:
+  ```bash
+  obsidian vault="[vault_name]" create \
+    path="Notes/Learnings/[Learning Topic].md" \
+    content="[full updated content]" \
+    overwrite
+  ```
 
 ---
 
@@ -371,7 +456,12 @@ tags: []
 [List of files updated during this check-in with [[links]]]
 ```
 
-→ **Create:** Write the filled template to `{vault_path}/Log/Daily/[TODAY].md`
+→ **Create using obsidian-cli:**
+```bash
+obsidian vault="[vault_name]" create \
+  path=Log/Daily/YYYY-MM-DD.md \
+  content="---\nnode_type: log-entry\ncreated: [TODAY]\nstatus: active\nconnected: []\ntags: []\n---\n\n# [TODAY]\n\n## What Happened\n[content]\n\n## Energy and Focus\n[content]\n\n## Open Threads\n[content]\n\n## Reflections\n\n## Linked Updates"
+```
 
 This file is the hub of the day. Every other entity created
 or updated during the check-in gets a `[[link]]` back here.
@@ -440,7 +530,7 @@ exist yet?]
 update? Or just sit here as a reference?]
 ```
 
-**When updating:**
+**When updating using obsidian-cli append:**
 Add new connected notes to the node list.
 Update synthesis if new patterns emerge.
 Never remove existing nodes — they are graph history.
@@ -472,8 +562,9 @@ new `[[links]]` today.
 
 | Problem                                      | Action                                                          |
 | -------------------------------------------- | --------------------------------------------------------------- |
+| obsidian-cli returns error                   | Check if Obsidian is running. If not: "Obsidian needs to be open for me to update your vault." |
 | Ambiguous entity type                        | Default to Idea — easier to promote than demote                 |
 | User mentions someone with only a first name | Create file as `People/[firstname].md` — note full name unknown |
 | Project mentioned with no clear goal         | Create with `deadline: TBD` — flag in synthesis to clarify      |
-| Duplicate topic detected                     | Load existing file — append, do not create second file          |
+| Duplicate topic detected                     | Load existing file with obsidian-cli read — append, do not create second file |
 | User declines confirmation                   | Capture inline in daily log only — no standalone file           |

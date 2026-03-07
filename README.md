@@ -19,6 +19,18 @@ A Claude skill that turns Claude into your thinking partner for daily check-ins,
 
 [Read more →](./claude/README.md)
 
+### OpenClaw (`openclaw/`)
+
+An OpenClaw skill that integrates memspren with [OpenClaw](https://openclaw.ai/)—a local AI assistant that runs on your machine with browser control, file access, and extensible skills.
+
+- **Local-first AI** — runs on your machine, keeps your data private
+- **Obsidian integration** — same Zettelkasten patterns as Claude plugin
+- **Daily check-in workflow** — brain dump → targeted follow-up → entity creation
+- **Persistent memory** — maintains context across OpenClaw sessions
+- **Full Zettelkasten** — YAML frontmatter + Obsidian wikilinks keep your graph connected
+
+[Read more →](./openclaw/README.md)
+
 ---
 
 ## Architecture
