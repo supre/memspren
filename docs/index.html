@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memspren - Zettelkasten Knowledge Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Memspren</h1>
+            <p class="subtitle">A Zettelkasten-based personal knowledge management ecosystem</p>
+            <div class="header-links">
+                <a href="https://github.com/supre/memspren" class="btn btn-github">GitHub</a>
+            </div>
+        </header>
+
+        <nav class="toc">
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#plugins">Plugins</a></li>
+                <li><a href="#architecture">Architecture</a></li>
+                <li><a href="#getting-started">Getting Started</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <section id="overview">
+                <h2>Overview</h2>
+                <p><strong>Core concept:</strong> Every entity is a node. Every connection is a link. Your thinking partner maintains persistent context without manual effort.</p>
+                <p>Memspren is a multi-platform integration for managing your second brain across different platforms and tools. It implements a Zettelkasten (slip-box) system that keeps your knowledge graph atomic, linked, and queryable.</p>
+            </section>
+
+            <section id="plugins">
+                <h2>Plugins</h2>
+
+                <article class="plugin">
+                    <h3>Claude Skill</h3>
+                    <p>A Claude skill that turns Claude into your thinking partner for daily check-ins, capturing projects, ideas, people, and tasks as linked atomic notes in your Obsidian vault.</p>
+                    <ul>
+                        <li><strong>No CLI required</strong> — uses Claude's native file tools</li>
+                        <li><strong>Daily check-in workflow</strong> — brain dump → targeted follow-up → entity creation</li>
+                        <li><strong>Persistent memory</strong> — maintains context across sessions</li>
+                        <li><strong>Full Zettelkasten</strong> — YAML frontmatter + Obsidian wikilinks</li>
+                    </ul>
+                    <div class="setup-box">
+                        <h4>Setup</h4>
+                        <ol>
+                            <li>In Claude Code (Cowork mode), select your Obsidian vault folder</li>
+                            <li>Load the <code>managing-second-brain.skill</code> file from the <code>claude/</code> folder</li>
+                            <li>Start a conversation — Claude will guide you through setup on first use</li>
+                        </ol>
+                        <p><a href="https://github.com/supre/memspren/tree/main/claude">View full docs →</a></p>
+                    </div>
+                </article>
+
+                <article class="plugin">
+                    <h3>OpenClaw Skill</h3>
+                    <p>An OpenClaw skill that integrates memspren with OpenClaw—a local AI assistant that runs on your machine with browser control, file access, and extensible skills.</p>
+                    <ul>
+                        <li><strong>Local-first AI</strong> — runs on your machine, keeps your data private</li>
+                        <li><strong>Obsidian integration</strong> — same Zettelkasten patterns as Claude plugin</li>
+                        <li><strong>Daily check-in workflow</strong> — brain dump → targeted follow-up → entity creation</li>
+                        <li><strong>Full Zettelkasten</strong> — YAML frontmatter + Obsidian wikilinks</li>
+                    </ul>
+                    <div class="setup-box">
+                        <h4>Setup</h4>
+                        <ol>
+                            <li>In OpenClaw, load the <code>memspren.skill</code> file from the <code>openclaw/</code> folder</li>
+                            <li>Point it to your Obsidian vault on first use</li>
+                            <li>OpenClaw will guide you through setup (~2 minutes)</li>
+                        </ol>
+                        <p><a href="https://github.com/supre/memspren/tree/main/openclaw">View full docs →</a></p>
+                    </div>
+                </article>
+            </section>
+
+            <section id="architecture">
+                <h2>Architecture</h2>
+
+                <h3>Two-Location Design</h3>
+                <p>Every plugin follows this pattern:</p>
+                <table class="arch-table">
+                    <tr>
+                        <th>Location</th>
+                        <th>What lives here</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Skill folder</strong></td>
+                        <td><code>config.md</code>, Memory/, operational files</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Vault</strong></td>
+                        <td>All note content: Work/, People/, Log/, etc.</td>
+                    </tr>
+                </table>
+                <p>This separation keeps your knowledge graph clean while giving the AI system predictable places to store state.</p>
+
+                <h3>Entity Types</h3>
+                <ul class="entity-list">
+                    <li><strong>Projects</strong> — deadline-driven work with goals and progress notes</li>
+                    <li><strong>Ideas</strong> — atomic thoughts, underdeveloped concepts, seeds for future projects</li>
+                    <li><strong>People</strong> — everyone you work with, interaction logs, connections to projects</li>
+                    <li><strong>Tasks</strong> — unified inbox with priority and connections to projects/ideas</li>
+                    <li><strong>Learnings</strong> — things you've learned, read, understood, connected to active work</li>
+                    <li><strong>Daily logs</strong> — one note per check-in, hub of all entities touched that day</li>
+                </ul>
+
+                <h3>Vault Structure</h3>
+                <pre><code>[vault_path]/
+├── Vision/          — values, long-term vision, guiding principles
+├── Strategy/        — quarterly goals and active strategies
+├── Work/
+│   ├── Projects/    — deadline-driven work
+│   └── Ideas/       — lightweight captures
+├── People/          — work contacts and interaction logs
+├── Tasks/           — unified task inbox
+├── Log/Daily/       — one note per check-in day
+├── Notes/Learnings/ — things learned, connected to work
+├── Inbox/           — unsorted catch-all
+└── Archive/         — nothing ever deleted
+</code></pre>
+            </section>
+
+            <section id="getting-started">
+                <h2>Getting Started</h2>
+                <ol class="steps">
+                    <li>
+                        <strong>Pick a plugin</strong> that matches your workflow
+                        <ul>
+                            <li>Claude Skill if you use Claude Code (Cowork mode)</li>
+                            <li>OpenClaw Skill if you prefer a local AI assistant</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Follow its setup instructions</strong> (takes ~2 minutes)
+                    </li>
+                    <li>
+                        <strong>Start capturing:</strong>
+                        <ul>
+                            <li>Projects you're working on</li>
+                            <li>Ideas and thoughts</li>
+                            <li>People you interact with</li>
+                            <li>Tasks and reminders</li>
+                            <li>Learnings and reflections</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>Philosophy</h3>
+                <p>This isn't just a storage system. The goal is <strong>persistent context without manual effort</strong>:</p>
+                <ul>
+                    <li>Your AI reads recent notes on every interaction</li>
+                    <li>You never have to re-explain yourself</li>
+                    <li>Your thinking is captured atomically, linked, and queryable</li>
+                    <li>Nothing gets deleted — everything gets archived</li>
+                    <li>Your vault is portable, future-proof, and yours forever</li>
+                </ul>
+            </section>
+
+            <section id="future">
+                <h2>Future Plugins</h2>
+                <ul>
+                    <li>Obsidian plugin — native interface for entity creation and queries</li>
+                    <li>Slack integration — capture ideas and tasks from Slack</li>
+                    <li>Calendar sync — link daily logs to calendar events</li>
+                    <li>Web clipper — capture learnings from articles</li>
+                    <li>CLI tool — command-line interface for vault queries</li>
+                </ul>
+            </section>
+        </main>
+
+        <footer>
+            <p>Memspren is open source. <a href="https://github.com/supre/memspren">View on GitHub →</a></p>
+        </footer>
+    </div>
+</body>
+</html>
