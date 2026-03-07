@@ -4,26 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Memspren - Zettelkasten Knowledge Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Memspren</h1>
-            <p class="subtitle">A Zettelkasten-based personal knowledge management ecosystem</p>
-            <div class="header-links">
-                <a href="https://github.com/supre/memspren" class="btn btn-github">GitHub</a>
-            </div>
-        </header>
-
+    <aside class="sidebar">
         <nav class="toc">
             <ul>
-                <li><a href="#overview">Overview</a></li>
-                <li><a href="#plugins">Plugins</a></li>
-                <li><a href="#architecture">Architecture</a></li>
-                <li><a href="#getting-started">Getting Started</a></li>
+                <li><a href="#overview" data-section="overview">Overview</a></li>
+                <li><a href="#plugins" data-section="plugins">Plugins</a></li>
+                <li><a href="#architecture" data-section="architecture">Architecture</a></li>
+                <li><a href="#getting-started" data-section="getting-started">Getting Started</a></li>
+                <li><a href="#future" data-section="future">Future Plugins</a></li>
             </ul>
         </nav>
+    </aside>
+
+    <div class="main-container">
+        <header>
+            <div class="header-content">
+                <h1>Memspren</h1>
+                <p class="subtitle">A Zettelkasten-based personal knowledge management ecosystem</p>
+            </div>
+            <a href="https://github.com/supre/memspren" class="github-icon" title="View on GitHub" target="_blank" rel="noopener noreferrer">
+                <i class="fab fa-github"></i>
+            </a>
+        </header>
 
         <main>
             <section id="overview">
@@ -172,8 +178,10 @@
         </main>
 
         <footer>
-            <p>Memspren is open source. <a href="https://github.com/supre/memspren">View on GitHub →</a></p>
+            <p>Being worked on by <strong>Supreet</strong>. <a href="https://github.com/supre/memspren" target="_blank" rel="noopener noreferrer"><i class="fab fa-github"></i> View on GitHub</a></p>
         </footer>
     </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
