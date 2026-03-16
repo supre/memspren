@@ -1,9 +1,9 @@
 [
   {
     "date": "2026-03-16",
-    "title": "Documentation site restructured with multi-page routing",
-    "content": "Migrated the single-page documentation site to a multi-page architecture with hash-based routing. Added dedicated sections for Progress Notes and Publications.",
-    "tags": ["docs", "infrastructure"]
+    "title": "Workspace-root config and multi-vault support",
+    "content": "Session start protocol updated to check workspace root for .memspren-config (vault path pointer) before loading vault-internal files. Supports multiple vaults by separating workspace-level config from vault-specific settings. File location table clarified to distinguish workspace root, vault skill files, and vault content.",
+    "tags": ["skill", "architecture", "multi-vault"]
   },
   {
     "date": "2026-03-07",
