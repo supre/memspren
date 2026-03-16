@@ -10,5 +10,23 @@
     "title": "Netlify deployment configured",
     "content": "Set up netlify.toml with production-only deployment rules. Only main branch changes trigger deploys.",
     "tags": ["deployment", "infrastructure"]
+  },
+  {
+    "date": "2026-03-07",
+    "title": "OpenClaw skill v0.01 shipped",
+    "content": "First working version of memspren as an OpenClaw skill. Implements session start protocol with .memspren-config at workspace root, vault-specific config loading, and hot-memory context retrieval. Foundation for Zettelkasten-based knowledge graph management via obsidian-cli.",
+    "tags": ["skill", "openclaw", "milestone"]
+  },
+  {
+    "date": "2026-03-04",
+    "title": "Platform pivot from Claude to OpenClaw",
+    "content": "Strategic decision to evolve memspren from Claude plugin to OpenClaw skill. Rationale: OpenClaw provides phone accessibility (Telegram/WhatsApp), better user management, and foundation for future multi-agent architecture. v0.01 targets exploratory foundation; v1.0 targets production-ready custom agentic system.",
+    "tags": ["architecture", "strategy"]
+  },
+  {
+    "date": "2026-03-03",
+    "title": "Initial concept and dual-audience publication",
+    "content": "Memspren concept introduced via two simultaneous articles: technical architecture on dev.to and non-technical motivation on Substack. Established vision for Zettelkasten-powered personal knowledge graph with Claude as thinking partner.",
+    "tags": ["concept", "publication"]
   }
 ]
