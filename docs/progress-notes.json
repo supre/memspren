@@ -6,7 +6,13 @@
     "tags": ["docs", "infrastructure"]
   },
   {
-    "date": "2026-03-15",
+    "date": "2026-03-07",
+    "title": "Documentation site launched",
+    "content": "Static documentation site created with Getting Started guide, left sidebar navigation, and GitHub integration. Includes step-by-step setup instructions for both Claude and OpenClaw plugins.",
+    "tags": ["docs", "infrastructure", "milestone"]
+  },
+  {
+    "date": "2026-03-07",
     "title": "Netlify deployment configured",
     "content": "Set up netlify.toml with production-only deployment rules. Only main branch changes trigger deploys.",
     "tags": ["deployment", "infrastructure"]
@@ -28,5 +34,11 @@
     "title": "Initial concept and dual-audience publication",
     "content": "Memspren concept introduced via two simultaneous articles: technical architecture on dev.to and non-technical motivation on Substack. Established vision for Zettelkasten-powered personal knowledge graph with Claude as thinking partner.",
     "tags": ["concept", "publication"]
+  },
+  {
+    "date": "2026-02-28",
+    "title": "Initial repository created with Claude skill",
+    "content": "Project initialized with Managing Second Brain skill for Claude. Established foundation for Zettelkasten-based knowledge graph system with protocols for setup, check-in, entity management, and linking.",
+    "tags": ["skill", "claude", "milestone"]
   }
 ]
