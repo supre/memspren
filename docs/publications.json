@@ -1,0 +1,47 @@
+[
+  {
+    "title": "I Built an AI Assistant and Named Her Agatha. She Runs My Life Now.",
+    "medium": "Substack",
+    "type": "article",
+    "context": "The origin story of Agatha — a personal AI assistant built after years of failed PKM systems. Traces the journey from manual journals to Obsidian to a protocol-driven AI partner who manages daily planning, goal tracking, and drift detection. The core shift: from being a librarian of your thoughts to being their architect.",
+    "url": "https://innerodyssey.substack.com/p/i-built-an-ai-assistant-and-named",
+    "date": "2026-02-27",
+    "tags": ["origin-story", "agatha", "pkm", "ai-assistant"]
+  },
+  {
+    "title": "I Open-Sourced My Second Brain. Here's How to Build Yours.",
+    "medium": "Substack",
+    "type": "article",
+    "context": "The 'why' behind MemSpren, told through a Telegram moment where Agatha recovered a forgotten tool name instantly. Explains in plain language how hot memory, a graph index, and evolvable protocol files make an AI knowledge partner feel like a colleague — not software. Links to the open-source GitHub repo and technical deep-dive.",
+    "url": "https://innerodyssey.substack.com/p/i-open-sourced-my-second-brain-heres",
+    "date": "2026-03-03",
+    "tags": ["memspren", "open-source", "architecture", "hot-memory"]
+  },
+  {
+    "title": "Memspren OpenClaw Skill is Live",
+    "medium": "Substack",
+    "type": "video",
+    "context": "A short-form video walkthrough announcing the live release of the MemSpren skill for OpenClaw. Demonstrates the system's core promise: one place that always knows where you are and what to do next. Setup instructions and the live site are linked in the description.",
+    "url": "https://innerodyssey.substack.com/p/memspren-openclaw-skill-is-live",
+    "date": "2026-03-07",
+    "tags": ["memspren", "openclaw", "release", "walkthrough"]
+  },
+  {
+    "title": "We Don't Share Reality. We Just Share Vocabulary",
+    "medium": "Substack",
+    "type": "article",
+    "context": "A philosophical and technical essay on why human perception is a model, not reality — and what that means for how we capture and connect our thoughts. Introduces graph theory concepts (structural holes, centrality, weak ties) as a framework for mapping the self, and lays out the next evolution of MemSpren as a topology of the mind.",
+    "url": "https://innerodyssey.substack.com/p/we-dont-share-reality-we-just-share",
+    "date": "2026-03-11",
+    "tags": ["philosophy", "graph-theory", "perception", "memspren"]
+  },
+  {
+    "title": "Building MemSpren: A Claude Skill as a Second Brain — V1 Architecture Deep Dive",
+    "medium": "dev.to",
+    "type": "article",
+    "context": "A deep technical breakdown of MemSpren's V1 architecture — using Claude as the intelligence layer and Obsidian as storage. Covers the three-tier memory system (hot memory, system state, on-demand loading), the session startup sequence, Zettelkasten node types with mandatory YAML frontmatter, and the hard invariants that keep the graph healthy over time.",
+    "url": "https://dev.to/supreet_s/building-memspren-a-claude-skill-as-a-second-brain-v1-architecture-deep-dive-2p7o",
+    "date": "2026-03-03",
+    "tags": ["memspren", "architecture", "claude-skill", "zettelkasten", "deep-dive"]
+  }
+]

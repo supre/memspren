@@ -29,12 +29,28 @@ body {
     list-style: none;
 }
 
+.nav-group-label {
+    padding: 10px 25px 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #999;
+}
+
+.nav-group-label:not(:first-child) {
+    margin-top: 16px;
+    border-top: 1px solid #eee;
+    padding-top: 16px;
+}
+
 .toc a {
     display: block;
-    padding: 12px 25px;
+    padding: 10px 25px;
     color: #555;
     text-decoration: none;
     font-weight: 500;
+    font-size: 0.92rem;
     border-left: 3px solid transparent;
     transition: all 0.2s;
 }
@@ -73,6 +89,15 @@ header {
 
 .header-content {
     flex: 1;
+}
+
+.header-title-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.header-title-link:hover {
+    text-decoration: none;
 }
 
 header h1 {
@@ -114,11 +139,16 @@ main {
     max-width: 900px;
 }
 
-section {
-    margin-bottom: 60px;
+/* Pages - hidden by default, shown when active */
+.page {
+    display: none;
 }
 
-section:last-of-type {
+.page.active {
+    display: block;
+}
+
+section {
     margin-bottom: 0;
 }
 
@@ -144,6 +174,12 @@ h3:first-child {
 p {
     margin-bottom: 15px;
     line-height: 1.7;
+}
+
+.page-intro {
+    color: #666;
+    font-size: 1.05rem;
+    margin-bottom: 25px;
 }
 
 /* Plugin cards */
@@ -356,6 +392,277 @@ footer i {
     font-size: 1rem;
 }
 
+/* --- Filter Toggle --- */
+.filters-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    margin-bottom: 16px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+}
+
+.filters-toggle:hover {
+    border-color: #0066cc;
+    color: #0066cc;
+}
+
+.filters-toggle[aria-expanded="true"] {
+    border-color: #0066cc;
+    color: #0066cc;
+    background: #f0f6ff;
+}
+
+.filters-badge {
+    display: none;
+    background: #0066cc;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 0 5px;
+}
+
+.filters-badge.visible {
+    display: inline-flex;
+}
+
+/* --- Collapsible Filters --- */
+.filters-collapsible {
+    max-height: 0;
+    overflow: hidden;
+    margin-bottom: 0;
+    transition: max-height 0.25s ease-out, margin-bottom 0.25s ease-out;
+}
+
+.filters-collapsible.open {
+    max-height: 500px;
+    margin-bottom: 30px;
+    transition: max-height 0.3s ease-in, margin-bottom 0.3s ease-in;
+}
+
+/* --- Filters --- */
+.filter-group {
+    margin-bottom: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.filter-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #666;
+    min-width: 40px;
+    padding-top: 6px;
+}
+
+.filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.filter-btn {
+    padding: 5px 14px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+
+.filter-btn:hover {
+    border-color: #0066cc;
+    color: #0066cc;
+}
+
+.filter-btn.active {
+    background: #0066cc;
+    color: white;
+    border-color: #0066cc;
+}
+
+/* --- Progress Notes --- */
+.progress-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.progress-card {
+    background: #f9f9f9;
+    border-radius: 6px;
+    padding: 20px 24px;
+    border-left: 4px solid #0066cc;
+}
+
+.progress-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.progress-card-header time {
+    font-size: 0.82rem;
+    color: #888;
+    font-weight: 500;
+}
+
+.progress-card h3 {
+    margin: 0 0 8px;
+    font-size: 1.1rem;
+    color: #222;
+}
+
+.progress-card p {
+    margin: 0;
+    color: #555;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.tag {
+    background: #e8f0fe;
+    color: #1a5fb4;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* --- Publications --- */
+.publications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.publication-card {
+    background: #f9f9f9;
+    border-radius: 6px;
+    padding: 20px 24px;
+    border-left: 4px solid #0066cc;
+}
+
+.publication-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 12px;
+    font-size: 0.82rem;
+    color: #888;
+}
+
+.publication-card-header > *:not(:last-child)::after {
+    content: "\00b7";
+    margin: 0 10px;
+    color: #ccc;
+    font-weight: 700;
+    font-size: 1.1em;
+}
+
+.publication-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 600;
+    color: #555;
+    text-transform: capitalize;
+    white-space: nowrap;
+}
+
+.publication-type i {
+    color: #0066cc;
+}
+
+.publication-medium {
+    display: inline-block;
+    background: #eee;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+    color: #555;
+    white-space: nowrap;
+}
+
+.publication-card-header time {
+    white-space: nowrap;
+}
+
+.publication-card h3 {
+    margin: 0 0 8px;
+    font-size: 1.1rem;
+    color: #222;
+}
+
+.publication-card p {
+    margin: 0 0 12px;
+    color: #555;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.publication-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #0066cc;
+}
+
+.publication-link:hover {
+    text-decoration: underline;
+}
+
+.publication-link i {
+    font-size: 0.75rem;
+}
+
+.publication-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* --- Empty State --- */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
     .sidebar {
@@ -418,10 +725,6 @@ footer i {
         padding: 20px;
     }
 
-    header {
-        padding: 20px;
-    }
-
     footer {
         padding: 20px;
     }
@@ -447,5 +750,14 @@ footer i {
     pre {
         padding: 10px;
         font-size: 0.75em;
+    }
+
+    .filter-group {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .filter-label {
+        padding-top: 0;
     }
 }

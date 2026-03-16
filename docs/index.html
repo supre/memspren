@@ -12,11 +12,15 @@
     <aside class="sidebar">
         <nav class="toc">
             <ul>
-                <li><a href="#overview" data-section="overview">Overview</a></li>
-                <li><a href="#plugins" data-section="plugins">Plugins</a></li>
-                <li><a href="#architecture" data-section="architecture">Architecture</a></li>
-                <li><a href="#getting-started" data-section="getting-started">Getting Started</a></li>
-                <li><a href="#future" data-section="future">Future Plugins</a></li>
+                <li class="nav-group-label">Documentation</li>
+                <li><a href="#/overview" data-route="overview">Overview</a></li>
+                <li><a href="#/plugins" data-route="plugins">Plugins</a></li>
+                <li><a href="#/architecture" data-route="architecture">Architecture</a></li>
+                <li><a href="#/getting-started" data-route="getting-started">Getting Started</a></li>
+                <li><a href="#/future" data-route="future">Future Plugins</a></li>
+                <li class="nav-group-label">Updates</li>
+                <li><a href="#/progress" data-route="progress">Progress Notes</a></li>
+                <li><a href="#/publications" data-route="publications">Publications</a></li>
             </ul>
         </nav>
     </aside>
@@ -24,7 +28,7 @@
     <div class="main-container">
         <header>
             <div class="header-content">
-                <h1>Memspren</h1>
+                <a href="#/overview" class="header-title-link"><h1>Memspren</h1></a>
                 <p class="subtitle">A Zettelkasten-based personal knowledge management ecosystem</p>
             </div>
             <a href="https://github.com/supre/memspren" class="github-icon" title="View on GitHub" target="_blank" rel="noopener noreferrer">
@@ -33,13 +37,15 @@
         </header>
 
         <main>
-            <section id="overview">
+            <!-- Overview Page -->
+            <section class="page" id="page-overview">
                 <h2>Overview</h2>
                 <p><strong>Core concept:</strong> Every entity is a node. Every connection is a link. Your thinking partner maintains persistent context without manual effort.</p>
                 <p>Memspren is a multi-platform integration for managing your second brain across different platforms and tools. It implements a Zettelkasten (slip-box) system that keeps your knowledge graph atomic, linked, and queryable.</p>
             </section>
 
-            <section id="plugins">
+            <!-- Plugins Page -->
+            <section class="page" id="page-plugins">
                 <h2>Plugins</h2>
 
                 <article class="plugin">
@@ -83,7 +89,8 @@
                 </article>
             </section>
 
-            <section id="architecture">
+            <!-- Architecture Page -->
+            <section class="page" id="page-architecture">
                 <h2>Architecture</h2>
 
                 <h3>Two-Location Design</h3>
@@ -130,7 +137,8 @@
 </code></pre>
             </section>
 
-            <section id="getting-started">
+            <!-- Getting Started Page -->
+            <section class="page" id="page-getting-started">
                 <h2>Getting Started</h2>
                 <ol class="steps">
                     <li>
@@ -166,7 +174,8 @@
                 </ul>
             </section>
 
-            <section id="future">
+            <!-- Future Plugins Page -->
+            <section class="page" id="page-future">
                 <h2>Future Plugins</h2>
                 <ul>
                     <li>Obsidian plugin — native interface for entity creation and queries</li>
@@ -175,6 +184,83 @@
                     <li>Web clipper — capture learnings from articles</li>
                     <li>CLI tool — command-line interface for vault queries</li>
                 </ul>
+            </section>
+
+            <!-- Progress Notes Page -->
+            <section class="page" id="page-progress">
+                <h2>Progress Notes</h2>
+                <button class="filters-toggle" id="progress-filters-toggle" aria-expanded="false" aria-controls="progress-filters">
+                    <i class="fas fa-sliders"></i> Filters <span class="filters-badge" id="progress-filters-badge"></span>
+                </button>
+                <div class="filters filters-collapsible" id="progress-filters">
+                    <div class="filter-group">
+                        <span class="filter-label">Time</span>
+                        <div class="filter-buttons" id="time-filters">
+                            <button class="filter-btn active" data-hours="0">All</button>
+                            <button class="filter-btn" data-hours="3">Last 3 hours</button>
+                            <button class="filter-btn" data-hours="24">Last 24 hours</button>
+                            <button class="filter-btn" data-hours="168">Last 7 days</button>
+                            <button class="filter-btn" data-hours="720">Last 30 days</button>
+                            <button class="filter-btn" data-hours="1440">Last 60 days</button>
+                            <button class="filter-btn" data-hours="2160">Last 90 days</button>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <span class="filter-label">Tags</span>
+                        <div class="filter-buttons" id="tag-filters">
+                            <button class="filter-btn active" data-tag="all">All</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="progress-list" class="progress-list"></div>
+                <div id="progress-empty" class="empty-state" style="display:none;">
+                    <p>No progress notes match the selected filters.</p>
+                </div>
+            </section>
+
+            <!-- Publications Page -->
+            <section class="page" id="page-publications">
+                <h2>Publications</h2>
+                <p class="page-intro">Articles, videos, and other content about why Memspren exists, how it's being built, and the thinking behind it.</p>
+                <button class="filters-toggle" id="pub-filters-toggle" aria-expanded="false" aria-controls="pub-filters">
+                    <i class="fas fa-sliders"></i> Filters <span class="filters-badge" id="pub-filters-badge"></span>
+                </button>
+                <div class="filters filters-collapsible" id="pub-filters">
+                    <div class="filter-group">
+                        <span class="filter-label">Time</span>
+                        <div class="filter-buttons" id="pub-time-filters">
+                            <button class="filter-btn active" data-hours="0">All</button>
+                            <button class="filter-btn" data-hours="3">Last 3 hours</button>
+                            <button class="filter-btn" data-hours="24">Last 24 hours</button>
+                            <button class="filter-btn" data-hours="168">Last 7 days</button>
+                            <button class="filter-btn" data-hours="720">Last 30 days</button>
+                            <button class="filter-btn" data-hours="1440">Last 60 days</button>
+                            <button class="filter-btn" data-hours="2160">Last 90 days</button>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <span class="filter-label">Tags</span>
+                        <div class="filter-buttons" id="pub-tag-filters">
+                            <button class="filter-btn active" data-tag="all">All</button>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <span class="filter-label">Type</span>
+                        <div class="filter-buttons" id="pub-type-filters">
+                            <button class="filter-btn active" data-type="all">All</button>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <span class="filter-label">Medium</span>
+                        <div class="filter-buttons" id="pub-medium-filters">
+                            <button class="filter-btn active" data-medium="all">All</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="publications-list" class="publications-list"></div>
+                <div id="publications-empty" class="empty-state" style="display:none;">
+                    <p>No publications match the selected filters.</p>
+                </div>
             </section>
         </main>
 
