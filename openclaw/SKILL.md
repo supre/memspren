@@ -39,15 +39,19 @@ Tell the user: *"Obsidian needs to be open for me to update your vault. Please o
 
 Every session, in this order:
 
-1. Read `.second-brain/config.md` — always first (vault path, setup status)
-2. Load `.second-brain/Memory/hot-memory.md` — current week context
-3. Load `.second-brain/Memory/system-state.md` — active protocols and flags
-4. Check `setup_complete` in config.md
+1. **Check workspace root for `.memspren-config`** — contains vault_path + setup_complete flag
+   - If exists → use vault_path from this file
+   - If not exists → run setup (user provides vault path, then create `.memspren-config`)
 
-If `setup_complete: false` → read `Protocols/setup-protocol.md` and follow it.
-If `setup_complete: true` → proceed to intent detection.
+2. Read `{vault_path}/.second-brain/config.md` — vault-specific settings (check-in time, thresholds)
 
-Neither Memory file exists on first run — that's expected. Just read config.md.
+3. Load `{vault_path}/.second-brain/Memory/hot-memory.md` — current week context
+
+4. Load `{vault_path}/.second-brain/Memory/system-state.md` — active protocols and flags
+
+If setup hasn't run yet (no `.memspren-config` at workspace root), start setup protocol.
+
+Memory files may not exist on first run — that's expected.
 
 ## Intent detection
 
@@ -86,10 +90,11 @@ Never load all protocol files at once.
 
 | Location | What lives here |
 | --- | --- |
-| `.second-brain/` | config.md, Memory/ — skill operational files, NOT in vault |
-| `vault_path` (from config.md) | All content: Work/, People/, Log/, Notes/, Tasks/, Inbox/, Archive/ |
+| `~/clawd/.memspren-config` | Workspace root — vault path pointer only |
+| `{vault_path}/.second-brain/` | Inside vault directory — skill operational files (config, Memory, protocols) |
+| `{vault_path}/` (root folders) | Inside vault directory — all human content (Work/, People/, Log/, Notes/, Tasks/, Inbox/, Archive/) |
 
-Skill files (config, hot-memory, system-state) → use Write/Read/Edit tools directly.
+Skill files (`.second-brain/`) → use Write/Read/Edit tools directly.
 Vault content → always use obsidian-cli.
 
 ## Entity quick reference

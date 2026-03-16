@@ -1,0 +1,20 @@
+[
+  {
+    "date": "2026-03-16",
+    "title": "Clarified file location documentation in SKILL.md",
+    "content": "Updated 'Two file locations' table to explicitly show that .second-brain/ lives inside the vault directory, not outside it. Added workspace root .memspren-config as a separate entry to distinguish vault path pointer from vault-internal skill files.",
+    "tags": ["docs", "skill"]
+  },
+  {
+    "date": "2026-03-16",
+    "title": "Documentation site restructured with multi-page routing",
+    "content": "Migrated the single-page documentation site to a multi-page architecture with hash-based routing. Added dedicated sections for Progress Notes and Publications.",
+    "tags": ["docs", "infrastructure"]
+  },
+  {
+    "date": "2026-03-15",
+    "title": "Netlify deployment configured",
+    "content": "Set up netlify.toml with production-only deployment rules. Only main branch changes trigger deploys.",
+    "tags": ["deployment", "infrastructure"]
+  }
+]
