@@ -1,0 +1,42 @@
+# Netlify deployment configuration for memspren
+
+# Build settings
+[build]
+  # Only deploy docs folder
+  base = ""
+  publish = "docs"
+  command = "echo 'Static site, no build needed'"
+
+# Deploy rules - only deploy on main branch changes
+[[deploy_contexts]]
+  context = "production"
+  branch = "main"
+
+[[deploy_contexts]]
+  context = "branch-deploy"
+  branch = "!main"
+  command = "exit 1"
+
+# Production deployments - triggered only on main branch
+[context.production]
+  command = "exit 0"
+
+# Ignore all other branches - don't deploy previews
+[context.branch-deploy]
+  command = "exit 1"
+
+# Prevent deploy previews on pull requests
+[context.deploy-preview]
+  command = "exit 1"
+
+# Prevent deploy previews on branch deploys
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+# Redirect rules (optional - uncomment if needed)
+# [[redirects]]
+#   from = "/*"
+#   to = "/index.html"
+#   status = 200
