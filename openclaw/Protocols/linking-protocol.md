@@ -12,6 +12,8 @@ All vault operations use obsidian-cli for consistency and reliability.
 - Every file gets YAML frontmatter — no exceptions
 - Every file gets at least one `[[link]]` — no orphan notes
 - Links go in BOTH the frontmatter `connected` field AND the file body
+- **Link entities inline throughout the body text** — projects, people, ideas, patterns, strategies on first mention
+- **Include a "Related" section at the bottom** with 3-5 key connections
 - Always use forward slashes in file paths
 - Never use absolute paths — always relative from vault root
 - Link to what exists — do not create placeholder links to files
@@ -62,6 +64,43 @@ Examples:
 
 Both types must exist in every file. They serve different purposes
 and neither replaces the other.
+
+#### Inline Linking Requirements
+
+**Link entities on first mention:**
+- **Projects:** Link when referencing active or past projects
+- **People:** Link when mentioning someone by name
+- **Patterns:** Link to behavioral patterns, protocols, or strategies
+- **Ideas:** Link to ideas when discussing concepts or solutions
+- **Learnings:** Link to notes, books, articles when referencing insights
+- **Daily logs:** Link to specific dates when referencing events
+
+**Example of inline linking:**
+```markdown
+This week I'm shipping [[Work/Projects/second-brain|Second Brain v0.02]],
+which builds on insights from [[People/jason|Jason]] and the
+[[Notes/Learnings/zettelkasten-method|Zettelkasten Method]]. The build
+started on [[Log/Daily/2026-03-15|March 15]].
+```
+
+**Related section at bottom:**
+
+Every note should end with a "Related" section containing 3-5 curated
+connections to high-value related notes:
+
+```markdown
+## Related
+
+[[Strategy/12-Week Goal Q2 2026.md|12-Week Goal Q2 2026]]
+[[Work/Projects/second-brain|Second Brain Skill]]
+[[Log/Daily/2026-03-15|Daily Log — March 15]]
+[[Notes/Learnings/building-in-public|Building in Public]]
+```
+
+The Related section serves three purposes:
+1. **Quick navigation** — most important connections in one place
+2. **Graph anchors** — strengthens graph structure for visual mapping
+3. **Context preservation** — captures curated relationships that matter most
 
 ---
 

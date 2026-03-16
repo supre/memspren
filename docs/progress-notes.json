@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-03-16",
+    "title": "Inline wikilink requirement for knowledge graph structure",
+    "content": "Updated linking-protocol.md to require inline wikilinks throughout note body text, not just in frontmatter. Every entity mention (projects, people, patterns, ideas, learnings) must be linked on first reference. Added mandatory 'Related' section at bottom of all vault notes with 3-5 curated connections. Reasoning: Frontmatter 'connected' arrays provide programmatic structure, but inline links create semantic relationships visible in Obsidian graph view. Without inline links, graph shows isolated nodes; with them, it reveals how concepts actually interconnect—the core value of a knowledge graph. Related section serves as quick navigation, graph anchor points, and context preservation.",
+    "tags": ["skill", "architecture", "knowledge-graph"]
+  },
+  {
+    "date": "2026-03-16",
     "title": "Workspace-root config and multi-vault support",
     "content": "Session start protocol updated to check workspace root for .memspren-config (vault path pointer) before loading vault-internal files. Supports multiple vaults by separating workspace-level config from vault-specific settings. File location table clarified to distinguish workspace root, vault skill files, and vault content.",
     "tags": ["skill", "architecture", "multi-vault"]
