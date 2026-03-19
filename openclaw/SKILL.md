@@ -95,6 +95,7 @@ Memory files may not exist on first run — that's expected. Create them on firs
 | What am I working on / status | Use active memory (insights + goals + hot-memory) → summarize |
 | What should I focus on | Use goals.md + insights.md → advise |
 | Sync now / push to obsidian / sync my vault | Read `Protocols/sync-protocol.md` → execute sync |
+| Knowledge transfer / KT session / had a KT | Read `Protocols/kt-protocol.md` → capture KT |
 
 ## Conversation flow (during brain dumps and check-ins)
 
@@ -136,6 +137,7 @@ Run `check_cli.py` before sync operations. Use `update_connected.py` for all `co
 | `Protocols/entity-protocol.md` | During sync — creating or updating vault entities |
 | `Protocols/linking-protocol.md` | During sync — writing or updating vault files |
 | `Protocols/sync-protocol.md` | Sync triggered (user, cron, or auto) |
+| `Protocols/kt-protocol.md` | User mentions a knowledge transfer session |
 
 Never load all protocol files at once.
 
@@ -156,6 +158,7 @@ Never load all protocol files at once.
 | Task | `Tasks/tasks-inbox.md` | Append only, not a new file |
 | Learning | `Notes/Learnings/[topic].md` | — |
 | Daily log | `Log/Daily/YYYY-MM-DD.md` | Created during sync |
+| Knowledge Transfer | `Work/KT/[topic].md` + `Work/KT/Transcripts/[topic].md` | Structured doc + raw transcript |
 
 ## Critical rules
 
