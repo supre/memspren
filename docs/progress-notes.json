@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-03-19",
+    "title": "Batch sync architecture — 3-layer memory system (v0.02)",
+    "content": "Major architectural overhaul addressing the critical token explosion problem (Friction #4). Replaced immediate Obsidian sync with a 3-layer memory system: Layer 1 (Active Memory, ~2000 tokens) keeps insights.md (user patterns, energy, mindset), goals.md (priorities + weekly/quarterly tracking), and hot-memory.md (project state) in context. Layer 2 (Brain Dump Buffer) is a write-only append log during conversation — zero token cost, never read until sync. Layer 3 (Obsidian Vault) receives detailed entities with full YAML frontmatter and wiki links during batch sync (triggered by user, cron interval, or check-in close). Result: ~90% fewer file operations during conversation. New sync-protocol.md governs the 11-step batch process: validate → load state → process buffer → batch create/update Obsidian entities → recalculate insights + goals + hot-memory → archive buffer → confirm. First sync test processed 4 brain dump entries, created 11 entities (daily log, 3 ideas, 4 learnings, 1 person, tasks inbox), updated 2 existing entities, and established 12 cross-links. Buffer archived to sync-archive/ after successful sync. insights.md introduces inference about the user — patterns observed, strategies working/not working, energy state composite, mindset tracking, and vision alignment assessment. goals.md derives actionable priorities from insights and tracks weekly micro-goals and quarterly KRs. Hot-memory slimmed from 800 to 500 tokens by moving patterns/lifestyle/mindset to insights.md.",
+    "tags": ["skill", "architecture", "token-optimization", "milestone", "v0.02"]
+  },
+  {
+    "date": "2026-03-19",
+    "title": "New memory documents: insights.md and goals.md",
+    "content": "Introduced two new active memory documents that stay in context every session. insights.md (~700 tokens) maintains live inference about the user: what matters now, recent challenges, behavioral patterns with evidence dates, strategies working/not working, energy state (composite of sleep/physical activity/nutrition/mood), mindset state, and vision alignment. Recalculated every sync from buffer data + previous insights (rolling summary, latest-weighted). goals.md (~500 tokens) derives actionable priorities from insights: lead domino, top 3 priorities, what to avoid (based on patterns), health priority, emotional check, plus weekly micro-goal and quarterly goal tracking with current status. Together with slimmed hot-memory.md (~500 tokens), total active memory stays under 2000 tokens while providing richer context than the previous 800-token hot-memory alone.",
+    "tags": ["skill", "architecture", "memory", "v0.02"]
+  },
+  {
+    "date": "2026-03-19",
+    "title": "Sync buffer and archive system",
+    "content": "Implemented sync-buffer.md as a detailed append-only brain dump log. During conversation, every brain dump is captured with full context (emotional state, specific names, numbers, quotes, reasoning, decisions), extracted entities (typed: DAILY_LOG, PROJECT_UPDATE, PERSON_UPDATE, PATTERN_UPDATE, TASK_NEW, IDEA, LEARNING), and proposed links between entities. Buffer is NEVER read during conversation (zero token cost). During sync, buffer is the primary data source for creating rich Obsidian entities. After successful sync, buffer is archived to sync-archive/YYYY-MM-DD-HHMMSS.md (never deleted) and cleared for next cycle. Sync triggers: user explicit ('sync now'), cron interval (configurable, default 15 min), end of check-in (if auto_sync_on_checkin_close: true), or buffer overflow (configurable max tokens).",
+    "tags": ["skill", "architecture", "sync", "v0.02"]
+  },
+  {
     "date": "2026-03-16",
     "title": "Inline wikilink requirement for knowledge graph structure",
     "content": "Updated linking-protocol.md to require inline wikilinks throughout note body text, not just in frontmatter. Every entity mention (projects, people, patterns, ideas, learnings) must be linked on first reference. Added mandatory 'Related' section at bottom of all vault notes with 3-5 curated connections. Reasoning: Frontmatter 'connected' arrays provide programmatic structure, but inline links create semantic relationships visible in Obsidian graph view. Without inline links, graph shows isolated nodes; with them, it reveals how concepts actually interconnect—the core value of a knowledge graph. Related section serves as quick navigation, graph anchor points, and context preservation.",
