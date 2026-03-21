@@ -18,19 +18,6 @@
   },
   {
     "date": "2026-03-21",
-    "title": "Knowledge transfer capture protocol",
-    "scope": "openclaw",
-    "summary": "New protocol for capturing work knowledge transfer sessions into structured vault notes.",
-    "details": [
-      "Triggered when user mentions KT, knowledge transfer, or handoff",
-      "Produces two documents per KT: structured summary in Work/KT/[topic].md and raw transcript in Work/KT/Transcripts/[topic].md",
-      "Extracts participants, technical details, decisions, gotchas, action items, unclear areas, and references",
-      "Both documents follow sync protocol (buffered, not immediate)"
-    ],
-    "tags": ["protocol", "knowledge-transfer", "v0.02"]
-  },
-  {
-    "date": "2026-03-21",
     "title": "Daily log append fix — multi-sync deduplication",
     "scope": "openclaw",
     "summary": "Fixed critical bug where multiple syncs per day created separate daily log files instead of appending.",
