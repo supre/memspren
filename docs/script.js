@@ -470,7 +470,21 @@ document.addEventListener('DOMContentLoaded', function () {
         window.scrollTo(0, 0);
     };
 
+    // --- Metadata ---
+    function loadMetadata() {
+        fetch('metadata.json?v=3')
+            .then(function (res) { return res.json(); })
+            .then(function (meta) {
+                var versionEl = document.getElementById('site-version');
+                if (versionEl && meta.version) {
+                    versionEl.textContent = meta.version;
+                }
+            })
+            .catch(function () {});
+    }
+
     // --- Init ---
+    loadMetadata();
     loadProgressNotes();
     loadPublications();
     navigate(getRouteFromHash());
