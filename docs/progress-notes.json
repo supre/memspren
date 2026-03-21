@@ -1,0 +1,164 @@
+[
+  {
+    "date": "2026-03-21",
+    "title": "Smart merge system — description-based deduplication + git safety",
+    "scope": "openclaw",
+    "summary": "Governance layer to prevent duplicate file creation during sync, with git safety checkpoints.",
+    "details": [
+      "Two new scripts: scan_descriptions.py extracts frontmatter descriptions from vault folders; git_commit.py commits file state before any modification",
+      "New required frontmatter field 'description' on all entity types — serves as search key for merge decisions",
+      "Agent decision flow: scan folder → read descriptions → decide merge or create → git commit if modifying → notify user on conflicts",
+      "Scope rules per entity type: vision/strategy = aggressive merge, ideas/learnings = moderate, patterns = conservative, projects/people = no scan",
+      "Setup protocol now requires git as prerequisite and initializes git repo in vault during setup"
+    ],
+    "links": [
+      { "label": "Architecture docs", "url": "smart-merge-architecture.html" }
+    ],
+    "tags": ["architecture", "governance", "deduplication", "git", "v0.02"]
+  },
+  {
+    "date": "2026-03-21",
+    "title": "Knowledge transfer capture protocol",
+    "scope": "openclaw",
+    "summary": "New protocol for capturing work knowledge transfer sessions into structured vault notes.",
+    "details": [
+      "Triggered when user mentions KT, knowledge transfer, or handoff",
+      "Produces two documents per KT: structured summary in Work/KT/[topic].md and raw transcript in Work/KT/Transcripts/[topic].md",
+      "Extracts participants, technical details, decisions, gotchas, action items, unclear areas, and references",
+      "Both documents follow sync protocol (buffered, not immediate)"
+    ],
+    "tags": ["protocol", "knowledge-transfer", "v0.02"]
+  },
+  {
+    "date": "2026-03-21",
+    "title": "Daily log append fix — multi-sync deduplication",
+    "scope": "openclaw",
+    "summary": "Fixed critical bug where multiple syncs per day created separate daily log files instead of appending.",
+    "details": [
+      "Sync protocol Step 4a now checks if Log/Daily/YYYY-MM-DD.md exists before creating",
+      "If exists: appends with timestamp header. If not: creates as before"
+    ],
+    "tags": ["bugfix", "sync", "v0.02"]
+  },
+  {
+    "date": "2026-03-19",
+    "title": "Batch sync architecture — 3-layer memory system",
+    "scope": "openclaw",
+    "summary": "Major architectural overhaul replacing immediate Obsidian sync with a 3-layer memory system. ~90% fewer file operations during conversation.",
+    "details": [
+      "Layer 1 (Active Memory, ~2000 tokens): insights.md, goals.md, hot-memory.md — read every session",
+      "Layer 2 (Brain Dump Buffer): write-only append log during conversation — zero token cost, never read until sync",
+      "Layer 3 (Obsidian Vault): detailed entities with full YAML frontmatter and wiki links, created during batch sync",
+      "New sync-protocol.md governs the 11-step batch process: validate → load state → process buffer → create/update entities → recalculate memory → archive buffer → confirm",
+      "First sync test: processed 4 brain dumps, created 11 entities, updated 2 existing, established 12 cross-links"
+    ],
+    "tags": ["architecture", "token-optimization", "milestone", "v0.02"]
+  },
+  {
+    "date": "2026-03-19",
+    "title": "New memory documents: insights.md and goals.md",
+    "scope": "openclaw",
+    "summary": "Two new active memory documents providing richer context than previous hot-memory alone.",
+    "details": [
+      "insights.md (~700 tokens): live inference about the user — patterns, energy state, strategies working/not working, mindset, vision alignment",
+      "goals.md (~500 tokens): actionable priorities derived from insights — lead domino, top 3, what to avoid, health priority, emotional check, weekly/quarterly goals",
+      "hot-memory.md slimmed from 800 to 500 tokens by moving patterns/lifestyle/mindset to insights.md",
+      "Total active memory stays under 2000 tokens while providing richer context"
+    ],
+    "tags": ["architecture", "memory", "v0.02"]
+  },
+  {
+    "date": "2026-03-19",
+    "title": "Sync buffer and archive system",
+    "scope": "openclaw",
+    "summary": "Implemented sync-buffer.md as a detailed append-only brain dump log with archive-on-sync.",
+    "details": [
+      "Every brain dump captured with full context: emotional state, names, numbers, quotes, reasoning, decisions",
+      "Extracted entities typed: DAILY_LOG, PROJECT_UPDATE, PERSON_UPDATE, PATTERN_UPDATE, TASK_NEW, IDEA, LEARNING",
+      "Buffer is NEVER read during conversation (zero token cost) — only consumed during sync",
+      "After successful sync, buffer archived to sync-archive/YYYY-MM-DD-HHMMSS.md and cleared",
+      "Sync triggers: user explicit, cron interval (default 15 min), end of check-in, or buffer overflow"
+    ],
+    "tags": ["architecture", "sync", "v0.02"]
+  },
+  {
+    "date": "2026-03-16",
+    "title": "Inline wikilink requirement for knowledge graph structure",
+    "summary": "Updated linking protocol to require inline wikilinks throughout note body, not just frontmatter.",
+    "details": [
+      "Every entity mention (projects, people, patterns, ideas, learnings) must be linked on first reference",
+      "Added mandatory 'Related' section at bottom of all vault notes with 3-5 curated connections",
+      "Inline links create semantic relationships visible in Obsidian graph view — without them, graph shows isolated nodes"
+    ],
+    "tags": ["architecture", "knowledge-graph"]
+  },
+  {
+    "date": "2026-03-16",
+    "title": "Workspace-root config and multi-vault support",
+    "summary": "Session start protocol updated to support multiple vaults via workspace-level config separation.",
+    "details": [
+      "Checks workspace root for .memspren-config (vault path pointer) before loading vault-internal files",
+      "File location table clarified to distinguish workspace root, vault skill files, and vault content"
+    ],
+    "tags": ["architecture", "multi-vault"]
+  },
+  {
+    "date": "2026-03-07",
+    "title": "Documentation site launched",
+    "summary": "Static documentation site with Getting Started guide, sidebar navigation, and GitHub integration.",
+    "details": [
+      "Step-by-step setup instructions for both Claude and OpenClaw plugins",
+      "Left sidebar navigation with hash-based SPA routing"
+    ],
+    "tags": ["docs", "infrastructure", "milestone"]
+  },
+  {
+    "date": "2026-03-07",
+    "title": "Netlify deployment configured",
+    "summary": "Set up netlify.toml with production-only deployment rules. Only main branch changes trigger deploys.",
+    "details": [],
+    "tags": ["deployment", "infrastructure"]
+  },
+  {
+    "date": "2026-03-07",
+    "title": "OpenClaw skill v0.01 shipped",
+    "scope": "openclaw",
+    "summary": "First working version of memspren as an OpenClaw skill with session protocol and vault config loading.",
+    "details": [
+      "Session start protocol with .memspren-config at workspace root",
+      "Vault-specific config loading and hot-memory context retrieval",
+      "Foundation for Zettelkasten-based knowledge graph management via obsidian-cli"
+    ],
+    "tags": ["openclaw", "milestone"]
+  },
+  {
+    "date": "2026-03-04",
+    "title": "Platform pivot from Claude to OpenClaw",
+    "summary": "Strategic decision to evolve memspren from Claude plugin to OpenClaw skill.",
+    "details": [
+      "Rationale: OpenClaw provides phone accessibility (Telegram/WhatsApp), better user management, and foundation for multi-agent architecture",
+      "v0.01 targets exploratory foundation; v1.0 targets production-ready custom agentic system"
+    ],
+    "tags": ["architecture", "strategy"]
+  },
+  {
+    "date": "2026-03-03",
+    "title": "Initial concept and dual-audience publication",
+    "summary": "Memspren concept introduced via simultaneous technical and non-technical articles.",
+    "details": [
+      "Technical architecture on dev.to and non-technical motivation on Substack",
+      "Established vision for Zettelkasten-powered personal knowledge graph with Claude as thinking partner"
+    ],
+    "tags": ["concept", "publication"]
+  },
+  {
+    "date": "2026-02-28",
+    "title": "Initial repository created with Claude skill",
+    "summary": "Project initialized with Managing Second Brain skill for Claude.",
+    "details": [
+      "Established foundation for Zettelkasten-based knowledge graph system",
+      "Protocols for setup, check-in, entity management, and linking"
+    ],
+    "tags": ["claude", "milestone"]
+  }
+]

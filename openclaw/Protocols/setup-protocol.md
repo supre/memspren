@@ -16,20 +16,44 @@ All vault operations use obsidian-cli. Skill files (config, Memory) are written 
 Copy and track progress before starting:
 
 ```
-- [ ] Step 1: Greet user
-- [ ] Step 2: Vault location
-- [ ] Step 3: Check-in time
-- [ ] Step 4: Vision and goals
-- [ ] Step 5: Journaling (Phase 2 — skip for MMVP)
-- [ ] Step 6: Lifestyle tracking (Phase 2 — skip for MMVP)
-- [ ] Step 7: Create files and structure
-- [ ] Step 8: Guided tour
-- [ ] Step 9: Mark setup complete
+- [ ] Step 1: Check prerequisites (git, obsidian-cli)
+- [ ] Step 2: Greet user
+- [ ] Step 3: Vault location
+- [ ] Step 4: Check-in time
+- [ ] Step 5: Vision and goals
+- [ ] Step 6: Sync schedule
+- [ ] Step 7: Journaling (Phase 2 — skip for MMVP)
+- [ ] Step 8: Lifestyle tracking (Phase 2 — skip for MMVP)
+- [ ] Step 9: Create files and structure (includes git init)
+- [ ] Step 10: Guided tour
+- [ ] Step 11: Mark setup complete
 ```
 
 ---
 
-## Step 1: Greet user
+## Step 1: Check prerequisites
+
+### Git
+Verify git is installed:
+```bash
+git --version
+```
+
+If git not found:
+> "MemSpren requires git for version control of your vault. Every time I modify a file,
+> I commit the previous version first so nothing is ever lost. Please install git:
+> - macOS: `brew install git` or `xcode-select --install`
+> - Linux: `sudo apt install git`
+> - Windows: https://git-scm.com/download/win"
+
+Do NOT proceed with setup until git is available.
+
+### Obsidian CLI
+(Already covered in Prerequisites section of SKILL.md)
+
+---
+
+## Step 2: Greet user
 
 Say:
 > "Hey! I'm going to set up your second brain. Takes about 2 minutes.
@@ -38,7 +62,7 @@ Say:
 
 ---
 
-## Step 2: Vault location
+## Step 3: Vault location
 
 Ask:
 > "What's the full path to your Obsidian vault on your computer?
@@ -60,7 +84,7 @@ If Obsidian is not running, tell user: "Please open Obsidian and try again."
 
 ---
 
-## Step 3: Check-in time
+## Step 4: Check-in time
 
 Ask:
 > "What time works for your daily check-in? (e.g. 9pm, after work)"
@@ -91,7 +115,63 @@ obsidian vault="[vault_name]" create \
 
 ---
 
-## Step 5: Journaling *(Phase 2 — skip for MMVP)*
+## Step 6: Sync schedule
+
+Explain to the user how vault synchronization works, then set up cron jobs.
+
+Say:
+> "Your brain dumps are captured in real-time but synced to Obsidian in batches
+> — this keeps things fast and token-efficient. I can set up automatic syncs
+> throughout the day. How many times per day would you like your vault synced?
+> (e.g. '3 times — noon, 5pm, 9pm' or 'just once at night')"
+
+| Answer | Action |
+|---|---|
+| Provides specific times | Create a cron job for each time using the `cron` tool |
+| Says "default" or skips | Create one default cron job at 21:00 (9 PM) |
+| Doesn't want auto-sync | Skip — user will trigger manually with "sync now" |
+
+**Creating cron jobs:**
+
+For each sync time, create a cron job with:
+- **Schedule:** `cron` kind with appropriate expression (e.g. `0 12 * * *` for noon)
+- **Timezone:** User's timezone (from system or ask)
+- **Session target:** `isolated`
+- **Delivery:** `announce` (so user sees sync results)
+- **Payload:** `agentTurn` with message:
+  ```
+  Trigger a MemSpren sync now. Read the sync-buffer at {vault_path}/.second-brain/Memory/sync-buffer.md
+  — if pending_sync is true, execute the full sync protocol: read Protocols/sync-protocol.md from
+  the memspren skill, follow all 11 steps (validate obsidian-cli, load state, process buffer, batch
+  create/update Obsidian entities, recalculate insights.md + goals.md + hot-memory.md, archive buffer,
+  clear buffer, log results). If pending_sync is false or buffer is empty, reply 'Nothing to sync.'
+  Vault: {vault_name}. Remember to export PATH to include /Applications/Obsidian.app/Contents/MacOS
+  before any obsidian-cli commands.
+  ```
+
+**Store sync schedule in config.md:**
+
+Add to config.md during Step 8 (file creation):
+```yaml
+sync_mode: batch
+sync_interval_cron: [list of times, e.g. "12:00, 17:00, 21:00"]
+sync_cron_job_ids: [list of cron job IDs returned from creation]
+auto_sync_on_checkin_close: true
+buffer_max_tokens: 3000
+```
+
+**Default (if user skips):**
+
+Create one cron job at 21:00 in user's timezone. Store in config.md.
+
+Say:
+> "I've set up automatic sync at [times]. Your vault will be updated with
+> everything captured during the day. You can also say 'sync now' anytime
+> to trigger it manually."
+
+---
+
+## Step 7: Journaling *(Phase 2 — skip for MMVP)*
 
 Ask:
 > "Do you want a daily journaling prompt during check-ins?"
@@ -111,7 +191,7 @@ Default journaling questions:
 
 ---
 
-## Step 6: Lifestyle tracking *(Phase 2 — skip for MMVP)*
+## Step 8: Lifestyle tracking *(Phase 2 — skip for MMVP)*
 
 Ask:
 > "Do you want to track anything daily — health, habits,
@@ -131,7 +211,7 @@ Continue until user says they're done.
 
 ---
 
-## Step 7: Create files and structure
+## Step 9: Create files and structure
 
 **Two locations are used:**
 - **Skill folder** → `.second-brain/` in the mounted folder root (always fixed)
@@ -223,21 +303,94 @@ setup_complete: false
 
 Write using the Write tool:
 
-```markdown
----
-node_type: hot-memory
-last_updated: [TODAY]
----
-# Hot Memory
-
-## Active Projects
-
-## Immediate Tasks
-
-## Patterns Flagged
-
-## Active Protocols
 ```
+LAST_UPDATED: [TODAY]
+
+ACTIVE_PROJECTS [max 3]
+
+OPEN_THREADS
+
+EVIDENCE_TRAIL
+
+KEY_INSIGHTS
+
+IDEAS_PARKED
+```
+
+### Create .second-brain/Memory/insights.md
+
+Write using the Write tool:
+
+```
+LAST_UPDATED: [TODAY]
+
+WHAT_MATTERS_NOW
+[To be populated after first check-in]
+
+RECENT_CHALLENGES
+
+PATTERNS_OBSERVED
+
+STRATEGIES_WORKING
+
+STRATEGIES_NOT_WORKING
+
+ENERGY_STATE
+
+MINDSET_STATE
+
+VISION_ALIGNMENT
+```
+
+### Create .second-brain/Memory/goals.md
+
+Write using the Write tool:
+
+```
+LAST_UPDATED: [TODAY]
+
+LEAD_DOMINO
+[To be populated after first check-in]
+
+TOP_3
+
+WHAT_TO_AVOID
+
+HEALTH_PRIORITY
+
+EMOTIONAL_CHECK
+
+WEEKLY_MICRO_GOALS
+
+QUARTERLY_GOALS
+```
+
+### Create .second-brain/Memory/sync-buffer.md
+
+Write using the Write tool:
+
+```
+---
+node_type: sync-buffer
+last_updated: [TODAY]
+pending_sync: false
+entry_count: 0
+---
+```
+
+### Create .second-brain/Memory/sync-archive/ directory
+
+Create the directory for archived sync buffers.
+
+### Initialize git in the vault
+
+```bash
+python3 scripts/git_commit.py --vault-path "[vault_path]" --init
+```
+
+Tell user:
+> "I've initialized git in your vault for version control. Every time I modify
+> a file, I'll commit the previous version first so nothing is ever lost."
 
 ### Create .second-brain/Memory/system-state.md
 
@@ -266,7 +419,7 @@ moc_suggestions: true
 
 ---
 
-## Step 8: Guided tour
+## Step 10: Guided tour
 
 Say:
 > "Your second brain is ready. Here's what I built:"
@@ -300,7 +453,7 @@ Close with:
 
 ---
 
-## Step 9: Mark setup complete
+## Step 11: Mark setup complete
 
 **Update .second-brain/config.md:**
 

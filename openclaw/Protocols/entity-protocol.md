@@ -6,10 +6,23 @@ Read `Protocols/linking-protocol.md` before writing any file.
 All file paths are relative to `vault_path` stored in config.md.
 All vault file operations use obsidian-cli (create, read, append, property updates).
 
+## Sync Mode Awareness
+
+Check `sync_mode` in `.second-brain/config.md`:
+
+- **`sync_mode: batch`** (default) — This protocol is ONLY executed during sync
+  (triggered by `Protocols/sync-protocol.md`). During conversation, entities are
+  extracted and written to `sync-buffer.md` instead. Do NOT use obsidian-cli
+  during conversation.
+
+- **`sync_mode: immediate`** (legacy) — Entities are created/updated immediately
+  during conversation using obsidian-cli as described below.
+
 ---
 
 ## Core Rules
 
+- **Every file MUST have a `description` field in frontmatter** — one-line summary of what the file is about. This is the search key for finding similar files and preventing duplicates.
 - Always confirm before creating a new entity (except tasks)
 - Never delete existing content — always append
 - Always check if entity already exists before creating

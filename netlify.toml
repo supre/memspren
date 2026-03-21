@@ -21,15 +21,15 @@
 [context.production]
   command = "exit 0"
 
-# Ignore all other branches - don't deploy previews
+# Block direct branch deploys - feature branches only deploy via PRs (deploy-preview)
 [context.branch-deploy]
   command = "exit 1"
 
-# Prevent deploy previews on pull requests
+# Deploy previews for pull requests - serve from docs folder
 [context.deploy-preview]
-  command = "exit 1"
+  command = "echo 'Static site, no build needed'"
+  publish = "docs"
 
-# Prevent deploy previews on branch deploys
 [[headers]]
   for = "/*"
   [headers.values]

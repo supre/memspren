@@ -3,12 +3,12 @@
 Triggered when user says "check in", "let's do my daily check-in",
 "end of day", or anything signaling they want to log their day.
 
-Read `.second-brain/Memory/hot-memory.md` and `.second-brain/Memory/system-state.md` before starting.
-Read `Protocols/entity-protocol.md` when creating or updating any entity.
-Read `Protocols/linking-protocol.md` when writing any file.
+Read `.second-brain/Memory/insights.md`, `.second-brain/Memory/goals.md`,
+and `.second-brain/Memory/hot-memory.md` before starting.
+These are your ONLY context sources during conversation — do NOT read vault files.
 
-All vault file operations use obsidian-cli. Vault content paths are relative to `vault_path` from `.second-brain/config.md`.
-Skill operational files (Memory, config) are at `.second-brain/` — not in the vault.
+Read `Protocols/entity-protocol.md` only during sync (not during conversation).
+Read `Protocols/linking-protocol.md` only during sync (not during conversation).
 
 ---
 
@@ -21,11 +21,11 @@ Copy and track:
 - [ ] Step 3: Brain dump
 - [ ] Step 4: Silent inference pass
 - [ ] Step 5: Targeted follow-up
-- [ ] Step 6: Create and update entities
+- [ ] Step 6: Extract and buffer entities
 - [ ] Step 7: Journaling (if enabled)
 - [ ] Step 8: Lifestyle check-in (if enabled)
 - [ ] Step 9: Synthesis and close
-- [ ] Step 10: Update memory and log
+- [ ] Step 10: Update memory
 ```
 
 ---
@@ -66,14 +66,7 @@ If gap is 3+ occurrences in the last 30 days, flag it:
 > we've missed [X] days in the last month. Worth noting as
 > a pattern. Want to adjust your check-in time or approach?"
 
-**Log gap** to `Logs/system-log.md` using obsidian-cli append:
-```bash
-obsidian vault="[vault_name]" append \
-  path=Logs/system-log.md \
-  content="\n[TIMESTAMP] CHECK-IN: Gap detected — [count] days since last check-in"
-```
-
-Log pattern flag separately when threshold is crossed.
+**Note gap in sync-buffer** for later logging to system-log during sync.
 
 ---
 
@@ -105,7 +98,8 @@ Inference checklist:
 - [ ] Journaling questions covered naturally?
 - [ ] Lifestyle metrics mentioned naturally?
 - [ ] Anything that connects to Vision or Strategy?
-- [ ] What is NOT covered that hot-memory says should be?
+- [ ] What is NOT covered that insights.md or goals.md says should be?
+- [ ] Energy/mindset shift from previous state in insights.md?
 ```
 
 Mark what was covered. Only follow up on what was NOT.
@@ -132,133 +126,58 @@ Stop follow-up when all gaps are covered or user signals they're done.
 
 ---
 
-## Step 6: Create and update entities
+## Step 6: Extract and buffer entities
 
-Read `Protocols/entity-protocol.md` now.
-Read `Protocols/linking-protocol.md` now.
+This is where the old protocol wrote directly to Obsidian.
+**NEW: Write to sync-buffer.md instead.**
 
-Create or update one entity at a time, in this order:
+For everything the user shared, append a DETAILED entry to
+`.second-brain/Memory/sync-buffer.md` using the Write/Edit tool.
 
-### 6a — Daily log note
-
-Create `Log/Daily/YYYY-MM-DD.md` using obsidian-cli create.
-
-The full template is:
-
+**Entry format:**
 ```markdown
 ---
-node_type: log-entry
-created: [TODAY]
-status: active
-connected:
-  - [project files mentioned]
-  - [idea files mentioned]
-  - [people files mentioned]
-tags: []
----
 
-# [YYYY-MM-DD]
+## Entry [N] | [YYYY-MM-DD HH:MM TZ] | check-in
 
-## What Happened
-[Prose summary of the day — written naturally, captures what happened,
-how the user felt, what was on their mind]
+### Full Context
+[DETAILED capture of everything the user said. NOT condensed, NOT summarized.
+Include: emotional state, specific names mentioned, specific numbers, quotes,
+reasoning, decisions made, what they're struggling with, what they're excited about.
+This is the source of truth for creating Obsidian entities during sync.
+More detail is ALWAYS better than less.]
 
-## Energy and Focus
-[How the user felt — inferred from tone if not stated directly]
+### Extracted Entities
+- DAILY_LOG: [date] | [detailed summary of the day]
+- PROJECT_UPDATE: [project name] | [what changed, why, specific evidence]
+- PERSON_UPDATE: [name] | [interaction details, context, emotional weight]
+- PERSON_NEW: [name] | [who they are, relationship, context]
+- PATTERN_UPDATE: [pattern name] | [new evidence with dates]
+- PATTERN_NEW: [name] | [description, when observed, triggers, evidence]
+- TASK_NEW: [description] | [priority] | [due date] | [connected project]
+- TASK_COMPLETE: [description] | [completion date]
+- IDEA: [name] | [full context, reasoning, connections]
+- LEARNING: [topic] | [what was learned, source, why it matters]
 
-## Open Threads
-[Anything unresolved, pending, or uncertain]
-
-## Reflections
-[Journaling responses if journaling enabled — leave blank if not]
-
-## Linked Updates
-[List of files updated during this check-in with [[links]]]
+### Proposed Links
+- [file A] ↔ [file B] | [reason for link]
 ```
 
-**Create using obsidian-cli:**
-```bash
-obsidian vault="[vault_name]" create \
-  path=Log/Daily/YYYY-MM-DD.md \
-  content="---\nnode_type: log-entry\ncreated: YYYY-MM-DD\nstatus: active\nconnected: []\ntags: []\n---\n\n# YYYY-MM-DD\n\n## What Happened\n[content]\n\n## Energy and Focus\n[content]\n\n## Open Threads\n[content]\n\n## Reflections\n\n## Linked Updates"
-```
+**Rules for buffer entries:**
+- Append only — never edit previous entries
+- Be DETAILED — full context preserved (this is what Obsidian entities are built from later)
+- Include emotional context, not just facts
+- Include user's exact words where significant (quotes matter for patterns)
+- Update `entry_count` and `last_updated` in buffer frontmatter
+- Set `pending_sync: true` in buffer frontmatter
 
-### 6b — Project updates
+**Also update insights.md and goals.md in-place** if a significant shift was detected:
+- Major mindset change (spiral, breakthrough, inner critic episode)
+- Energy state change (gym miss, sleep failure, illness)
+- Priority shift (user says something is more/less important now)
+- New pattern identified
 
-For each project mentioned:
-- **Read** the existing project file using obsidian-cli:
-  ```bash
-  obsidian vault="[vault_name]" read path=Work/Projects/[project].md
-  ```
-- Append a new `### [TODAY]` section under `## Progress Notes`
-- Update `last_modified` in frontmatter
-- Add today's log path to the `connected:` array using the helper script:
-  ```bash
-  python scripts/update_connected.py \
-    --vault "[vault_name]" \
-    --file "Work/Projects/[project].md" \
-    --add "Log/Daily/YYYY-MM-DD.md"
-  ```
-- **Write** the updated file back using obsidian-cli:
-  ```bash
-  obsidian vault="[vault_name]" create \
-    path=Work/Projects/[project].md \
-    content="[full updated content]" \
-    overwrite
-  ```
-
-If a project is mentioned that doesn't exist yet:
-- Ask: *"Is [name] a new project? Want me to set it up properly
-  with goals and a deadline?"*
-- If yes → follow entity-protocol.md → Project creation
-- If no → treat as an idea instead
-
-### 6c — Ideas
-
-For each new idea surfaced:
-- **Create** atomic idea file using obsidian-cli (see entity-protocol.md for template):
-  ```bash
-  obsidian vault="[vault_name]" create \
-    path=Work/Ideas/[idea-name].md \
-    content="[filled template]"
-  ```
-- Link to today's daily log and any related projects or people
-- If user elaborated significantly → capture full context
-- If user mentioned it briefly → create stub, note it's underdeveloped
-
-### 6d — People
-
-For each person mentioned:
-
-- **Read** the existing person file if it exists:
-  ```bash
-  obsidian vault="[vault_name]" read path=People/[firstname-lastname].md
-  ```
-- If file exists → append interaction note under `## Interaction Log`
-  + add today's log path to `connected:` array using helper script + write back
-- If no file → **create** `People/[name].md` using obsidian-cli:
-  ```bash
-  obsidian vault="[vault_name]" create \
-    path=People/[firstname-lastname].md \
-    content="[filled template]"
-  ```
-- Link to today's log and any connected projects
-
-### 6e — Tasks
-
-For each task mentioned:
-- **Read** `{vault_path}/Tasks/tasks-inbox.md` using obsidian-cli:
-  ```bash
-  obsidian vault="[vault_name]" read path=Tasks/tasks-inbox.md
-  ```
-- **New task** → Append the task under `## Active Tasks` using obsidian-cli append:
-  ```bash
-  obsidian vault="[vault_name]" append \
-    path=Tasks/tasks-inbox.md \
-    content="\n- [ ] [Task description]\n  priority: high | medium | low\n  due: [date]\n  tags: #project | #idea | #life\n  created: YYYY-MM-DD"
-  ```
-- **Completed task** → Read tasks-inbox.md, mark `- [x]`, add `completed: [TODAY]`, write back with overwrite
-- **Blocked task** → Append status info, flag in hot-memory if it blocks an active project
+For minor updates, let the sync recalculation handle it.
 
 ---
 
@@ -271,20 +190,8 @@ If false → skip this step entirely.
 If true → check which journaling questions were NOT already
 covered naturally in the brain dump (Step 4 inference pass).
 
-Ask only uncovered questions, one at a time, woven naturally:
-
-> "One more thing — [journaling question]?"
-
-Do not ask all questions in sequence. It should feel like
-conversation, not a form.
-
-Capture answers and **append** to today's daily log under
-the `## Reflections` section using obsidian-cli append:
-```bash
-obsidian vault="[vault_name]" append \
-  path=Log/Daily/YYYY-MM-DD.md \
-  content="\n### [Question]\n[Answer]"
-```
+Ask only uncovered questions, one at a time, woven naturally.
+Capture answers in the sync-buffer entry (append to the current entry's Full Context).
 
 ---
 
@@ -294,99 +201,64 @@ obsidian vault="[vault_name]" append \
 
 If false → skip this step entirely.
 
-If true → for each active lifestyle protocol in system-state.md:
-- Check if the metric was mentioned naturally in brain dump
-- If yes → log it, do not ask again
+If true → for each active lifestyle metric:
+- Check if mentioned naturally in brain dump
+- If yes → already captured in buffer, do not ask again
 - If no → ask naturally, one metric at a time
 
-**Create** `Life/Lifestyle/YYYY-MM-DD-[area].md` with logged values using obsidian-cli create.
-Link to today's daily log.
-
-Track completion. If a metric is skipped 3+ times in a week,
-note it in the synthesis (Step 9) and flag in system-log.md.
+Capture responses in the sync-buffer entry.
 
 ---
 
 ## Step 9: Synthesis and close
 
-After all entities are created and updated, close the check-in
+After all data is captured in the buffer, close the check-in
 with a brief, natural synthesis. Three parts:
 
-### Part 1 — What was logged
+### Part 1 — What was captured
 
-Short summary of what got captured today. Not a list readout —
-a sentence or two:
+Short summary of what was captured. Note it hasn't synced to vault yet:
 
-> "Okay, I've logged your work on [project], captured the idea
-> about [idea], and added [task] to your inbox."
+> "Captured your work on [project], the idea about [idea], and
+> [task] for your inbox. These will sync to your vault on next sync."
 
 ### Part 2 — Pattern or observation (if anything notable)
 
 Only include if something genuinely stands out. Don't force it.
+Reference insights.md patterns if relevant:
 
-Examples:
-> "You've mentioned feeling scattered three days in a row —
-> might be worth looking at what's creating that."
-
-> "The [project] hasn't come up in check-ins for a week —
-> it might be going idle soon."
-
-> "You've been logging a lot of ideas this week but not
-> converting any to projects — just noting it."
+> "I've noticed [pattern] showing up again — [brief observation]."
 
 ### Part 3 — Tomorrow's priorities
 
-**Read** `Tasks/tasks-inbox.md` and pull from `hot-memory.md` (high priority + due soon)
-and active projects. Suggest 2–3 things max:
+Pull from goals.md (current priorities) and what user shared.
+Suggest 2–3 things max:
 
 > "For tomorrow — based on what's open, I'd focus on:
 > 1. [most important task or project milestone]
 > 2. [second priority]
 > 3. [optional third if clearly important]"
 
-Keep it short. Do not overwhelm.
+### Part 4 — Sync prompt
+
+> "Want me to sync this to your vault now, or let it accumulate?"
+
+If `auto_sync_on_checkin_close: true` in config.md:
+> "Auto-syncing to your vault now..."
+> Then trigger sync (read `Protocols/sync-protocol.md` and execute).
 
 ---
 
-## Step 10: Update memory and log
+## Step 10: Update memory
 
-### Update hot-memory.md
-
-**Read** `.second-brain/Memory/hot-memory.md`, rewrite with today's state.
-Keep under 800 tokens. Include:
-
-- Active projects with current status (one line each)
-- Top 3 tasks by priority
-- Any patterns currently flagged
-- Any targets being re-evaluated
-- Active protocols list
-
-→ **Write** back using the Write tool (not obsidian-cli — this is a skill file, not vault content).
-
-### Update system-state.md
-
-**Read** `.second-brain/Memory/system-state.md`, update:
+**Update system-state.md** (using Write tool):
 ```yaml
 last_checkin_date: [TODAY]
 last_checkin_summary: [one line summary]
 ```
-→ **Write** back using the Write tool.
 
-### Update index.md *(Phase 2)*
-
-> **MMVP note:** Skip until `Context-Docs/index.md` exists.
-
-Add any new nodes created today.
-Update link frequency for any nodes that gained new connections.
-
-### Log to system-log.md
-
-**Append** to `{vault_path}/Logs/system-log.md` using obsidian-cli:
-```bash
-obsidian vault="[vault_name]" append \
-  path=Logs/system-log.md \
-  content="\n[TIMESTAMP] CHECK-IN COMPLETE\n  date: YYYY-MM-DD\n  entities_created: [count and types]\n  entities_updated: [count and types]\n  patterns_flagged: [any or none]\n  missed_days_gap: [count or none]\n  journaling: [completed/skipped]\n  lifestyle_tracked: [areas or none]"
-```
+**If sync was triggered in Step 9:** sync-protocol.md handles all memory updates.
+**If sync was NOT triggered:** insights.md and goals.md should already be updated in-place from Step 6 (for significant shifts only).
 
 ---
 
@@ -394,9 +266,8 @@ obsidian vault="[vault_name]" append \
 
 | Problem                                  | Action                                                                             |
 | ---------------------------------------- | ---------------------------------------------------------------------------------- |
-| obsidian-cli returns error               | Check if Obsidian is running. If not, tell user: "Obsidian needs to be open for me to update your vault. Please open Obsidian and try again." |
 | User is very brief, gives minimal info   | Ask one open follow-up: *"Anything else on your mind today?"* — don't push further |
-| User wants to skip check-in              | Respect it. Log: `CHECK-IN SKIPPED` with date. Note gap tomorrow.                  |
-| Entity file missing that should exist    | Create it now with available context. Note it was auto-created in system-log.      |
-| User contradicts something in hot-memory | Trust the user. Update hot-memory immediately.                                     |
-| User seems stressed or overwhelmed       | Acknowledge it first before any logging. Don't push through the checklist.         |
+| User wants to skip check-in              | Respect it. Note in buffer: `CHECK-IN SKIPPED` with date.                          |
+| User contradicts something in insights   | Trust the user. Update insights.md immediately.                                    |
+| User seems stressed or overwhelmed       | Acknowledge it first before any capture. Don't push through the checklist.         |
+| Buffer write fails                       | Fall back to updating insights.md and goals.md directly. Log the failure.          |

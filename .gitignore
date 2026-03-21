@@ -1,1 +1,6 @@
 .internal/
+.netlify/
+.claude/
+netlify.toml
+node_modules/
+dist/

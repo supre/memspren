@@ -74,12 +74,18 @@ Every file starts with this block. Fields vary by node type.
 ---
 node_type: [see valid values below]
 created: YYYY-MM-DD
+description: "[one-line summary of what this file is about]"
 status: [see valid values below]
 connected: []
 tags: []
 last_modified: YYYY-MM-DD
 ---
 ```
+
+**The `description` field is REQUIRED for all node types.** It serves as:
+- Search key for finding similar/duplicate files during sync
+- Identity of the file for smart merge decisions
+- Retrieval aid for "what do I have about X?" queries
 
 ### Valid node_type values
 ```
