@@ -24,9 +24,12 @@ A Claude skill that turns Claude into your thinking partner for daily check-ins,
 An OpenClaw skill that integrates memspren with [OpenClaw](https://openclaw.ai/)—a local AI assistant that runs on your machine with browser control, file access, and extensible skills.
 
 - **Local-first AI** — runs on your machine, keeps your data private
-- **Obsidian integration** — same Zettelkasten patterns as Claude plugin
+- **Three-layer memory architecture** — active memory (insights, goals, hot-memory) + brain dump buffer + Obsidian vault sync
+- **Batch sync system** — captures during conversation, syncs to vault on demand with smart deduplication
+- **Smart merge** — description-based deduplication prevents duplicate entities when syncing
+- **Knowledge transfer protocol** — structured capture of context when switching between sessions
 - **Daily check-in workflow** — brain dump → targeted follow-up → entity creation
-- **Persistent memory** — maintains context across OpenClaw sessions
+- **Git safety** — automated commits with conflict detection during sync
 - **Full Zettelkasten** — YAML frontmatter + Obsidian wikilinks keep your graph connected
 
 [Read more →](./openclaw/README.md)
@@ -65,6 +68,8 @@ All plugins implement:
 - **Check-in protocol** — structured daily reviews
 - **Entity protocol** — creation and update rules for each entity type
 - **Linking protocol** — frontmatter + wikilink system
+- **Sync protocol** — batch sync from buffer to vault with smart merge (OpenClaw)
+- **Knowledge transfer protocol** — structured context capture across sessions (OpenClaw)
 
 [See full protocols →](./claude/Protocols/)
 
