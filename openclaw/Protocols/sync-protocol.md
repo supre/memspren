@@ -74,12 +74,27 @@ Process entities in this order:
 
 ### 4a — Daily log note
 
-Create `Log/Daily/YYYY-MM-DD.md` with FULL DETAILED content from all buffer entries for that date.
-Include: everything the user said, full emotional context, decisions made, specific names/numbers/quotes.
-This is the richest document — do not condense. Use the full context from buffer entries.
+**CRITICAL: Check if today's daily log already exists before creating.**
+
+```bash
+obsidian vault="[vault_name]" read path=Log/Daily/YYYY-MM-DD.md
+```
+
+- **If it exists:** APPEND new content to the existing log. Do NOT create a new file or overwrite.
+  Use `obsidian vault="[vault_name]" append` to add new sections for the time period covered
+  by the current buffer entries. Add a timestamp header (e.g., `## Afternoon Update (3:00 PM)`)
+  to separate from earlier content.
+
+- **If it does NOT exist:** Create `Log/Daily/YYYY-MM-DD.md` with FULL DETAILED content from
+  all buffer entries for that date.
+
+In both cases: include everything the user said, full emotional context, decisions made, specific
+names/numbers/quotes. This is the richest document — do not condense. Use the full context from
+buffer entries.
 
 Follow the daily log template from entity-protocol.md.
 Link to all entities created/updated during this sync.
+Update the `connected:` array using the helper script (append, don't replace).
 
 ### 4b — Project updates
 
