@@ -136,17 +136,39 @@ body {
 <nav class="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-4xl">
   <div class="glass-card rounded-full px-8 py-3 flex justify-between items-center">
     <a class="font-headline text-2xl font-bold text-primary italic glow-text" href="#top">MemSpren</a>
+    <!-- Desktop nav -->
     <div class="hidden md:flex items-center gap-x-8">
       <a class="font-label text-xs uppercase tracking-[0.2em] text-primary hover:text-accent-cyan transition-all" href="#story">Story</a>
       <a class="font-label text-xs uppercase tracking-[0.2em] text-on-surface/60 hover:text-primary transition-all" href="#publications">Publications</a>
       <a class="font-label text-xs uppercase tracking-[0.2em] text-on-surface/60 hover:text-primary transition-all" href="#progress">Progress</a>
       <a class="font-label text-xs uppercase tracking-[0.2em] text-on-surface/60 hover:text-primary transition-all" href="#setup">Setup</a>
     </div>
-    <div class="flex items-center gap-4">
+    <div class="hidden md:flex items-center gap-4">
       <a href="https://github.com/supre/memspren" target="_blank" rel="noopener noreferrer" class="text-on-surface/40 hover:text-primary transition-colors" title="GitHub">
         <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
       </a>
       <span id="site-version" class="font-label text-xs text-on-surface/30 tracking-widest"></span>
+    </div>
+    <!-- Mobile burger -->
+    <button class="md:hidden text-primary/60 hover:text-primary transition-colors" onclick="toggleMobileNav()" id="mobile-burger" aria-label="Menu">
+      <span class="material-symbols-outlined text-2xl">menu</span>
+    </button>
+  </div>
+  <!-- Mobile slide menu -->
+  <div id="mobile-nav" class="md:hidden glass-card rounded-2xl mt-3 overflow-hidden transition-all duration-300" style="max-height:0; opacity:0;">
+    <div class="flex flex-col py-4">
+      <a class="font-label text-sm uppercase tracking-[0.2em] text-primary px-8 py-3 hover:bg-primary/10 transition-colors no-underline" href="#story" onclick="closeMobileNav()">Story</a>
+      <a class="font-label text-sm uppercase tracking-[0.2em] text-on-surface/60 px-8 py-3 hover:bg-primary/10 hover:text-primary transition-colors no-underline" href="#publications" onclick="closeMobileNav()">Publications</a>
+      <a class="font-label text-sm uppercase tracking-[0.2em] text-on-surface/60 px-8 py-3 hover:bg-primary/10 hover:text-primary transition-colors no-underline" href="#progress" onclick="closeMobileNav()">Progress</a>
+      <a class="font-label text-sm uppercase tracking-[0.2em] text-on-surface/60 px-8 py-3 hover:bg-primary/10 hover:text-primary transition-colors no-underline" href="#setup" onclick="closeMobileNav()">Setup</a>
+      <div class="border-t border-primary/10 mx-8 my-2"></div>
+      <a class="flex items-center gap-3 text-on-surface/50 px-8 py-3 hover:bg-primary/10 hover:text-primary transition-colors no-underline" href="https://github.com/supre/memspren" target="_blank" rel="noopener noreferrer">
+        <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+        <span class="font-label text-sm uppercase tracking-[0.2em]">GitHub</span>
+      </a>
+      <div class="px-8 py-3">
+        <span class="site-version font-label text-xs text-on-surface/30 tracking-widest"></span>
+      </div>
     </div>
   </div>
 </nav>
@@ -179,8 +201,19 @@ body {
       You just can't see how they connect.
     </p>
 
+    <!-- CTAs -->
+    <div class="hero-animate hero-animate-delay-3 flex flex-wrap justify-center gap-6 mt-16">
+      <a href="#setup" class="bg-primary text-on-primary px-10 py-4 rounded-full font-bold uppercase tracking-widest text-xs flex items-center gap-3 hover:shadow-[0_0_30px_rgba(131,213,198,0.4)] transition-all no-underline">
+        Get Started
+        <span class="material-symbols-outlined text-lg">terminal</span>
+      </a>
+      <a href="#story" class="px-10 py-4 rounded-full border border-primary/20 text-primary font-bold uppercase tracking-widest text-xs hover:bg-primary/10 transition-colors backdrop-blur-sm no-underline">
+        Read the Story
+      </a>
+    </div>
+
     <!-- Scroll cue -->
-    <div class="hero-animate hero-animate-delay-3 mt-20 scroll-cue">
+    <div class="mt-12 scroll-cue">
       <span class="material-symbols-outlined text-primary/30 text-3xl">expand_more</span>
     </div>
   </div>
@@ -197,8 +230,10 @@ body {
     </div>
 
     <div class="reveal">
-      <h2 class="text-4xl md:text-5xl font-headline italic text-primary glow-text mb-4">The Story</h2>
-      <p class="text-on-surface/40 text-sm font-light mb-16">Click a node to expand.</p>
+      <h2 class="text-4xl md:text-5xl font-headline italic text-primary glow-text mb-6">The Story</h2>
+      <p class="text-on-surface/50 text-base md:text-lg font-light leading-relaxed max-w-2xl mb-16">
+        MemSpren started as a personal problem — scattered ideas, vanishing AI conversations, abandoned note systems. It became a methodology for turning raw thinking into a connected knowledge graph. Automatically.
+      </p>
     </div>
 
     <div class="relative reveal">
@@ -536,9 +571,33 @@ body {
 
 
 <!-- ============================================ -->
-<!-- STEPPER SCRIPT                                -->
+<!-- MOBILE NAV + STEPPER SCRIPT                   -->
 <!-- ============================================ -->
 <script>
+var mobileNavOpen = false;
+function toggleMobileNav() {
+  var nav = document.getElementById('mobile-nav');
+  var burger = document.getElementById('mobile-burger');
+  mobileNavOpen = !mobileNavOpen;
+  if (mobileNavOpen) {
+    nav.style.maxHeight = nav.scrollHeight + 'px';
+    nav.style.opacity = '1';
+    burger.innerHTML = '<span class="material-symbols-outlined text-2xl">close</span>';
+  } else {
+    nav.style.maxHeight = '0';
+    nav.style.opacity = '0';
+    burger.innerHTML = '<span class="material-symbols-outlined text-2xl">menu</span>';
+  }
+}
+function closeMobileNav() {
+  var nav = document.getElementById('mobile-nav');
+  var burger = document.getElementById('mobile-burger');
+  mobileNavOpen = false;
+  nav.style.maxHeight = '0';
+  nav.style.opacity = '0';
+  burger.innerHTML = '<span class="material-symbols-outlined text-2xl">menu</span>';
+}
+
 function toggleStep(stepNum) {
   var steps = document.querySelectorAll('.stepper-step');
   steps.forEach(function(step) {
@@ -592,6 +651,9 @@ document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
 document.querySelectorAll('.reveal-stagger.reveal').forEach(el => {
   observer.observe(el);
 });
+
+// Auto-expand step 1 on load
+toggleStep(1);
 </script>
 
 <script src="script.js?v=5"></script>
