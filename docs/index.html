@@ -1,865 +1,599 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html class="scroll-smooth" lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>MemSpren | The Digital Curator</title>
+<title>MemSpren | A Second Brain Framework</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,600&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script>
-    tailwind.config = {
-        darkMode: "class",
-        theme: {
-            extend: {
-                colors: {
-                    "on-error": "#ffffff",
-                    "surface-container-low": "#f4f3f1",
-                    "surface": "#faf9f7",
-                    "on-tertiary-container": "#ffcebf",
-                    "surface-container": "#efeeec",
-                    "on-secondary-container": "#636262",
-                    "tertiary-fixed-dim": "#ffb59e",
-                    "surface-container-highest": "#e3e2e0",
-                    "error-container": "#ffdad6",
-                    "on-primary": "#ffffff",
-                    "inverse-surface": "#2f3130",
-                    "on-tertiary": "#ffffff",
-                    "error": "#ba1a1a",
-                    "on-background": "#1a1c1b",
-                    "surface-container-high": "#e9e8e6",
-                    "on-primary-container": "#95e8d9",
-                    "on-error-container": "#93000a",
-                    "tertiary": "#723521",
-                    "background": "#faf9f7",
-                    "tertiary-container": "#8f4c36",
-                    "secondary-container": "#e2dfde",
-                    "on-tertiary-fixed-variant": "#723521",
-                    "on-primary-fixed": "#00201c",
-                    "secondary": "#5f5e5e",
-                    "primary": "#005147",
-                    "outline": "#6e7976",
-                    "surface-tint": "#006b5f",
-                    "secondary-fixed-dim": "#c8c6c5",
-                    "inverse-primary": "#83d5c6",
-                    "on-primary-fixed-variant": "#005047",
-                    "secondary-fixed": "#e5e2e1",
-                    "on-tertiary-fixed": "#390b00",
-                    "surface-bright": "#faf9f7",
-                    "outline-variant": "#bec9c5",
-                    "on-secondary-fixed-variant": "#474746",
-                    "inverse-on-surface": "#f1f1ef",
-                    "surface-variant": "#e3e2e0",
-                    "on-secondary": "#ffffff",
-                    "surface-dim": "#dadad8",
-                    "primary-fixed-dim": "#83d5c6",
-                    "on-surface-variant": "#3e4946",
-                    "on-surface": "#1a1c1b",
-                    "primary-container": "#006b5f",
-                    "on-secondary-fixed": "#1b1b1b",
-                    "tertiary-fixed": "#ffdbd0",
-                    "surface-container-lowest": "#ffffff",
-                    "primary-fixed": "#9ff2e2"
-                },
-                fontFamily: {
-                    "headline": ["Newsreader"],
-                    "body": ["Manrope"],
-                    "label": ["Manrope"]
-                },
-                borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
-            },
-        },
-    }
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "primary": "#83d5c6",
+        "on-primary": "#00201c",
+        "surface": "#0a0c10",
+        "on-surface": "#e1e3e1",
+        "accent-cyan": "#00f5ff",
+        "accent-teal": "#005147",
+        "glass-bg": "rgba(10, 12, 16, 0.7)",
+        "glass-border": "rgba(131, 213, 198, 0.1)"
+      },
+      fontFamily: {
+        "headline": ["Newsreader", "serif"],
+        "body": ["Manrope", "sans-serif"],
+        "label": ["Manrope", "sans-serif"]
+      },
+      borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+    },
+  },
+}
 </script>
 <style>
-    .material-symbols-outlined {
-        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-    }
-    body {
-        font-family: 'Manrope', sans-serif;
-        -webkit-font-smoothing: antialiased;
-    }
-    .editorial-title {
-        font-family: 'Newsreader', serif;
-    }
-    /* SPA pages */
-    .page { display: none; }
-    .page.active { display: block; }
-    /* Filter toggle */
-    .filters-panel { max-height: 0; overflow: hidden; transition: max-height 0.25s ease-out; }
-    .filters-panel.open { max-height: 500px; transition: max-height 0.3s ease-in; }
-    /* Filter badge */
-    .filter-badge { display: none; }
-    .filter-badge.visible { display: inline-flex; }
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
+}
+.glow-text {
+  text-shadow: 0 0 20px rgba(0, 245, 255, 0.3), 0 0 40px rgba(0, 245, 255, 0.1);
+}
+.glass-card {
+  background: rgba(15, 20, 25, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(131, 213, 198, 0.1);
+}
+.glass-card-hover:hover {
+  border-color: rgba(131, 213, 198, 0.3);
+}
+body {
+  background-color: #0a0c10;
+  background-image:
+    linear-gradient(rgba(10, 12, 16, 0.8), rgba(10, 12, 16, 0.9)),
+    url(memspren-spren.png);
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+}
+
+/* Fade-in on scroll */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered children */
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal-stagger.visible > *:nth-child(1) { transition-delay: 0s; opacity: 1; transform: translateY(0); }
+.reveal-stagger.visible > *:nth-child(2) { transition-delay: 0.1s; opacity: 1; transform: translateY(0); }
+.reveal-stagger.visible > *:nth-child(3) { transition-delay: 0.2s; opacity: 1; transform: translateY(0); }
+.reveal-stagger.visible > *:nth-child(4) { transition-delay: 0.3s; opacity: 1; transform: translateY(0); }
+.reveal-stagger.visible > *:nth-child(5) { transition-delay: 0.4s; opacity: 1; transform: translateY(0); }
+.reveal-stagger.visible > *:nth-child(6) { transition-delay: 0.5s; opacity: 1; transform: translateY(0); }
+
+/* Hero entrance */
+@keyframes hero-fade {
+  from { opacity: 0; transform: translateY(32px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.hero-animate {
+  animation: hero-fade 1s ease forwards;
+}
+.hero-animate-delay-1 { animation-delay: 0.2s; opacity: 0; }
+.hero-animate-delay-2 { animation-delay: 0.5s; opacity: 0; }
+.hero-animate-delay-3 { animation-delay: 0.8s; opacity: 0; }
+
+/* Subtle pulse on the scroll cue */
+@keyframes gentle-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+.scroll-cue {
+  animation: gentle-bob 2.5s ease-in-out infinite;
+}
+
+/* Section divider glow */
+.section-glow {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(131,213,198,0.2) 30%, rgba(131,213,198,0.2) 70%, transparent);
+}
+
+/* HUD scanline overlay */
+.hud-scanline {
+  background: linear-gradient(to bottom, transparent 50%, rgba(0, 245, 255, 0.02) 50%);
+  background-size: 100% 4px;
+}
+
+/* Stepper arrow rotation */
+.stepper-arrow {
+  transition: transform 0.3s ease;
+}
+
+/* Arrow entity styling */
+.entity-arrow {
+  color: rgba(131,213,198,0.6);
+}
 </style>
 </head>
-<body class="bg-surface text-on-surface min-h-screen flex flex-col">
 
-<!-- TopNavBar -->
-<nav class="fixed top-0 w-full z-50 bg-[#faf9f7]/80 backdrop-blur-xl">
-    <div class="flex justify-between items-center px-6 py-4 max-w-full">
-        <div class="flex items-center gap-8">
-            <a href="#/story" class="font-headline font-bold text-primary text-xl no-underline">MemSpren</a>
-        </div>
-        <div class="flex items-center gap-3">
-            <a href="https://github.com/supre/memspren" target="_blank" rel="noopener noreferrer" class="text-secondary hover:text-primary transition-colors no-underline flex items-center" title="View on GitHub">
-                <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
-            </a>
-            <span id="site-version" class="text-[10px] font-label uppercase tracking-widest text-secondary px-2 py-1 bg-surface-container rounded-lg"></span>
-        </div>
+<body class="bg-surface text-on-surface font-body selection:bg-primary selection:text-on-primary min-h-screen antialiased">
+
+<!-- ============================================ -->
+<!-- TOP NAVIGATION                               -->
+<!-- ============================================ -->
+<nav class="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-4xl">
+  <div class="glass-card rounded-full px-8 py-3 flex justify-between items-center">
+    <a class="font-headline text-2xl font-bold text-primary italic glow-text" href="#top">MemSpren</a>
+    <div class="hidden md:flex items-center gap-x-8">
+      <a class="font-label text-xs uppercase tracking-[0.2em] text-primary hover:text-accent-cyan transition-all" href="#story">Story</a>
+      <a class="font-label text-xs uppercase tracking-[0.2em] text-on-surface/60 hover:text-primary transition-all" href="#publications">Publications</a>
+      <a class="font-label text-xs uppercase tracking-[0.2em] text-on-surface/60 hover:text-primary transition-all" href="#progress">Progress</a>
+      <a class="font-label text-xs uppercase tracking-[0.2em] text-on-surface/60 hover:text-primary transition-all" href="#setup">Setup</a>
     </div>
-    <div class="bg-surface-container-low h-[1px] w-full"></div>
+    <div class="flex items-center gap-4">
+      <a href="https://github.com/supre/memspren" target="_blank" rel="noopener noreferrer" class="text-on-surface/40 hover:text-primary transition-colors" title="GitHub">
+        <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+      </a>
+      <span id="site-version" class="font-label text-xs text-on-surface/30 tracking-widest"></span>
+    </div>
+  </div>
 </nav>
 
-<!-- Main Layout -->
-<div class="flex flex-1 pt-20">
 
-    <!-- SideNavBar -->
-    <aside class="fixed left-3 top-20 bottom-4 w-64 rounded-xl border-none bg-surface shadow-[0_20px_40px_rgba(26,28,27,0.04)] hidden md:block">
-        <div class="flex flex-col py-6 space-y-2 h-full">
-            <div class="px-6 mb-8">
-                <h2 class="font-body font-bold text-lg text-primary">The Curator</h2>
-                <p class="font-body font-medium text-xs tracking-wide text-secondary uppercase">Knowledge Archive</p>
-            </div>
-            <nav class="flex-1 space-y-1" id="side-nav">
-                <a href="#/story" data-route="story" class="nav-item flex items-center px-4 py-3 rounded-full mx-2 cursor-pointer transition-transform hover:translate-x-1 no-underline text-secondary hover:bg-surface-container-low">
-                    <span class="material-symbols-outlined mr-3">history_edu</span>
-                    <span class="font-body font-medium text-sm tracking-wide">Story</span>
-                </a>
-                <a href="#/toolkit" data-route="toolkit" class="nav-item flex items-center px-4 py-3 rounded-full mx-2 cursor-pointer transition-transform hover:translate-x-1 no-underline text-secondary hover:bg-surface-container-low">
-                    <span class="material-symbols-outlined mr-3">handyman</span>
-                    <span class="font-body font-medium text-sm tracking-wide">Toolkit</span>
-                </a>
-                <a href="#/log" data-route="log" class="nav-item flex items-center px-4 py-3 rounded-full mx-2 cursor-pointer transition-transform hover:translate-x-1 no-underline text-secondary hover:bg-surface-container-low">
-                    <span class="material-symbols-outlined mr-3">menu_book</span>
-                    <span class="font-body font-medium text-sm tracking-wide">Log</span>
-                </a>
-                <a href="#/publications" data-route="publications" class="nav-item flex items-center px-4 py-3 rounded-full mx-2 cursor-pointer transition-transform hover:translate-x-1 no-underline text-secondary hover:bg-surface-container-low">
-                    <span class="material-symbols-outlined mr-3">auto_stories</span>
-                    <span class="font-body font-medium text-sm tracking-wide">Publications</span>
-                </a>
-            </nav>
-        </div>
-    </aside>
+<!-- ============================================ -->
+<!-- HERO                                         -->
+<!-- ============================================ -->
+<header id="top" class="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
+  <!-- Full-bleed background image -->
+  <div class="absolute inset-0 z-0">
+    <img alt="MemSpren Spren" class="w-full h-full object-cover opacity-60" src="memspren-spren.png"/>
+    <div class="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-surface/40"></div>
+  </div>
 
-    <!-- Main Content -->
-    <main class="flex-1 ml-0 md:ml-72 px-6 md:px-16 py-12 max-w-5xl">
-
-        <!-- ===== STORY PAGE ===== -->
-        <section class="page" id="page-story">
-            <header class="mb-24">
-                <h1 class="editorial-title text-5xl md:text-7xl font-bold italic text-primary leading-tight mb-6">
-                    MemSpren: The Cognitive Journal
-                </h1>
-                <p class="text-xl md:text-2xl font-body text-secondary max-w-2xl leading-relaxed">
-                    A personal knowledge system at the synthesis of psychology and tech.
-                    <span class="text-primary italic">Engineered for clarity, not just storage.</span>
-                </p>
-            </header>
-
-            <!-- Vision -->
-            <div class="mb-32">
-                <div class="flex flex-col md:flex-row gap-12 items-start">
-                    <div class="flex-1 bg-surface-container-low p-10 rounded-xl">
-                        <h3 class="editorial-title text-2xl font-semibold mb-4 text-primary">Clarity, Not Motivation</h3>
-                        <p class="font-body text-on-surface-variant leading-relaxed">
-                            Most productivity tools fail by asking for more friction. MemSpren focuses on reducing the energy barrier to synthesis. We don't gamify your memory; we curate your attention.
-                        </p>
-                    </div>
-                    <div class="flex-1 pt-12">
-                        <h3 class="editorial-title text-2xl font-semibold mb-4 text-primary">The Through-Line</h3>
-                        <p class="font-body text-on-surface-variant leading-relaxed">
-                            A living document isn't a static archive. It's a continuous thread of thought across days, months, and years. Our architecture ensures that yesterday's insight fuels tomorrow's breakthrough.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Philosophy -->
-            <div class="mb-16">
-                <div class="flex items-center gap-4 mb-10">
-                    <h2 class="editorial-title text-3xl italic font-bold">Philosophy</h2>
-                    <div class="h-[1px] flex-1 bg-outline-variant opacity-20"></div>
-                </div>
-                <div class="bg-surface-container-low p-10 rounded-xl space-y-4">
-                    <p class="font-body text-on-surface-variant leading-relaxed">This isn't just a storage system. The goal is <strong class="text-on-surface">persistent context without manual effort</strong>:</p>
-                    <ul class="list-none space-y-3">
-                        <li class="flex items-start gap-3 font-body text-on-surface-variant">
-                            <span class="material-symbols-outlined text-primary text-lg mt-0.5">check_circle</span>
-                            Your AI reads recent notes on every interaction
-                        </li>
-                        <li class="flex items-start gap-3 font-body text-on-surface-variant">
-                            <span class="material-symbols-outlined text-primary text-lg mt-0.5">check_circle</span>
-                            You never have to re-explain yourself
-                        </li>
-                        <li class="flex items-start gap-3 font-body text-on-surface-variant">
-                            <span class="material-symbols-outlined text-primary text-lg mt-0.5">check_circle</span>
-                            Your thinking is captured atomically, linked, and queryable
-                        </li>
-                        <li class="flex items-start gap-3 font-body text-on-surface-variant">
-                            <span class="material-symbols-outlined text-primary text-lg mt-0.5">check_circle</span>
-                            Nothing gets deleted — everything gets archived
-                        </li>
-                        <li class="flex items-start gap-3 font-body text-on-surface-variant">
-                            <span class="material-symbols-outlined text-primary text-lg mt-0.5">check_circle</span>
-                            Your vault is portable, future-proof, and yours forever
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <!-- ===== TOOLKIT PAGE ===== -->
-        <section class="page" id="page-toolkit">
-            <header class="mb-16">
-                <h1 class="editorial-title text-4xl md:text-5xl font-bold italic text-primary leading-tight mb-4">
-                    The Toolkit
-                </h1>
-                <p class="text-lg font-body text-secondary max-w-2xl leading-relaxed">
-                    Plugins, architecture, and everything you need to get started.
-                </p>
-            </header>
-
-            <!-- Plugins -->
-            <div class="mb-24">
-                <div class="flex items-center gap-4 mb-10">
-                    <h2 class="editorial-title text-3xl italic font-bold">Plugins</h2>
-                    <div class="h-[1px] flex-1 bg-outline-variant opacity-20"></div>
-                </div>
-
-                <!-- Claude Skill -->
-                <div class="bg-surface-container-low p-8 rounded-xl mb-6">
-                    <div class="flex items-center gap-3 mb-4">
-                        <span class="text-primary font-bold font-body text-lg">01</span>
-                        <h3 class="font-body font-semibold text-xl text-on-surface">Claude Skill</h3>
-                    </div>
-                    <p class="font-body text-on-surface-variant leading-relaxed mb-4">
-                        An intelligent layer that turns Claude into your thinking partner for daily check-ins, capturing projects, ideas, people, and tasks as linked atomic notes in your Obsidian vault.
-                    </p>
-                    <ul class="space-y-2 mb-6">
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">No CLI required</strong> — uses Claude's native file tools
-                        </li>
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Daily check-in workflow</strong> — brain dump → targeted follow-up → entity creation
-                        </li>
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Persistent memory</strong> — maintains context across sessions
-                        </li>
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Full Zettelkasten</strong> — YAML frontmatter + Obsidian wikilinks
-                        </li>
-                    </ul>
-                    <div class="bg-surface p-6 rounded-lg border border-outline-variant/20">
-                        <h4 class="font-body font-semibold text-sm text-primary uppercase tracking-wide mb-3">Setup</h4>
-                        <ol class="list-decimal list-inside space-y-2 font-body text-on-surface-variant text-sm mb-3">
-                            <li>In Claude Code (Cowork mode), select your Obsidian vault folder</li>
-                            <li>Load the <code class="bg-surface-container px-1.5 py-0.5 rounded text-xs">managing-second-brain.skill</code> file from the <code class="bg-surface-container px-1.5 py-0.5 rounded text-xs">claude/</code> folder</li>
-                            <li>Start a conversation — Claude will guide you through setup on first use</li>
-                        </ol>
-                        <a href="https://github.com/supre/memspren/tree/main/claude" target="_blank" rel="noopener noreferrer" class="text-primary font-body text-sm font-medium hover:underline">View full docs →</a>
-                    </div>
-                </div>
-
-                <!-- OpenClaw Skill -->
-                <div class="bg-surface-container-low p-8 rounded-xl mb-6">
-                    <div class="flex items-center gap-3 mb-4">
-                        <span class="text-primary font-bold font-body text-lg">02</span>
-                        <h3 class="font-body font-semibold text-xl text-on-surface">OpenClaw Skill</h3>
-                    </div>
-                    <p class="font-body text-on-surface-variant leading-relaxed mb-4">
-                        Integrates memspren with <a href="https://openclaw.ai/" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">OpenClaw</a> — a local AI assistant that runs on your machine with browser control, file access, and extensible skills.
-                    </p>
-                    <ul class="space-y-2 mb-6">
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Local-first AI</strong> — runs on your machine, keeps your data private
-                        </li>
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Three-layer memory</strong> — active memory + brain dump buffer + Obsidian vault sync
-                        </li>
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Smart merge</strong> — description-based deduplication prevents duplicates during sync
-                        </li>
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Knowledge transfer</strong> — structured capture of context across sessions
-                        </li>
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Git safety</strong> — automated commits with conflict detection during sync
-                        </li>
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Full Zettelkasten</strong> — YAML frontmatter + Obsidian wikilinks
-                        </li>
-                    </ul>
-                    <div class="bg-surface p-6 rounded-lg border border-outline-variant/20">
-                        <h4 class="font-body font-semibold text-sm text-primary uppercase tracking-wide mb-3">Setup</h4>
-                        <ol class="list-decimal list-inside space-y-2 font-body text-on-surface-variant text-sm mb-3">
-                            <li>Clone or copy the <code class="bg-surface-container px-1.5 py-0.5 rounded text-xs">openclaw/</code> folder to <code class="bg-surface-container px-1.5 py-0.5 rounded text-xs">~/.openclaw/skills/</code></li>
-                            <li>Restart OpenClaw to load the skill</li>
-                            <li>Point it to your Obsidian vault on first use — OpenClaw will guide you through setup (~2 minutes)</li>
-                        </ol>
-                        <a href="https://github.com/supre/memspren/tree/main/openclaw" target="_blank" rel="noopener noreferrer" class="text-primary font-body text-sm font-medium hover:underline">View full docs →</a>
-                    </div>
-                </div>
-
-                <!-- Open-Source Core -->
-                <div class="group flex flex-col md:flex-row justify-between py-6 px-4 hover:bg-surface-container-low transition-colors items-baseline gap-4 rounded-lg">
-                    <div class="flex items-center gap-4">
-                        <span class="text-primary font-bold font-body text-lg">03</span>
-                        <span class="font-body font-semibold text-lg text-on-surface">Open-Source Core</span>
-                    </div>
-                    <p class="font-body text-on-surface-variant text-sm md:text-base md:max-w-sm md:text-right">
-                        The engine of the digital curator. Local-first, extensible, and owned by you.
-                    </p>
-                </div>
-            </div>
-
-            <!-- Architecture -->
-            <div class="mb-24">
-                <div class="flex items-center gap-4 mb-10">
-                    <h2 class="editorial-title text-3xl italic font-bold">Architecture</h2>
-                    <div class="h-[1px] flex-1 bg-outline-variant opacity-20"></div>
-                </div>
-
-                <h3 class="font-body font-semibold text-lg text-on-surface mb-4">Two-Location Design</h3>
-                <p class="font-body text-on-surface-variant leading-relaxed mb-6">Every plugin follows this pattern:</p>
-
-                <div class="overflow-x-auto mb-8">
-                    <table class="w-full border-collapse">
-                        <thead>
-                            <tr class="border-b border-outline-variant/30">
-                                <th class="text-left py-3 px-4 font-body font-semibold text-sm text-on-surface">Location</th>
-                                <th class="text-left py-3 px-4 font-body font-semibold text-sm text-on-surface">What lives here</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="border-b border-outline-variant/15">
-                                <td class="py-3 px-4 font-body text-sm"><strong class="text-primary">Skill folder</strong></td>
-                                <td class="py-3 px-4 font-body text-sm text-on-surface-variant"><code class="bg-surface-container px-1.5 py-0.5 rounded text-xs">config.md</code>, Memory/, operational files</td>
-                            </tr>
-                            <tr>
-                                <td class="py-3 px-4 font-body text-sm"><strong class="text-primary">Vault</strong></td>
-                                <td class="py-3 px-4 font-body text-sm text-on-surface-variant">All note content: Work/, People/, Log/, etc.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <h3 class="font-body font-semibold text-lg text-on-surface mb-4">Entity Types</h3>
-                <ul class="space-y-3 mb-8">
-                    <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                        <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Projects</strong> — deadline-driven work with goals and progress notes
-                    </li>
-                    <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                        <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Ideas</strong> — atomic thoughts, underdeveloped concepts, seeds for future projects
-                    </li>
-                    <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                        <span class="text-primary font-bold">—</span> <strong class="text-on-surface">People</strong> — everyone you work with, interaction logs, connections to projects
-                    </li>
-                    <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                        <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Tasks</strong> — unified inbox with priority and connections to projects/ideas
-                    </li>
-                    <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                        <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Learnings</strong> — things you've learned, read, understood, connected to active work
-                    </li>
-                    <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                        <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Daily logs</strong> — one note per check-in, hub of all entities touched that day
-                    </li>
-                </ul>
-
-                <h3 class="font-body font-semibold text-lg text-on-surface mb-4">Vault Structure</h3>
-                <div class="bg-surface-container p-6 rounded-xl">
-                    <pre class="font-mono text-sm text-on-surface-variant leading-relaxed whitespace-pre"><code>[vault_path]/
-├── Vision/          — values, long-term vision, guiding principles
-├── Strategy/        — quarterly goals and active strategies
-├── Work/
-│   ├── Projects/    — deadline-driven work
-│   └── Ideas/       — lightweight captures
-├── People/          — work contacts and interaction logs
-├── Tasks/           — unified task inbox
-├── Log/Daily/       — one note per check-in day
-├── Notes/Learnings/ — things learned, connected to work
-├── Inbox/           — unsorted catch-all
-└── Archive/         — nothing ever deleted</code></pre>
-                </div>
-            </div>
-
-            <!-- Getting Started -->
-            <div class="mb-24">
-                <div class="flex items-center gap-4 mb-10">
-                    <h2 class="editorial-title text-3xl italic font-bold">Getting Started</h2>
-                    <div class="h-[1px] flex-1 bg-outline-variant opacity-20"></div>
-                </div>
-
-                <div class="space-y-6">
-                    <div class="flex gap-5">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-body font-bold text-sm">1</div>
-                        <div>
-                            <h4 class="font-body font-semibold text-on-surface mb-1">Pick a plugin</h4>
-                            <p class="font-body text-on-surface-variant text-sm">Claude Skill if you use Claude Code (Cowork mode). OpenClaw Skill if you prefer a local AI assistant.</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-5">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-body font-bold text-sm">2</div>
-                        <div>
-                            <h4 class="font-body font-semibold text-on-surface mb-1">Follow its setup instructions</h4>
-                            <p class="font-body text-on-surface-variant text-sm">Takes ~2 minutes. The plugin will guide you through vault initialization.</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-5">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-body font-bold text-sm">3</div>
-                        <div>
-                            <h4 class="font-body font-semibold text-on-surface mb-1">Start capturing</h4>
-                            <p class="font-body text-on-surface-variant text-sm">Projects, ideas, people, tasks, learnings, and reflections — all linked automatically.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Future Plugins -->
-            <div class="mb-16">
-                <div class="flex items-center gap-4 mb-10">
-                    <h2 class="editorial-title text-3xl italic font-bold">Future Plugins</h2>
-                    <div class="h-[1px] flex-1 bg-outline-variant opacity-20"></div>
-                </div>
-                <div class="space-y-0.5">
-                    <div class="flex flex-col md:flex-row justify-between py-4 px-4 hover:bg-surface-container-low transition-colors items-baseline gap-2 rounded-lg">
-                        <span class="font-body font-semibold text-on-surface">Obsidian plugin</span>
-                        <span class="font-body text-on-surface-variant text-sm">Native interface for entity creation and queries</span>
-                    </div>
-                    <div class="flex flex-col md:flex-row justify-between py-4 px-4 hover:bg-surface-container-low transition-colors items-baseline gap-2 rounded-lg">
-                        <span class="font-body font-semibold text-on-surface">Slack integration</span>
-                        <span class="font-body text-on-surface-variant text-sm">Capture ideas and tasks from Slack</span>
-                    </div>
-                    <div class="flex flex-col md:flex-row justify-between py-4 px-4 hover:bg-surface-container-low transition-colors items-baseline gap-2 rounded-lg">
-                        <span class="font-body font-semibold text-on-surface">Calendar sync</span>
-                        <span class="font-body text-on-surface-variant text-sm">Link daily logs to calendar events</span>
-                    </div>
-                    <div class="flex flex-col md:flex-row justify-between py-4 px-4 hover:bg-surface-container-low transition-colors items-baseline gap-2 rounded-lg">
-                        <span class="font-body font-semibold text-on-surface">Web clipper</span>
-                        <span class="font-body text-on-surface-variant text-sm">Capture learnings from articles</span>
-                    </div>
-                    <div class="flex flex-col md:flex-row justify-between py-4 px-4 hover:bg-surface-container-low transition-colors items-baseline gap-2 rounded-lg">
-                        <span class="font-body font-semibold text-on-surface">CLI tool</span>
-                        <span class="font-body text-on-surface-variant text-sm">Command-line interface for vault queries</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ===== LOG PAGE ===== -->
-        <section class="page" id="page-log">
-            <header class="mb-12">
-                <h1 class="editorial-title text-4xl md:text-5xl font-bold italic text-primary leading-tight mb-4">
-                    Progress Log
-                </h1>
-                <p class="text-lg font-body text-secondary max-w-2xl leading-relaxed">
-                    A timeline of what's been built, fixed, and shipped.
-                </p>
-            </header>
-
-            <!-- Filter Toggle -->
-            <button class="inline-flex items-center gap-2 px-4 py-2 border border-outline-variant/30 bg-surface rounded-full text-sm font-body font-medium text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary mb-4" id="progress-filters-toggle" aria-expanded="false">
-                <span class="material-symbols-outlined text-base">tune</span>
-                Filters
-                <span class="filter-badge bg-primary text-on-primary text-[10px] font-bold min-w-[18px] h-[18px] rounded-full items-center justify-center px-1" id="progress-filters-badge"></span>
-            </button>
-
-            <!-- Filters Panel -->
-            <div class="filters-panel mb-0" id="progress-filters">
-                <div class="bg-surface-container-low p-6 rounded-xl mb-6 space-y-4">
-                    <div class="flex items-start gap-3">
-                        <span class="font-body font-semibold text-xs text-secondary uppercase tracking-wide min-w-[40px] pt-1.5">Time</span>
-                        <div class="flex flex-wrap gap-2" id="time-filters">
-                            <button class="filter-btn px-3 py-1 border border-outline-variant/30 bg-surface rounded-full text-xs font-body text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary active" data-hours="0">All</button>
-                            <button class="filter-btn px-3 py-1 border border-outline-variant/30 bg-surface rounded-full text-xs font-body text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary" data-hours="168">7 days</button>
-                            <button class="filter-btn px-3 py-1 border border-outline-variant/30 bg-surface rounded-full text-xs font-body text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary" data-hours="720">30 days</button>
-                            <button class="filter-btn px-3 py-1 border border-outline-variant/30 bg-surface rounded-full text-xs font-body text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary" data-hours="2160">90 days</button>
-                        </div>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <span class="font-body font-semibold text-xs text-secondary uppercase tracking-wide min-w-[40px] pt-1.5">Tags</span>
-                        <div class="flex flex-wrap gap-2" id="tag-filters">
-                            <button class="filter-btn px-3 py-1 border border-outline-variant/30 bg-surface rounded-full text-xs font-body text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary active" data-tag="all">All</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Progress List -->
-            <div id="progress-list-wrapper">
-                <div id="progress-list" class="space-y-4"></div>
-                <div id="progress-empty" class="text-center py-16 text-secondary font-body" style="display:none;">
-                    <p>No progress notes match the selected filters.</p>
-                </div>
-            </div>
-
-            <!-- Detail View: Smart Merge Architecture -->
-            <div id="detail-smart-merge-architecture" class="detail-view" style="display:none;">
-                <button onclick="closeDetail()" class="inline-flex items-center gap-2 px-4 py-2 border border-outline-variant/30 bg-surface rounded-full text-sm font-body font-medium text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary mb-8">
-                    <span class="material-symbols-outlined text-base">arrow_back</span>
-                    Back to Log
-                </button>
-
-                <h1 class="editorial-title text-3xl md:text-4xl font-bold italic text-primary leading-tight mb-2">
-                    Smart Merge Architecture
-                </h1>
-                <p class="text-sm font-body text-secondary mb-8">MemSpren v0.02 — Internal Architecture Document</p>
-
-                <div class="bg-surface-container-low p-6 rounded-xl mb-10 space-y-1 text-sm font-body text-on-surface-variant">
-                    <p><strong class="text-on-surface">Date:</strong> March 21, 2026</p>
-                    <p><strong class="text-on-surface">Author:</strong> Supreet Singh</p>
-                    <p><strong class="text-on-surface">Status:</strong> Implemented</p>
-                    <p><strong class="text-on-surface">Affects:</strong> OpenClaw skill only</p>
-                    <p><strong class="text-on-surface">Problem Solved:</strong> Duplicate file creation, vault clutter, no version control safety net</p>
-                </div>
-
-                <!-- Problem Statement -->
-                <div class="mb-10">
-                    <div class="flex items-center gap-4 mb-6">
-                        <h2 class="editorial-title text-2xl italic font-bold">Problem Statement</h2>
-                        <div class="h-[1px] flex-1 bg-outline-variant opacity-20"></div>
-                    </div>
-                    <p class="font-body text-on-surface-variant leading-relaxed mb-4">During production use of MemSpren v0.02's batch sync system, three critical quality issues surfaced:</p>
-                    <ol class="list-decimal list-inside space-y-2 font-body text-on-surface-variant text-sm">
-                        <li><strong class="text-on-surface">Duplicate documents:</strong> Multiple files created for the same topic</li>
-                        <li><strong class="text-on-surface">No existence checking:</strong> Sync process created new files without checking if a similar file already existed</li>
-                        <li><strong class="text-on-surface">No safety net:</strong> When files were modified, the previous version was lost</li>
-                    </ol>
-                </div>
-
-                <!-- Solution -->
-                <div class="mb-10">
-                    <div class="flex items-center gap-4 mb-6">
-                        <h2 class="editorial-title text-2xl italic font-bold">Solution: Smart Merge + Git Safety</h2>
-                        <div class="h-[1px] flex-1 bg-outline-variant opacity-20"></div>
-                    </div>
-
-                    <h3 class="font-body font-semibold text-lg text-on-surface mb-3">Script 1: <code class="bg-surface-container px-1.5 py-0.5 rounded text-xs">scan_descriptions.py</code> <span class="text-[10px] uppercase tracking-wider font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded">NEW</span></h3>
-                    <p class="font-body text-on-surface-variant text-sm leading-relaxed mb-3">Scans a vault folder and extracts frontmatter metadata from all files. Returns structured JSON so the agent can find similar/duplicate files before creating new ones.</p>
-                    <div class="bg-surface-container p-4 rounded-xl mb-6">
-                        <pre class="font-mono text-xs text-on-surface-variant leading-relaxed whitespace-pre"><code>python3 scripts/scan_descriptions.py \
-  --vault-path "/path/to/vault" --folder "Vision"
-
-# Output (JSON)
-[{
-  "path": "Vision/Psychology-Tech Synthesis.md",
-  "description": "Career through-line combining psychology and technology",
-  "node_type": "vision",
-  "status": "active",
-  "last_modified": "2026-03-15"
-}]</code></pre>
-                    </div>
-
-                    <div class="bg-primary/5 border-l-2 border-primary p-4 rounded-r-lg mb-6">
-                        <p class="font-body text-on-surface-variant text-sm"><strong class="text-on-surface">Key design decision:</strong> The script only reads frontmatter (first few lines until closing <code class="bg-surface-container px-1 py-0.5 rounded text-xs">---</code>), not the full file. This keeps token cost minimal even when scanning folders with many files.</p>
-                    </div>
-
-                    <h3 class="font-body font-semibold text-lg text-on-surface mb-3">Script 2: <code class="bg-surface-container px-1.5 py-0.5 rounded text-xs">git_commit.py</code> <span class="text-[10px] uppercase tracking-wider font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded">NEW</span></h3>
-                    <p class="font-body text-on-surface-variant text-sm leading-relaxed mb-3">Commits the current state of a file before modification. Creates a safety checkpoint — nothing is ever lost.</p>
-                    <div class="bg-surface-container p-4 rounded-xl mb-6">
-                        <pre class="font-mono text-xs text-on-surface-variant leading-relaxed whitespace-pre"><code>python3 scripts/git_commit.py \
-  --vault-path "/path/to/vault" \
-  --file "Vision/Psychology-Tech Synthesis.md" \
-  --message "pre-merge snapshot"
-
-# Output: { "action": "committed", "hash": "abc123f", ... }
-
-# Initialize git in vault (during setup)
-python3 scripts/git_commit.py --vault-path "/path/to/vault" --init</code></pre>
-                    </div>
-                </div>
-
-                <!-- Agent Decision Flow -->
-                <div class="mb-10">
-                    <div class="flex items-center gap-4 mb-6">
-                        <h2 class="editorial-title text-2xl italic font-bold">Agent Decision Flow</h2>
-                        <div class="h-[1px] flex-1 bg-outline-variant opacity-20"></div>
-                    </div>
-                    <p class="font-body text-on-surface-variant text-sm leading-relaxed mb-4">The agent makes all decisions. Scripts are tools that provide data and safety.</p>
-                    <div class="bg-surface-container p-6 rounded-xl overflow-x-auto">
-                        <pre class="font-mono text-xs text-on-surface-variant leading-[1.8] whitespace-pre"><code>AGENT NEEDS TO WRITE CONTENT
-         │
-         ▼
-┌─────────────────────────────────────┐
-│ Step 1: SCAN                        │
-│ scan_descriptions.py --folder X     │
-│ → Returns existing files + descs    │
-└────────────────┬────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────┐
-│ Step 2: DECIDE                      │
-│ Agent reads descriptions            │
-│ Does an existing file match?        │
-└───────┬───────────────┬─────────────┘
-        │               │
-    ┌───▼───┐     ┌─────▼─────┐
-    │  YES  │     │    NO     │
-    └───┬───┘     └─────┬─────┘
-        │               │
-        ▼               ▼
-┌───────────────┐ ┌───────────────┐
-│ Read full     │ │ Create new    │
-│ file via      │ │ file with     │
-│ obsidian-cli  │ │ description   │
-└───────┬───────┘ │ in frontmatter│
-        │         └───────┬───────┘
-        ▼                 │
-┌───────────────┐         │
-│ Step 3:       │         │
-│ ANALYZE       │         │
-│ Complement or │         │
-│ Conflict?     │         │
-└──┬─────────┬──┘         │
-   │         │            │
-   ▼         ▼            │
-COMPLEMENT  CONFLICT      │
-   │         │            │
-   ▼         ▼            │
-┌────────┐ ┌────────┐    │
-│ git    │ │ git    │    │
-│ commit │ │ commit │    │
-│ snap-  │ │ snap-  │    │
-│ shot   │ │ shot   │    │
-└───┬────┘ └───┬────┘    │
-    │          │          │
-    ▼          ▼          │
- Append     Update +     │
-            NOTIFY USER  │
-    │       (what changed │
-    │       + git hash    │
-    │       for revert)   │
-    │          │          │
-    ▼          ▼          ▼
-┌─────────────────────────────────────┐
-│ Step 4: FINALIZE                    │
-│ Update description if expanded      │
-│ Update last_modified                │
-│ Update connected[] via script       │
-└─────────────────────────────────────┘</code></pre>
-                    </div>
-                </div>
-
-                <!-- Description Field -->
-                <div class="mb-10">
-                    <div class="flex items-center gap-4 mb-6">
-                        <h2 class="editorial-title text-2xl italic font-bold">The <code class="bg-surface-container px-1.5 py-0.5 rounded text-sm">description</code> Field</h2>
-                        <div class="h-[1px] flex-1 bg-outline-variant opacity-20"></div>
-                    </div>
-                    <p class="font-body text-on-surface-variant text-sm leading-relaxed mb-4">Every file in the vault now requires a <code class="bg-surface-container px-1 py-0.5 rounded text-xs">description</code> field in its YAML frontmatter. It serves three purposes:</p>
-                    <ul class="space-y-2 mb-6">
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Merge key:</strong> Used by scan_descriptions.py to find similar files
-                        </li>
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">File identity:</strong> The agent reads descriptions to decide merge vs create
-                        </li>
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Retrieval aid:</strong> Future "what do I have about X?" queries can search descriptions
-                        </li>
-                    </ul>
-                    <div class="bg-surface-container p-4 rounded-xl">
-                        <pre class="font-mono text-xs text-on-surface-variant leading-relaxed whitespace-pre"><code>---
-node_type: idea
-created: 2026-03-21
-description: "Gamification of daily habits with points earned for right actions"
-status: active
-connected: []
-tags: []
-last_modified: 2026-03-21
----</code></pre>
-                    </div>
-                </div>
-
-                <!-- Merge Scope Rules -->
-                <div class="mb-10">
-                    <div class="flex items-center gap-4 mb-6">
-                        <h2 class="editorial-title text-2xl italic font-bold">Merge Scope Rules</h2>
-                        <div class="h-[1px] flex-1 bg-outline-variant opacity-20"></div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full border-collapse">
-                            <thead>
-                                <tr class="border-b border-outline-variant/30">
-                                    <th class="text-left py-3 px-4 font-body font-semibold text-sm text-on-surface">Node Type</th>
-                                    <th class="text-left py-3 px-4 font-body font-semibold text-sm text-on-surface">Folder</th>
-                                    <th class="text-left py-3 px-4 font-body font-semibold text-sm text-on-surface">Behavior</th>
-                                </tr>
-                            </thead>
-                            <tbody class="font-body text-sm text-on-surface-variant">
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">vision</code></td><td class="py-2 px-4">Vision/</td><td class="py-2 px-4">Aggressive — few files, merge readily</td></tr>
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">strategy</code></td><td class="py-2 px-4">Strategy/</td><td class="py-2 px-4">Aggressive — few files</td></tr>
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">idea</code></td><td class="py-2 px-4">Work/Ideas/</td><td class="py-2 px-4">Moderate — similar ideas consolidate</td></tr>
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">learning</code></td><td class="py-2 px-4">Notes/Learnings/</td><td class="py-2 px-4">Moderate — same topic = same file</td></tr>
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">pattern</code></td><td class="py-2 px-4">Notes/Patterns/</td><td class="py-2 px-4">Conservative — patterns are distinct</td></tr>
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">project</code></td><td class="py-2 px-4">Work/Projects/</td><td class="py-2 px-4">No scan — always distinct</td></tr>
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">person</code></td><td class="py-2 px-4">People/</td><td class="py-2 px-4">No scan — always distinct</td></tr>
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">log-entry</code></td><td class="py-2 px-4">Log/Daily/</td><td class="py-2 px-4">Date-based — same date = append</td></tr>
-                                <tr><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">kt</code></td><td class="py-2 px-4">Work/KT/</td><td class="py-2 px-4">Moderate — same system = same file</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Git Safety -->
-                <div class="mb-10">
-                    <div class="flex items-center gap-4 mb-6">
-                        <h2 class="editorial-title text-2xl italic font-bold">Git as Safety Net</h2>
-                        <div class="h-[1px] flex-1 bg-outline-variant opacity-20"></div>
-                    </div>
-                    <div class="bg-primary/5 border-l-2 border-primary p-4 rounded-r-lg mb-6">
-                        <p class="font-body text-on-surface-variant text-sm"><strong class="text-on-surface">Setup requirement:</strong> Git must be installed before MemSpren setup. The setup protocol initializes a git repo in the vault with an initial commit. <code class="bg-surface-container px-1 py-0.5 rounded text-xs">git_commit.py</code> handles initialization if the vault isn't already a repo.</p>
-                    </div>
-                    <p class="font-body text-on-surface-variant text-sm leading-relaxed mb-3">When new content <strong class="text-on-surface">conflicts</strong> with existing content, the agent:</p>
-                    <ol class="list-decimal list-inside space-y-2 font-body text-on-surface-variant text-sm mb-4">
-                        <li>Commits the current file state (git snapshot)</li>
-                        <li>Updates the file with reconciled content</li>
-                        <li>Notifies the user with what changed and git hash for rollback</li>
-                    </ol>
-                    <div class="bg-surface-container p-4 rounded-xl">
-                        <pre class="font-mono text-xs text-on-surface-variant leading-relaxed whitespace-pre"><code>"I updated [file].
- Previous version said: [X]
- New information says: [Y]
- I've reconciled it to: [Z]
-
- Previous version saved in git (commit abc123f).
- Run `git diff abc123f` to see what changed.
- Run `git revert abc123f` to undo."</code></pre>
-                    </div>
-                </div>
-
-                <!-- Files Changed -->
-                <div class="mb-10">
-                    <div class="flex items-center gap-4 mb-6">
-                        <h2 class="editorial-title text-2xl italic font-bold">Files Changed</h2>
-                        <div class="h-[1px] flex-1 bg-outline-variant opacity-20"></div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full border-collapse">
-                            <thead>
-                                <tr class="border-b border-outline-variant/30">
-                                    <th class="text-left py-3 px-4 font-body font-semibold text-sm text-on-surface">File</th>
-                                    <th class="text-left py-3 px-4 font-body font-semibold text-sm text-on-surface">Action</th>
-                                    <th class="text-left py-3 px-4 font-body font-semibold text-sm text-on-surface">Purpose</th>
-                                </tr>
-                            </thead>
-                            <tbody class="font-body text-sm text-on-surface-variant">
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">scripts/scan_descriptions.py</code></td><td class="py-2 px-4"><span class="text-[10px] uppercase tracking-wider font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded">NEW</span></td><td class="py-2 px-4">Extract frontmatter descriptions</td></tr>
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">scripts/git_commit.py</code></td><td class="py-2 px-4"><span class="text-[10px] uppercase tracking-wider font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded">NEW</span></td><td class="py-2 px-4">Commit file state before modification</td></tr>
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">Protocols/sync-protocol.md</code></td><td class="py-2 px-4"><span class="text-[10px] uppercase tracking-wider font-semibold bg-tertiary/10 text-tertiary px-2 py-0.5 rounded">MODIFIED</span></td><td class="py-2 px-4">Added smart merge flow + scope rules</td></tr>
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">Protocols/entity-protocol.md</code></td><td class="py-2 px-4"><span class="text-[10px] uppercase tracking-wider font-semibold bg-tertiary/10 text-tertiary px-2 py-0.5 rounded">MODIFIED</span></td><td class="py-2 px-4">Added description requirement</td></tr>
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">Protocols/linking-protocol.md</code></td><td class="py-2 px-4"><span class="text-[10px] uppercase tracking-wider font-semibold bg-tertiary/10 text-tertiary px-2 py-0.5 rounded">MODIFIED</span></td><td class="py-2 px-4">Added description to base frontmatter</td></tr>
-                                <tr class="border-b border-outline-variant/15"><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">Protocols/setup-protocol.md</code></td><td class="py-2 px-4"><span class="text-[10px] uppercase tracking-wider font-semibold bg-tertiary/10 text-tertiary px-2 py-0.5 rounded">MODIFIED</span></td><td class="py-2 px-4">Added git prerequisite + vault init</td></tr>
-                                <tr><td class="py-2 px-4"><code class="bg-surface-container px-1 py-0.5 rounded text-xs">SKILL.md</code></td><td class="py-2 px-4"><span class="text-[10px] uppercase tracking-wider font-semibold bg-tertiary/10 text-tertiary px-2 py-0.5 rounded">MODIFIED</span></td><td class="py-2 px-4">Added new scripts to bundled scripts table</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Future -->
-                <div class="mb-10">
-                    <div class="flex items-center gap-4 mb-6">
-                        <h2 class="editorial-title text-2xl italic font-bold">What This Doesn't Solve (Future)</h2>
-                        <div class="h-[1px] flex-1 bg-outline-variant opacity-20"></div>
-                    </div>
-                    <ul class="space-y-2">
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Cross-folder merging</strong> — e.g., an idea that should become a project
-                        </li>
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Semantic similarity</strong> — would need embeddings for truly intelligent matching
-                        </li>
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Retroactive cleanup</strong> — existing duplicates need a separate cleanup pass
-                        </li>
-                        <li class="flex items-start gap-2 font-body text-on-surface-variant text-sm">
-                            <span class="text-primary font-bold">—</span> <strong class="text-on-surface">Auto-adding descriptions</strong> — existing files without descriptions need migration
-                        </li>
-                    </ul>
-                </div>
-
-                <button onclick="closeDetail()" class="inline-flex items-center gap-2 px-4 py-2 border border-outline-variant/30 bg-surface rounded-full text-sm font-body font-medium text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary mt-4">
-                    <span class="material-symbols-outlined text-base">arrow_back</span>
-                    Back to Log
-                </button>
-            </div>
-        </section>
-
-        <!-- ===== PUBLICATIONS PAGE ===== -->
-        <section class="page" id="page-publications">
-            <header class="mb-12">
-                <h1 class="editorial-title text-4xl md:text-5xl font-bold italic text-primary leading-tight mb-4">
-                    Publications
-                </h1>
-                <p class="text-lg font-body text-secondary max-w-2xl leading-relaxed">
-                    Articles, videos, and other content about why MemSpren exists, how it's being built, and the thinking behind it.
-                </p>
-            </header>
-
-            <!-- Filter Toggle -->
-            <button class="inline-flex items-center gap-2 px-4 py-2 border border-outline-variant/30 bg-surface rounded-full text-sm font-body font-medium text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary mb-4" id="pub-filters-toggle" aria-expanded="false">
-                <span class="material-symbols-outlined text-base">tune</span>
-                Filters
-                <span class="filter-badge bg-primary text-on-primary text-[10px] font-bold min-w-[18px] h-[18px] rounded-full items-center justify-center px-1" id="pub-filters-badge"></span>
-            </button>
-
-            <!-- Filters Panel -->
-            <div class="filters-panel mb-0" id="pub-filters">
-                <div class="bg-surface-container-low p-6 rounded-xl mb-6 space-y-4">
-                    <div class="flex items-start gap-3">
-                        <span class="font-body font-semibold text-xs text-secondary uppercase tracking-wide min-w-[50px] pt-1.5">Time</span>
-                        <div class="flex flex-wrap gap-2" id="pub-time-filters">
-                            <button class="filter-btn px-3 py-1 border border-outline-variant/30 bg-surface rounded-full text-xs font-body text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary active" data-hours="0">All</button>
-                            <button class="filter-btn px-3 py-1 border border-outline-variant/30 bg-surface rounded-full text-xs font-body text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary" data-hours="168">7 days</button>
-                            <button class="filter-btn px-3 py-1 border border-outline-variant/30 bg-surface rounded-full text-xs font-body text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary" data-hours="720">30 days</button>
-                            <button class="filter-btn px-3 py-1 border border-outline-variant/30 bg-surface rounded-full text-xs font-body text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary" data-hours="2160">90 days</button>
-                        </div>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <span class="font-body font-semibold text-xs text-secondary uppercase tracking-wide min-w-[50px] pt-1.5">Tags</span>
-                        <div class="flex flex-wrap gap-2" id="pub-tag-filters">
-                            <button class="filter-btn px-3 py-1 border border-outline-variant/30 bg-surface rounded-full text-xs font-body text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary active" data-tag="all">All</button>
-                        </div>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <span class="font-body font-semibold text-xs text-secondary uppercase tracking-wide min-w-[50px] pt-1.5">Type</span>
-                        <div class="flex flex-wrap gap-2" id="pub-type-filters">
-                            <button class="filter-btn px-3 py-1 border border-outline-variant/30 bg-surface rounded-full text-xs font-body text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary active" data-type="all">All</button>
-                        </div>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <span class="font-body font-semibold text-xs text-secondary uppercase tracking-wide min-w-[50px] pt-1.5">Medium</span>
-                        <div class="flex flex-wrap gap-2" id="pub-medium-filters">
-                            <button class="filter-btn px-3 py-1 border border-outline-variant/30 bg-surface rounded-full text-xs font-body text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary active" data-medium="all">All</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Publications List -->
-            <div id="publications-list" class="space-y-4"></div>
-            <div id="publications-empty" class="text-center py-16 text-secondary font-body" style="display:none;">
-                <p>No publications match the selected filters.</p>
-            </div>
-        </section>
-
-    </main>
-</div>
-
-<!-- Footer -->
-<footer class="w-full mt-auto border-t-[0.5px] border-outline-variant/15 bg-surface-container-low">
-    <div class="flex flex-col md:flex-row justify-between items-center px-12 py-8 gap-4">
-        <div class="flex items-center gap-4">
-            <span class="text-primary font-bold font-body text-sm">MemSpren</span>
-            <span class="font-body text-[10px] uppercase tracking-[0.05em] text-secondary">Built by <a href="https://supreet.me" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">Supreet</a>. For the Digital Curator.</span>
-        </div>
-        <div class="flex gap-8">
-            <a class="font-body text-[10px] uppercase tracking-[0.05em] text-secondary hover:underline decoration-primary/30 transition-opacity duration-300 no-underline" href="https://github.com/supre/memspren" target="_blank" rel="noopener noreferrer">GitHub</a>
-        </div>
+  <div class="relative z-10 max-w-3xl mx-auto px-8 text-center">
+    <!-- Brand mark -->
+    <div class="hero-animate inline-block px-5 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-[0.6rem] font-label tracking-[0.4em] uppercase mb-10 backdrop-blur-md">
+      Second Brain Framework · <span id="site-version" class="site-version"></span>
     </div>
+
+    <!-- Brand name -->
+    <h1 class="hero-animate hero-animate-delay-1 text-6xl md:text-8xl font-headline italic leading-[0.95] text-primary mb-8 glow-text tracking-tight">
+      MemSpren
+    </h1>
+
+    <!-- Hook -->
+    <p class="hero-animate hero-animate-delay-2 text-xl md:text-2xl text-on-surface/70 max-w-2xl mx-auto leading-relaxed font-light font-headline italic">
+      You already have the thoughts.<br/>
+      You just can't see how they connect.
+    </p>
+
+    <!-- Scroll cue -->
+    <div class="hero-animate hero-animate-delay-3 mt-20 scroll-cue">
+      <span class="material-symbols-outlined text-primary/30 text-3xl">expand_more</span>
+    </div>
+  </div>
+</header>
+
+
+<!-- ============================================ -->
+<!-- STORY — VERTICAL STEPPER                     -->
+<!-- ============================================ -->
+<section id="story" class="py-24 md:py-32 relative">
+  <div class="max-w-4xl mx-auto px-8">
+    <div class="reveal">
+      <div class="section-glow mb-20"></div>
+    </div>
+
+    <div class="reveal">
+      <h2 class="text-4xl md:text-5xl font-headline italic text-primary glow-text mb-4">The Story</h2>
+      <p class="text-on-surface/40 text-sm font-light mb-16">Click a node to expand.</p>
+    </div>
+
+    <div class="relative reveal">
+      <!-- Vertical line -->
+      <div class="absolute left-5 md:left-6 top-0 bottom-0 w-[1px] bg-gradient-to-b from-primary/40 via-primary/20 to-transparent"></div>
+
+      <!-- Step 1: Recognition -->
+      <div class="stepper-step relative pl-16 md:pl-20 pb-8" data-step="1">
+        <button class="stepper-node absolute left-0 md:left-1 w-10 h-10 md:w-11 md:h-11 rounded-full bg-surface border-2 border-primary flex items-center justify-center z-10 cursor-pointer hover:ring-4 hover:ring-primary/20 transition-all" onclick="toggleStep(1)">
+          <span class="font-label text-primary font-bold text-xs">01</span>
+        </button>
+        <button class="stepper-title w-full text-left cursor-pointer group" onclick="toggleStep(1)">
+          <div class="flex items-center gap-4">
+            <h3 class="text-xl md:text-2xl font-headline italic text-on-surface/80 group-hover:text-primary transition-colors">The scattered mind</h3>
+            <span class="material-symbols-outlined text-primary/40 text-lg stepper-arrow transition-transform">expand_more</span>
+          </div>
+          <p class="text-on-surface/40 text-sm mt-1 font-light">Your best thinking is invisible — even to you.</p>
+        </button>
+        <div class="stepper-content" style="max-height:0; overflow:hidden; transition: max-height 0.4s ease;">
+          <div class="space-y-6 text-base md:text-lg text-on-surface/60 leading-relaxed font-light pt-8">
+            <p>You had a conversation last Tuesday that connected to something you wrote three weeks ago. You didn't notice. Nobody did. It's gone now.</p>
+            <p>Your notes live in one app. Your AI conversations live in another. Your voice memos, your half-formed ideas, the things you said to yourself while walking — scattered across a dozen tools that don't talk to each other.</p>
+            <p>You've tried to fix this. You've tried Notion. You've tried Obsidian. You've built elaborate folder structures and tagging systems that worked for two weeks before the maintenance became another chore. You've had brilliant conversations with AI that disappeared the moment you closed the tab.</p>
+            <p>The connections between your ideas exist. You can feel them forming. But no tool you've tried actually builds those connections for you.</p>
+            <p class="text-on-surface/40 text-sm italic">So your best thinking stays scattered, invisible, and — over time — lost.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: The Insight -->
+      <div class="stepper-step relative pl-16 md:pl-20 pb-8" data-step="2">
+        <button class="stepper-node absolute left-0 md:left-1 w-10 h-10 md:w-11 md:h-11 rounded-full bg-surface border-2 border-primary/40 flex items-center justify-center z-10 cursor-pointer hover:ring-4 hover:ring-primary/20 transition-all" onclick="toggleStep(2)">
+          <span class="font-label text-primary/60 font-bold text-xs">02</span>
+        </button>
+        <button class="stepper-title w-full text-left cursor-pointer group" onclick="toggleStep(2)">
+          <div class="flex items-center gap-4">
+            <h3 class="text-xl md:text-2xl font-headline italic text-on-surface/80 group-hover:text-primary transition-colors">The problem was never your discipline</h3>
+            <span class="material-symbols-outlined text-primary/40 text-lg stepper-arrow transition-transform">expand_more</span>
+          </div>
+          <p class="text-on-surface/40 text-sm mt-1 font-light">Productivity tools solve the wrong problem.</p>
+        </button>
+        <div class="stepper-content" style="max-height:0; overflow:hidden; transition: max-height 0.4s ease;">
+          <div class="space-y-6 text-base md:text-lg text-on-surface/60 leading-relaxed font-light pt-8">
+            <p>It was never your system. It was never the app. The problem is that you can't see your own thinking.</p>
+            <p>When your ideas sit in silos — notes here, conversations there, reflections somewhere else — you lose something more important than organization. You lose the ability to see patterns forming. You lose momentum, not because you stopped working, but because the evidence of your progress is invisible. Even to you.</p>
+            <p>Productivity tools have been solving the wrong problem for decades. They optimize for storage and retrieval. But the real need isn't <span class="text-on-surface/40 italic">"find that note I wrote."</span></p>
+            <div class="glass-card rounded-2xl p-8 md:p-10 my-2">
+              <p class="text-primary font-headline italic text-lg md:text-xl leading-relaxed">The real need is: show me how my ideas connect. Show me what I'm actually focused on. Show me that the scattered conversations I had this week are weaving into something coherent.</p>
+            </div>
+            <p>The problem is visibility. And until you solve for visibility, no amount of discipline, no new app, no better system will close the gap.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: The Origin -->
+      <div class="stepper-step relative pl-16 md:pl-20 pb-8" data-step="3">
+        <button class="stepper-node absolute left-0 md:left-1 w-10 h-10 md:w-11 md:h-11 rounded-full bg-surface border-2 border-primary/40 flex items-center justify-center z-10 cursor-pointer hover:ring-4 hover:ring-primary/20 transition-all" onclick="toggleStep(3)">
+          <span class="font-label text-primary/60 font-bold text-xs">03</span>
+        </button>
+        <button class="stepper-title w-full text-left cursor-pointer group" onclick="toggleStep(3)">
+          <div class="flex items-center gap-4">
+            <h3 class="text-xl md:text-2xl font-headline italic text-on-surface/80 group-hover:text-primary transition-colors">How this started</h3>
+            <span class="material-symbols-outlined text-primary/40 text-lg stepper-arrow transition-transform">expand_more</span>
+          </div>
+          <p class="text-on-surface/40 text-sm mt-1 font-light">From scattered engineer to methodology builder.</p>
+        </button>
+        <div class="stepper-content" style="max-height:0; overflow:hidden; transition: max-height 0.4s ease;">
+          <div class="space-y-6 text-base md:text-lg text-on-surface/60 leading-relaxed font-light pt-8">
+            <p>This methodology didn't start as a product. It started as a problem I couldn't stop running into.</p>
+            <p>I'm a software engineer. Distributed systems, cloud infrastructure, and — more recently — AI systems. I think in patterns and architecture. I spend my days inside complex systems where the relationships between components matter more than the components themselves.</p>
+            <p class="text-on-surface/80 text-xl font-headline italic">And yet my own thinking was a mess.</p>
+            <p>I was having dozens of AI conversations a week. Some brilliant, some mundane, all of them vanishing the moment the session ended. I was scattering ideas across Notion, Apple Notes, voice memos, Slack messages to myself. I kept re-explaining the same context to every new conversation.</p>
+            <p>Obsidian came close. The graph was exactly what I wanted — a visual map of how my thinking connected. But the graph only worked if I manually linked every note, maintained every relationship, kept the discipline of atomic note-taking day after day. That discipline held for a few weeks. Then life happened, and the graph became another abandoned system.</p>
+            <div class="glass-card rounded-2xl p-8 md:p-10 my-2">
+              <p class="text-on-surface/70 leading-relaxed">So I built what I actually needed. Not another note-taking app. A set of extraction rules, linking logic, and memory management patterns that could take the raw mess of my daily thinking and turn it into a structured knowledge graph. Automatically. Without me having to maintain anything.</p>
+            </div>
+            <p>I ran it as an AI skill, processing my own brain dumps daily. Within weeks, the Obsidian graph started showing me connections I hadn't consciously made. A map of what I was <em>actually</em> thinking about — not what I thought I was thinking about.</p>
+            <p class="text-primary/80 font-headline italic text-lg">That methodology became MemSpren.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: How It Works -->
+      <div class="stepper-step relative pl-16 md:pl-20 pb-8" data-step="4">
+        <button class="stepper-node absolute left-0 md:left-1 w-10 h-10 md:w-11 md:h-11 rounded-full bg-surface border-2 border-primary/40 flex items-center justify-center z-10 cursor-pointer hover:ring-4 hover:ring-primary/20 transition-all" onclick="toggleStep(4)">
+          <span class="font-label text-primary/60 font-bold text-xs">04</span>
+        </button>
+        <button class="stepper-title w-full text-left cursor-pointer group" onclick="toggleStep(4)">
+          <div class="flex items-center gap-4">
+            <h3 class="text-xl md:text-2xl font-headline italic text-on-surface/80 group-hover:text-primary transition-colors">One sentence in. Five linked notes out.</h3>
+            <span class="material-symbols-outlined text-primary/40 text-lg stepper-arrow transition-transform">expand_more</span>
+          </div>
+          <p class="text-on-surface/40 text-sm mt-1 font-light">How a brain dump becomes a knowledge graph.</p>
+        </button>
+        <div class="stepper-content" style="max-height:0; overflow:hidden; transition: max-height 0.4s ease;">
+          <div class="space-y-6 text-base md:text-lg text-on-surface/60 leading-relaxed font-light pt-8">
+            <p>You send a brain dump. It can be messy. It should be messy. A Telegram message, a voice transcription, a raw paragraph of whatever is on your mind.</p>
+            <div class="glass-card rounded-2xl p-8 md:p-10 my-2 border-l-2 border-l-primary/40">
+              <p class="text-on-surface/50 text-xs font-label uppercase tracking-widest mb-3">Brain dump</p>
+              <p class="text-on-surface/80 font-headline italic text-base leading-relaxed">"I talked to John about career moves and he mentioned graph theory. That connects to what I was reading about knowledge graphs last week. Also need to follow up with the team about the deployment pipeline."</p>
+            </div>
+            <p>MemSpren processes that single input and produces:</p>
+            <div class="space-y-3 my-2">
+              <div class="flex items-start gap-3"><span class="entity-arrow mt-1 text-sm">→</span><p>A person entity: <span class="text-primary/90 font-medium">John</span>, with a relationship to career strategy and graph theory</p></div>
+              <div class="flex items-start gap-3"><span class="entity-arrow mt-1 text-sm">→</span><p>A concept: <span class="text-primary/90 font-medium">graph theory</span>, linked to your existing notes on knowledge graphs</p></div>
+              <div class="flex items-start gap-3"><span class="entity-arrow mt-1 text-sm">→</span><p>A project reference: <span class="text-primary/90 font-medium">deployment pipeline</span>, tagged as requiring follow-up</p></div>
+              <div class="flex items-start gap-3"><span class="entity-arrow mt-1 text-sm">→</span><p>A temporal event: <span class="text-primary/90 font-medium">today's conversation</span>, timestamped and connected to all of the above</p></div>
+              <div class="flex items-start gap-3"><span class="entity-arrow mt-1 text-sm">→</span><p>Typed relationships between every entity: John ↔ career strategy, graph theory ↔ knowledge graphs, deployment pipeline ↔ follow-up</p></div>
+            </div>
+            <p>You didn't create any of those notes. You didn't add tags. You didn't build links. You talked. MemSpren extracted, linked, and structured.</p>
+            <p>Every brain dump adds nodes and edges to your Obsidian graph. Over days and weeks, scattered inputs become visible clusters. The graph grows while you think.</p>
+            <p class="text-primary/80 font-headline italic text-lg">That is what visibility looks like.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5: The Invitation -->
+      <div class="stepper-step relative pl-16 md:pl-20 pb-4" data-step="5">
+        <button class="stepper-node absolute left-0 md:left-1 w-10 h-10 md:w-11 md:h-11 rounded-full bg-surface border-2 border-primary/40 flex items-center justify-center z-10 cursor-pointer hover:ring-4 hover:ring-primary/20 transition-all" onclick="toggleStep(5)">
+          <span class="font-label text-primary/60 font-bold text-xs">05</span>
+        </button>
+        <button class="stepper-title w-full text-left cursor-pointer group" onclick="toggleStep(5)">
+          <div class="flex items-center gap-4">
+            <h3 class="text-xl md:text-2xl font-headline italic text-on-surface/80 group-hover:text-primary transition-colors">Open source. Your thinking stays yours.</h3>
+            <span class="material-symbols-outlined text-primary/40 text-lg stepper-arrow transition-transform">expand_more</span>
+          </div>
+          <p class="text-on-surface/40 text-sm mt-1 font-light">No lock-in. Portable. Yours forever.</p>
+        </button>
+        <div class="stepper-content" style="max-height:0; overflow:hidden; transition: max-height 0.4s ease;">
+          <div class="space-y-6 text-base md:text-lg text-on-surface/60 leading-relaxed font-light pt-8">
+            <p>MemSpren is a methodology that runs as a skill inside AI agent platforms. It produces standard Obsidian markdown files — portable, readable, yours. The tools are open. The vault is yours. There is no lock-in.</p>
+            <p>If you've been looking for a way to stop re-explaining yourself to every new AI conversation, to stop manually linking every note, to actually see how your ideas connect without maintaining the connections yourself — the methodology is here. It's being refined through daily use. And it works.</p>
+
+            <!-- Three paths -->
+            <div class="grid md:grid-cols-3 gap-4 mt-4">
+              <a href="#setup" class="glass-card glass-card-hover rounded-2xl p-6 transition-all duration-300 group no-underline block">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4 border border-primary/20">
+                  <span class="material-symbols-outlined text-primary text-xl">terminal</span>
+                </div>
+                <h4 class="text-sm font-headline font-semibold text-primary mb-2 italic">Ready to start?</h4>
+                <p class="text-on-surface/50 text-xs leading-relaxed mb-4">Prerequisites, installation, your first brain dump.</p>
+                <span class="flex items-center text-primary font-bold text-[0.6rem] uppercase tracking-widest gap-2">How to Get Started <span class="material-symbols-outlined text-xs group-hover:translate-x-1 transition-transform">arrow_forward</span></span>
+              </a>
+              <a href="#publications" class="glass-card glass-card-hover rounded-2xl p-6 transition-all duration-300 group no-underline block">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4 border border-primary/20">
+                  <span class="material-symbols-outlined text-primary text-xl">article</span>
+                </div>
+                <h4 class="text-sm font-headline font-semibold text-primary mb-2 italic">Want proof it's real?</h4>
+                <p class="text-on-surface/50 text-xs leading-relaxed mb-4">Every article documenting the methodology.</p>
+                <span class="flex items-center text-primary font-bold text-[0.6rem] uppercase tracking-widest gap-2">Publications <span class="material-symbols-outlined text-xs group-hover:translate-x-1 transition-transform">arrow_forward</span></span>
+              </a>
+              <a href="https://github.com/supre/memspren" target="_blank" class="glass-card glass-card-hover rounded-2xl p-6 transition-all duration-300 group no-underline block">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4 border border-primary/20">
+                  <span class="material-symbols-outlined text-primary text-xl">code</span>
+                </div>
+                <h4 class="text-sm font-headline font-semibold text-primary mb-2 italic">Want to follow along?</h4>
+                <p class="text-on-surface/50 text-xs leading-relaxed mb-4">The code, the skills, the vault structure. All open.</p>
+                <span class="flex items-center text-primary font-bold text-[0.6rem] uppercase tracking-widest gap-2">GitHub <span class="material-symbols-outlined text-xs group-hover:translate-x-1 transition-transform">arrow_forward</span></span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================ -->
+<!-- PUBLICATIONS                                 -->
+<!-- ============================================ -->
+<section id="publications" class="py-24 md:py-32 relative">
+  <div class="max-w-5xl mx-auto px-8">
+    <div class="reveal">
+      <div class="section-glow mb-20"></div>
+    </div>
+
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 reveal">
+      <div>
+        <h2 class="text-4xl md:text-5xl font-headline italic text-primary glow-text">Publications</h2>
+        <p class="text-on-surface/40 mt-3 text-sm font-light">Documenting the methodology as it's built.</p>
+      </div>
+      <div class="flex gap-6 mt-6 md:mt-0">
+        <a href="https://dev.to/supreet_s" target="_blank" class="text-on-surface/40 hover:text-primary transition-colors text-sm font-label uppercase tracking-widest">dev.to</a>
+        <a href="https://innerodyssey.substack.com" target="_blank" class="text-on-surface/40 hover:text-primary transition-colors text-sm font-label uppercase tracking-widest">Substack</a>
+      </div>
+    </div>
+
+    <div id="publications-list" class="grid md:grid-cols-2 gap-8 reveal">
+      <!-- Populated dynamically by script.js -->
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================ -->
+<!-- PROGRESS                                     -->
+<!-- ============================================ -->
+<section id="progress" class="py-24 md:py-32 relative">
+  <div class="max-w-5xl mx-auto px-8">
+    <div class="reveal">
+      <div class="section-glow mb-20"></div>
+    </div>
+
+    <div class="text-center mb-24 reveal">
+      <h2 class="text-5xl font-headline italic text-primary glow-text">System Log</h2>
+      <p class="text-on-surface/50 mt-4 tracking-[0.2em] uppercase text-xs">Incremental momentum tracker</p>
+    </div>
+
+    <div class="relative reveal" id="progress-timeline">
+      <!-- Center line -->
+      <div class="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-primary/30 to-transparent hidden md:block"></div>
+      <!-- Populated dynamically by script.js -->
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================ -->
+<!-- SETUP — HOW TO GET STARTED                   -->
+<!-- ============================================ -->
+<section id="setup" class="py-24 md:py-32 relative">
+  <div class="max-w-4xl mx-auto px-8">
+    <div class="reveal">
+      <div class="section-glow mb-20"></div>
+    </div>
+
+    <div class="text-center mb-16 reveal">
+      <h2 class="text-5xl font-headline italic text-primary glow-text">How to Get Started</h2>
+      <p class="text-on-surface/50 mt-4 tracking-[0.2em] uppercase text-xs">Zero to running in under 5 minutes</p>
+    </div>
+
+    <!-- Two paths -->
+    <div class="grid md:grid-cols-2 gap-8 reveal">
+
+      <!-- Claude Skill -->
+      <div class="glass-card rounded-2xl p-10 relative overflow-hidden">
+        <div class="absolute inset-0 hud-scanline opacity-10 pointer-events-none"></div>
+        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 border border-primary/20">
+          <span class="material-symbols-outlined text-primary text-2xl">psychology</span>
+        </div>
+        <h3 class="text-2xl font-headline font-semibold text-primary mb-4 italic">Claude Skill</h3>
+        <p class="text-on-surface/50 text-sm leading-relaxed mb-6">For Claude Code users. Uses Claude's native file tools — no CLI required.</p>
+        <ol class="space-y-4 text-on-surface/60 text-sm leading-relaxed">
+          <li class="flex items-start gap-3">
+            <span class="font-label text-primary font-bold text-xs mt-0.5">01</span>
+            <span>Open Claude Code in Cowork mode and select your Obsidian vault folder</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="font-label text-primary font-bold text-xs mt-0.5">02</span>
+            <span>Load <code class="text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded text-xs">managing-second-brain.skill</code> from the <code class="text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded text-xs">claude/</code> folder</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="font-label text-primary font-bold text-xs mt-0.5">03</span>
+            <span>Start a conversation — Claude guides you through setup on first use</span>
+          </li>
+        </ol>
+        <a href="https://github.com/supre/memspren/tree/main/claude" target="_blank" class="flex items-center text-primary font-bold text-[0.65rem] uppercase tracking-widest gap-2 mt-8 hover:brightness-125 transition-all no-underline">
+          Full docs <span class="material-symbols-outlined text-sm">arrow_outward</span>
+        </a>
+      </div>
+
+      <!-- OpenClaw Skill -->
+      <div class="glass-card rounded-2xl p-10 relative overflow-hidden">
+        <div class="absolute inset-0 hud-scanline opacity-10 pointer-events-none"></div>
+        <div class="w-12 h-12 rounded-xl bg-accent-cyan/10 flex items-center justify-center mb-6 border border-accent-cyan/20">
+          <span class="material-symbols-outlined text-accent-cyan text-2xl">terminal</span>
+        </div>
+        <h3 class="text-2xl font-headline font-semibold text-accent-cyan mb-4 italic">OpenClaw Skill</h3>
+        <p class="text-on-surface/50 text-sm leading-relaxed mb-6">For local-first AI. Runs on your machine with browser control, file access, and batch sync.</p>
+        <ol class="space-y-4 text-on-surface/60 text-sm leading-relaxed">
+          <li class="flex items-start gap-3">
+            <span class="font-label text-accent-cyan font-bold text-xs mt-0.5">01</span>
+            <span>Copy the <code class="text-accent-cyan/80 bg-accent-cyan/10 px-1.5 py-0.5 rounded text-xs">openclaw/</code> folder to <code class="text-accent-cyan/80 bg-accent-cyan/10 px-1.5 py-0.5 rounded text-xs">~/.openclaw/skills/</code></span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="font-label text-accent-cyan font-bold text-xs mt-0.5">02</span>
+            <span>Restart OpenClaw to load the skill</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="font-label text-accent-cyan font-bold text-xs mt-0.5">03</span>
+            <span>Point it to your Obsidian vault — OpenClaw guides you through setup (~2 min)</span>
+          </li>
+        </ol>
+        <a href="https://github.com/supre/memspren/tree/main/openclaw" target="_blank" class="flex items-center text-accent-cyan font-bold text-[0.65rem] uppercase tracking-widest gap-2 mt-8 hover:brightness-125 transition-all no-underline">
+          Full docs <span class="material-symbols-outlined text-sm">arrow_outward</span>
+        </a>
+      </div>
+
+    </div>
+
+    <!-- Prerequisites callout -->
+    <div class="glass-card rounded-2xl p-8 mt-8 reveal">
+      <div class="flex items-start gap-4">
+        <span class="material-symbols-outlined text-primary/60 text-xl mt-0.5">info</span>
+        <div class="text-on-surface/50 text-sm leading-relaxed">
+          <p class="text-on-surface/70 font-medium mb-2">Prerequisites</p>
+          <p><a href="https://obsidian.md" target="_blank" class="text-primary hover:brightness-125 transition-all no-underline">Obsidian</a> installed with a vault created. Git installed (for version-safe sync). That's it — the skill handles everything else.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ============================================ -->
+<!-- FOOTER                                       -->
+<!-- ============================================ -->
+<footer class="w-full pt-24 pb-16 relative">
+  <div class="max-w-5xl mx-auto px-8">
+    <div class="section-glow mb-16"></div>
+    <div class="text-center mb-12">
+      <a class="font-headline text-3xl italic text-primary font-bold glow-text no-underline" href="#top">MemSpren</a>
+      <p class="text-on-surface/30 text-sm mt-4 leading-relaxed font-light">
+        A second brain framework. Open source. Your thinking stays yours.
+      </p>
+    </div>
+    <div class="flex flex-col items-center gap-4 pt-8 border-t border-primary/5">
+      <div class="flex items-center gap-4">
+        <p class="font-body text-xs text-on-surface/20">
+          Built by <a href="https://supreet.me" target="_blank" class="text-on-surface/30 hover:text-primary transition-colors no-underline">Supreet Singh</a> · Open source
+        </p>
+        <a href="https://github.com/supre/memspren" target="_blank" rel="noopener noreferrer" class="text-on-surface/20 hover:text-primary transition-colors" title="GitHub">
+          <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+        </a>
+      </div>
+      <p class="font-body text-xs text-on-surface/15">
+        MemSpren <span id="site-version" class="site-version"></span>
+      </p>
+    </div>
+  </div>
 </footer>
 
-<script src="script.js?v=4"></script>
+
+<!-- ============================================ -->
+<!-- STEPPER SCRIPT                                -->
+<!-- ============================================ -->
+<script>
+function toggleStep(stepNum) {
+  var steps = document.querySelectorAll('.stepper-step');
+  steps.forEach(function(step) {
+    var num = parseInt(step.getAttribute('data-step'));
+    var content = step.querySelector('.stepper-content');
+    var arrow = step.querySelector('.stepper-arrow');
+    var node = step.querySelector('.stepper-node');
+    if (num === stepNum) {
+      var isOpen = content.style.maxHeight && content.style.maxHeight !== '0px';
+      if (isOpen) {
+        content.style.maxHeight = '0px';
+        arrow.style.transform = 'rotate(0deg)';
+        node.classList.remove('ring-4', 'ring-primary/20');
+        node.classList.replace('border-primary', 'border-primary/40');
+      } else {
+        content.style.maxHeight = content.scrollHeight + 'px';
+        arrow.style.transform = 'rotate(180deg)';
+        node.classList.add('ring-4', 'ring-primary/20');
+        node.classList.replace('border-primary/40', 'border-primary');
+      }
+    } else {
+      content.style.maxHeight = '0px';
+      arrow.style.transform = 'rotate(0deg)';
+      node.classList.remove('ring-4', 'ring-primary/20');
+      if (num !== 1) node.classList.replace('border-primary', 'border-primary/40');
+    }
+  });
+}
+</script>
+
+<!-- ============================================ -->
+<!-- SCROLL REVEAL SCRIPT                         -->
+<!-- ============================================ -->
+<script>
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, {
+  threshold: 0.15,
+  rootMargin: '0px 0px -40px 0px'
+});
+
+document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
+  observer.observe(el);
+});
+
+// Also observe reveal-stagger elements that are inside reveal elements
+document.querySelectorAll('.reveal-stagger.reveal').forEach(el => {
+  observer.observe(el);
+});
+</script>
+
+<script src="script.js?v=5"></script>
+
 </body>
 </html>
