@@ -56,11 +56,22 @@ def list_files_in_folder(vault: str, folder: str) -> list:
 
 
 def get_vault_path(vault: str) -> str:
-    """Get vault path from obsidian-cli or common locations."""
-    # Try obsidian-cli first
-    result = run_obsidian_cli(vault, "vault:path")
+    """Get vault path from obsidian-cli 'vault' command.
+
+    Runs: obsidian vault=<name> vault
+    Returns structured data like:
+        name    SecondBrainVaultTest
+        path    /Users/supreetsingh/SecondBrainVaultTest
+        files    156
+        folders    42
+        size    814632
+    """
+    result = run_obsidian_cli(vault, "vault")
     if result:
-        return result.strip()
+        for line in result.splitlines():
+            parts = line.split(None, 1)
+            if len(parts) == 2 and parts[0] == "path":
+                return parts[1].strip()
 
     # Fall back to home directory search
     home = os.path.expanduser("~")
