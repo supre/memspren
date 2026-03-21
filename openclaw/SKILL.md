@@ -95,7 +95,7 @@ Memory files may not exist on first run — that's expected. Create them on firs
 | What am I working on / status | Use active memory (insights + goals + hot-memory) → summarize |
 | What should I focus on | Use goals.md + insights.md → advise |
 | Sync now / push to obsidian / sync my vault | Read `Protocols/sync-protocol.md` → execute sync |
-| Knowledge transfer / KT session / had a KT | Read `Protocols/kt-protocol.md` → capture KT |
+| Matches a custom_protocol trigger in config.md | Load custom protocol from `.second-brain/Protocols/` |
 
 ## Conversation flow (during brain dumps and check-ins)
 
@@ -141,7 +141,14 @@ Run `check_cli.py` before sync operations. Use `update_connected.py` for all `co
 | `Protocols/entity-protocol.md` | During sync — creating or updating vault entities |
 | `Protocols/linking-protocol.md` | During sync — writing or updating vault files |
 | `Protocols/sync-protocol.md` | Sync triggered (user, cron, or auto) |
-| `Protocols/kt-protocol.md` | User mentions a knowledge transfer session |
+
+**Custom protocols** (user's vault — `.second-brain/Protocols/`):
+
+Loaded from `custom_protocols` section in config.md. Agent checks triggers at intent detection time.
+Custom protocols are user-specific — they stay in the vault, never in the skill package.
+
+When a user asks to create a new protocol, it is ALWAYS a custom protocol.
+Only the project owner/admin can create global protocols (shipped with the skill).
 
 Never load all protocol files at once.
 
