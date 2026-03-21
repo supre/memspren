@@ -1,15 +1,13 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const navLinks = document.querySelectorAll('.toc a[data-route]');
-    const pages = document.querySelectorAll('.page');
+    var navLinks = document.querySelectorAll('#side-nav a[data-route]');
+    var pages = document.querySelectorAll('.page');
 
     // --- Router ---
     function navigate(route) {
-        // Hide all pages
         pages.forEach(function (page) {
             page.classList.remove('active');
         });
 
-        // Show target page
         var target = document.getElementById('page-' + route);
         if (target) {
             target.classList.add('active');
@@ -17,13 +15,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Update nav active state
         navLinks.forEach(function (link) {
-            link.classList.remove('active');
-            if (link.getAttribute('data-route') === route) {
-                link.classList.add('active');
+            var isActive = link.getAttribute('data-route') === route;
+            if (isActive) {
+                link.className = 'nav-item flex items-center px-4 py-3 bg-primary text-white rounded-full mx-2 cursor-pointer transition-transform hover:translate-x-1 no-underline';
+            } else {
+                link.className = 'nav-item flex items-center px-4 py-3 rounded-full mx-2 cursor-pointer transition-transform hover:translate-x-1 no-underline text-secondary hover:bg-surface-container-low';
             }
         });
 
-        // Scroll to top of main content
         window.scrollTo(0, 0);
     }
 
@@ -32,10 +31,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (hash && hash.startsWith('#/')) {
             return hash.substring(2);
         }
-        return 'overview';
+        return 'story';
     }
 
-    // Handle nav clicks
     navLinks.forEach(function (link) {
         link.addEventListener('click', function (e) {
             e.preventDefault();
@@ -44,10 +42,17 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Handle hash changes
     window.addEventListener('hashchange', function () {
         navigate(getRouteFromHash());
     });
+
+    // --- Filter active style helpers ---
+    var FILTER_ACTIVE = 'filter-btn px-3 py-1 border border-primary bg-primary text-on-primary rounded-full text-xs font-body cursor-pointer transition-all';
+    var FILTER_INACTIVE = 'filter-btn px-3 py-1 border border-outline-variant/30 bg-surface rounded-full text-xs font-body text-secondary cursor-pointer transition-all hover:border-primary hover:text-primary';
+
+    function setFilterBtnState(btn, active) {
+        btn.className = active ? FILTER_ACTIVE : FILTER_INACTIVE;
+    }
 
     // --- Progress Notes ---
     var progressNotes = [];
@@ -55,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var activeTags = [];
 
     function loadProgressNotes() {
-        fetch('progress-notes.json')
+        fetch('progress-notes.json?v=3')
             .then(function (res) { return res.json(); })
             .then(function (data) {
                 progressNotes = data;
@@ -79,10 +84,11 @@ document.addEventListener('DOMContentLoaded', function () {
         var allBtn = container.querySelector('[data-tag="all"]');
         container.innerHTML = '';
         container.appendChild(allBtn);
+        setFilterBtnState(allBtn, true);
 
         Object.keys(tagSet).sort().forEach(function (tag) {
             var btn = document.createElement('button');
-            btn.className = 'filter-btn';
+            btn.className = FILTER_INACTIVE;
             btn.setAttribute('data-tag', tag);
             btn.textContent = tag;
             btn.addEventListener('click', function () {
@@ -105,9 +111,9 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function () {
             activeTimeFilter = parseInt(this.getAttribute('data-hours'), 10);
             document.querySelectorAll('#time-filters .filter-btn').forEach(function (b) {
-                b.classList.remove('active');
+                setFilterBtnState(b, false);
             });
-            this.classList.add('active');
+            setFilterBtnState(this, true);
             renderProgressNotes();
         });
     });
@@ -115,13 +121,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderProgressNotes() {
         var now = new Date();
         var filtered = progressNotes.filter(function (note) {
-            // Time filter
             if (activeTimeFilter > 0) {
                 var noteDate = new Date(note.date);
                 var diffHours = (now - noteDate) / (1000 * 60 * 60);
                 if (diffHours > activeTimeFilter) return false;
             }
-            // Tag filter (multi-select: note must have ALL selected tags)
             if (activeTags.length > 0) {
                 if (!note.tags) return false;
                 for (var i = 0; i < activeTags.length; i++) {
@@ -143,28 +147,71 @@ document.addEventListener('DOMContentLoaded', function () {
 
         empty.style.display = 'none';
 
-        // Sort by date descending
         filtered.sort(function (a, b) {
             return new Date(b.date) - new Date(a.date);
         });
 
         var html = '';
         filtered.forEach(function (note) {
+            var dateObj = new Date(note.date);
+            var monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+            var dateLabel = monthNames[dateObj.getMonth()] + ' ' + dateObj.getDate();
+
             var tagsHtml = (note.tags || []).map(function (tag) {
-                return '<span class="tag">' + escapeHtml(tag) + '</span>';
+                return '<span class="text-[10px] uppercase tracking-tighter font-body bg-surface-container-high px-2 py-0.5 rounded text-on-surface-variant">' + escapeHtml(tag) + '</span>';
             }).join('');
 
-            html += '<article class="progress-card">' +
-                '<div class="progress-card-header">' +
-                '<time>' + formatDate(note.date) + '</time>' +
-                '<div class="tags">' + tagsHtml + '</div>' +
+            var scopeHtml = '';
+            if (note.scope) {
+                scopeHtml = '<span class="text-[10px] uppercase tracking-wider font-body font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded">' + escapeHtml(note.scope) + '</span>';
+            }
+
+            // Render details as bullet list
+            var detailsHtml = '';
+            if (note.details && note.details.length > 0) {
+                detailsHtml = '<ul class="mt-2 space-y-1">';
+                note.details.forEach(function (d) {
+                    detailsHtml += '<li class="flex items-start gap-2 text-on-surface-variant text-sm leading-relaxed">' +
+                        '<span class="text-primary/60 mt-1.5 text-[6px]">&#9679;</span>' +
+                        '<span>' + escapeHtml(d) + '</span></li>';
+                });
+                detailsHtml += '</ul>';
+            }
+
+            // Render links — internal links open detail view, external links open in new tab
+            var linksHtml = '';
+            if (note.links && note.links.length > 0) {
+                linksHtml = '<div class="mt-2 flex gap-4">';
+                note.links.forEach(function (link) {
+                    var detailId = toDetailId(link.url);
+                    if (detailId) {
+                        linksHtml += '<a href="javascript:void(0)" onclick="openDetail(\'' + detailId + '\')" class="text-primary text-xs font-medium hover:underline">' + escapeHtml(link.label) + ' →</a>';
+                    } else {
+                        linksHtml += '<a href="' + escapeAttr(link.url) + '" target="_blank" rel="noopener noreferrer" class="text-primary text-xs font-medium hover:underline">' + escapeHtml(link.label) + ' →</a>';
+                    }
+                });
+                linksHtml += '</div>';
+            }
+
+            // Support both old format (content) and new format (summary + details)
+            var summaryText = note.summary || note.content || '';
+
+            html += '<div class="flex gap-8">' +
+                '<span class="font-mono text-secondary-container bg-primary px-3 py-1 rounded h-fit text-xs font-bold whitespace-nowrap">' + dateLabel + '</span>' +
+                '<div class="flex-1">' +
+                '<div class="flex items-center gap-2 mb-1">' +
+                '<h4 class="font-body font-bold text-on-surface">' + escapeHtml(note.title) + '</h4>' +
+                scopeHtml +
                 '</div>' +
-                '<h3>' + escapeHtml(note.title) + '</h3>' +
-                '<p>' + escapeHtml(note.content) + '</p>' +
-                '</article>';
+                '<p class="text-on-surface-variant text-sm leading-relaxed">' + escapeHtml(summaryText) + '</p>' +
+                detailsHtml +
+                linksHtml +
+                '<div class="flex flex-wrap gap-2 mt-3">' + tagsHtml + '</div>' +
+                '</div>' +
+                '</div>';
         });
 
-        list.innerHTML = html;
+        list.innerHTML = '<div class="bg-surface-container px-8 py-10 rounded-xl space-y-10">' + html + '</div>';
         updateProgressBadge();
     }
 
@@ -176,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var pubMediums = [];
 
     function loadPublications() {
-        fetch('publications.json')
+        fetch('publications.json?v=2')
             .then(function (res) { return res.json(); })
             .then(function (data) {
                 publications = data || [];
@@ -202,11 +249,9 @@ document.addEventListener('DOMContentLoaded', function () {
         buildMultiFilterButtons('pub-tag-filters', 'data-tag', tagSet, pubTags, function () {
             renderPublications();
         });
-
         buildMultiFilterButtons('pub-type-filters', 'data-type', typeSet, pubTypes, function () {
             renderPublications();
         });
-
         buildMultiFilterButtons('pub-medium-filters', 'data-medium', mediumSet, pubMediums, function () {
             renderPublications();
         });
@@ -217,10 +262,11 @@ document.addEventListener('DOMContentLoaded', function () {
         var allBtn = container.querySelector('[' + dataAttr + '="all"]');
         container.innerHTML = '';
         container.appendChild(allBtn);
+        setFilterBtnState(allBtn, true);
 
         Object.keys(valueSet).sort().forEach(function (val) {
             var btn = document.createElement('button');
-            btn.className = 'filter-btn';
+            btn.className = FILTER_INACTIVE;
             btn.setAttribute(dataAttr, val);
             btn.textContent = val;
             btn.addEventListener('click', function () {
@@ -243,9 +289,9 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function () {
             pubTimeFilter = parseInt(this.getAttribute('data-hours'), 10);
             document.querySelectorAll('#pub-time-filters .filter-btn').forEach(function (b) {
-                b.classList.remove('active');
+                setFilterBtnState(b, false);
             });
-            this.classList.add('active');
+            setFilterBtnState(this, true);
             renderPublications();
         });
     });
@@ -289,38 +335,26 @@ document.addEventListener('DOMContentLoaded', function () {
             return new Date(b.date) - new Date(a.date);
         });
 
-        var html = '';
+        var html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-8">';
         filtered.forEach(function (pub) {
-            var typeIcon = getTypeIcon(pub.type);
-            var tagsHtml = (pub.tags || []).map(function (tag) {
-                return '<span class="tag">' + escapeHtml(tag) + '</span>';
+            var tagsHtml = (pub.tags || []).slice(0, 3).map(function (tag) {
+                return '<span class="text-[10px] uppercase tracking-tighter font-body bg-surface-container-high px-2 py-0.5 rounded">' + escapeHtml(tag) + '</span>';
             }).join('');
 
-            html += '<article class="publication-card">' +
-                '<div class="publication-card-header">' +
-                '<span class="publication-type"><i class="' + typeIcon + '"></i> ' + escapeHtml(pub.type) + '</span>' +
-                '<span class="publication-medium">' + escapeHtml(pub.medium) + '</span>' +
-                '<time>' + formatDate(pub.date) + '</time>' +
+            html += '<a href="' + escapeAttr(pub.url) + '" target="_blank" rel="noopener noreferrer" class="border-l-2 border-primary/20 pl-6 py-4 hover:border-primary transition-all cursor-pointer block no-underline">' +
+                '<div class="flex items-center gap-2 mb-2">' +
+                '<span class="text-[10px] uppercase tracking-tighter font-label bg-surface-container-high px-2 py-0.5 rounded text-on-surface-variant">' + escapeHtml(pub.medium) + '</span>' +
+                '<span class="text-[10px] uppercase tracking-tighter font-label text-secondary">' + escapeHtml(pub.type) + '</span>' +
                 '</div>' +
-                '<h3>' + escapeHtml(pub.title) + '</h3>' +
-                '<p>' + escapeHtml(pub.context) + '</p>' +
-                '<div class="publication-footer">' +
-                '<div class="tags">' + tagsHtml + '</div>' +
-                '<a href="' + escapeAttr(pub.url) + '" class="publication-link" target="_blank" rel="noopener noreferrer">Read on ' + escapeHtml(pub.medium) + ' <i class="fas fa-arrow-up-right-from-square"></i></a>' +
-                '</div>' +
-                '</article>';
+                '<h3 class="font-body font-bold text-lg leading-tight text-on-surface hover:text-primary transition-colors">' + escapeHtml(pub.title) + '</h3>' +
+                '<p class="font-body text-on-surface-variant text-sm mt-2 leading-relaxed">' + escapeHtml(pub.context) + '</p>' +
+                '<div class="flex flex-wrap gap-2 mt-3">' + tagsHtml + '</div>' +
+                '</a>';
         });
+        html += '</div>';
 
         list.innerHTML = html;
         updatePubBadge();
-    }
-
-    function getTypeIcon(type) {
-        switch ((type || '').toLowerCase()) {
-            case 'video': return 'fas fa-video';
-            case 'podcast': return 'fas fa-podcast';
-            default: return 'fas fa-newspaper';
-        }
     }
 
     // --- Multi-select helpers ---
@@ -338,28 +372,14 @@ document.addEventListener('DOMContentLoaded', function () {
         btns.forEach(function (btn) {
             var val = btn.getAttribute(dataAttr);
             if (val === 'all') {
-                if (activeArr.length === 0) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
+                setFilterBtnState(btn, activeArr.length === 0);
             } else {
-                if (activeArr.indexOf(val) !== -1) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
+                setFilterBtnState(btn, activeArr.indexOf(val) !== -1);
             }
         });
     }
 
     // --- Helpers ---
-    function formatDate(dateStr) {
-        var d = new Date(dateStr);
-        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
-    }
-
     function escapeHtml(str) {
         var div = document.createElement('div');
         div.appendChild(document.createTextNode(str || ''));
@@ -374,6 +394,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function setupFilterToggle(toggleId, filterId) {
         var toggle = document.getElementById(toggleId);
         var panel = document.getElementById(filterId);
+        if (!toggle || !panel) return;
         toggle.addEventListener('click', function () {
             var isOpen = panel.classList.toggle('open');
             toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
@@ -410,6 +431,44 @@ document.addEventListener('DOMContentLoaded', function () {
             badge.classList.remove('visible');
         }
     }
+
+    // --- Detail View (inline architecture pages) ---
+    function toDetailId(url) {
+        // Map internal .html links to detail div IDs
+        if (!url || url.startsWith('http')) return null;
+        var name = url.replace('.html', '').replace(/[^a-zA-Z0-9-]/g, '-');
+        var el = document.getElementById('detail-' + name);
+        return el ? 'detail-' + name : null;
+    }
+
+    window.openDetail = function (detailId) {
+        // Hide log list + filters, show detail view
+        var wrapper = document.getElementById('progress-list-wrapper');
+        var filters = document.getElementById('progress-filters');
+        var filterToggle = document.getElementById('progress-filters-toggle');
+        var detail = document.getElementById(detailId);
+        if (!detail) return;
+
+        if (wrapper) wrapper.style.display = 'none';
+        if (filters) filters.style.display = 'none';
+        if (filterToggle) filterToggle.style.display = 'none';
+        detail.style.display = 'block';
+        window.scrollTo(0, 0);
+    };
+
+    window.closeDetail = function () {
+        // Hide all detail views, restore log list
+        var details = document.querySelectorAll('.detail-view');
+        details.forEach(function (d) { d.style.display = 'none'; });
+
+        var wrapper = document.getElementById('progress-list-wrapper');
+        var filters = document.getElementById('progress-filters');
+        var filterToggle = document.getElementById('progress-filters-toggle');
+        if (wrapper) wrapper.style.display = '';
+        if (filters) filters.style.display = '';
+        if (filterToggle) filterToggle.style.display = '';
+        window.scrollTo(0, 0);
+    };
 
     // --- Init ---
     loadProgressNotes();
