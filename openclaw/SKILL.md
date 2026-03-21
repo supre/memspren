@@ -125,8 +125,12 @@ When sync triggers → read `Protocols/sync-protocol.md` and execute.
 | --- | --- |
 | `scripts/check_cli.py` | Verify obsidian-cli is reachable and vault is accessible |
 | `scripts/update_connected.py` | Safely append paths to a file's `connected:` YAML array |
+| `scripts/scan_descriptions.py` | Extract frontmatter descriptions from a vault folder for smart merge decisions |
+| `scripts/git_commit.py` | Commit file state before modification (safety checkpoint, nothing ever lost) |
 
 Run `check_cli.py` before sync operations. Use `update_connected.py` for all `connected:` updates — never use `property:set` for arrays.
+
+**Smart merge flow (during sync):** Before creating any file, run `scan_descriptions.py` to check if a similar file already exists. Before modifying any existing file, run `git_commit.py` to snapshot current state. See `Protocols/sync-protocol.md` for full flow.
 
 ## Protocol files (load only when needed)
 

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MemSpren — Smart Merge Architecture (v0.02)</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --orange: #d29922;
+      --red: #f85149;
+      --purple: #bc8cff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 { color: var(--accent); margin-bottom: 0.5rem; font-size: 1.8rem; }
+    h2 { color: var(--accent); margin-top: 2rem; margin-bottom: 0.75rem; font-size: 1.4rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+    h3 { color: var(--purple); margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1.15rem; }
+    p { margin-bottom: 1rem; }
+    .meta { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem; border-left: 3px solid var(--accent); padding-left: 1rem; }
+    .meta strong { color: var(--text); }
+    code { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 0.15rem 0.4rem; font-size: 0.9em; color: var(--orange); }
+    pre { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem; font-size: 0.85rem; line-height: 1.5; }
+    pre code { background: none; border: none; padding: 0; color: var(--text); }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
+    th { background: var(--surface); color: var(--accent); text-align: left; padding: 0.6rem 0.8rem; border: 1px solid var(--border); font-size: 0.9rem; }
+    td { padding: 0.6rem 0.8rem; border: 1px solid var(--border); font-size: 0.9rem; }
+    tr:nth-child(even) { background: rgba(22, 27, 34, 0.5); }
+    ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+    li { margin-bottom: 0.4rem; }
+    .diagram { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; font-family: 'Courier New', monospace; font-size: 0.8rem; line-height: 1.7; white-space: pre; overflow-x: auto; }
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+    .badge-new { background: rgba(63, 185, 80, 0.15); color: var(--green); border: 1px solid rgba(63, 185, 80, 0.3); }
+    .badge-modified { background: rgba(210, 153, 34, 0.15); color: var(--orange); border: 1px solid rgba(210, 153, 34, 0.3); }
+    .badge-critical { background: rgba(248, 81, 73, 0.15); color: var(--red); border: 1px solid rgba(248, 81, 73, 0.3); }
+    .callout { background: var(--surface); border-left: 3px solid var(--accent); padding: 1rem; margin: 1rem 0; border-radius: 0 6px 6px 0; }
+    .callout-warn { border-left-color: var(--orange); }
+    .callout-success { border-left-color: var(--green); }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+  </style>
+</head>
+<body>
+
+<h1>Smart Merge Architecture</h1>
+<p style="color: var(--text-muted); margin-bottom: 0.5rem;">MemSpren v0.02 — Internal Architecture Document</p>
+
+<div class="meta">
+  <strong>Date:</strong> March 21, 2026<br>
+  <strong>Author:</strong> Supreet Singh<br>
+  <strong>Status:</strong> Implemented<br>
+  <strong>Branch:</strong> feature/making-openclaw-skill-seamless<br>
+  <strong>Affects:</strong> OpenClaw skill only (Claude skill not yet updated)<br>
+  <strong>Problem Solved:</strong> Duplicate file creation, vault clutter, no version control safety net
+</div>
+
+<h2>Problem Statement</h2>
+
+<p>During production use of MemSpren v0.02's batch sync system, three critical quality issues surfaced:</p>
+
+<ol>
+  <li><strong>Duplicate documents:</strong> Multiple files created for the same topic (e.g., multiple vision documents, similar idea files)</li>
+  <li><strong>No existence checking:</strong> The sync process created new files without checking if a similar file already existed in the target folder</li>
+  <li><strong>No safety net:</strong> When files were modified, the previous version was lost — no version control, no rollback capability</li>
+</ol>
+
+<p>These issues compounded with the multi-sync cron jobs (noon, 5 PM, 9 PM), where each sync could create duplicate entities independently.</p>
+
+<h2>Solution: Description-Based Smart Merge + Git Safety</h2>
+
+<p>Two new Python scripts provide governance over all Obsidian writes during sync:</p>
+
+<h3>Script 1: <code>scan_descriptions.py</code> <span class="badge badge-new">NEW</span></h3>
+
+<p>Scans a vault folder and extracts frontmatter metadata from all files. Returns structured JSON so the agent can find similar/duplicate files before creating new ones.</p>
+
+<pre><code># Usage
+python3 scripts/scan_descriptions.py \
+  --vault-path "/path/to/vault" \
+  --folder "Vision"
+
+# Output (JSON)
+[
+  {
+    "path": "Vision/Psychology-Tech Synthesis.md",
+    "description": "Career through-line combining psychology and technology",
+    "node_type": "vision",
+    "status": "active",
+    "last_modified": "2026-03-15"
+  }
+]</code></pre>
+
+<div class="callout">
+  <strong>Key design decision:</strong> The script only reads frontmatter (first few lines until closing <code>---</code>), not the full file. This keeps token cost minimal even when scanning folders with many files.
+</div>
+
+<h3>Script 2: <code>git_commit.py</code> <span class="badge badge-new">NEW</span></h3>
+
+<p>Commits the current state of a file before modification. Creates a safety checkpoint — nothing is ever lost.</p>
+
+<pre><code># Usage
+python3 scripts/git_commit.py \
+  --vault-path "/path/to/vault" \
+  --file "Vision/Psychology-Tech Synthesis.md" \
+  --message "pre-merge snapshot: before appending new vision context"
+
+# Output (JSON)
+{
+  "action": "committed",
+  "hash": "abc123f",
+  "file": "Vision/Psychology-Tech Synthesis.md",
+  "message": "pre-merge snapshot: ..."
+}
+
+# Initialize git in vault (during setup)
+python3 scripts/git_commit.py --vault-path "/path/to/vault" --init</code></pre>
+
+<h2>Architecture: Agent Decision Flow</h2>
+
+<p>The agent makes all decisions. Scripts are tools that provide data and safety. The agent is the brain.</p>
+
+<div class="diagram">
+AGENT NEEDS TO WRITE CONTENT
+         │
+         ▼
+┌─────────────────────────────────────┐
+│ Step 1: SCAN                        │
+│ scan_descriptions.py --folder X     │
+│ → Returns existing files + descs    │
+└────────────────┬────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────┐
+│ Step 2: DECIDE                      │
+│ Agent reads descriptions            │
+│ Does an existing file match?        │
+└───────┬───────────────┬─────────────┘
+        │               │
+    ┌───▼───┐     ┌─────▼─────┐
+    │  YES  │     │    NO     │
+    └───┬───┘     └─────┬─────┘
+        │               │
+        ▼               ▼
+┌───────────────┐ ┌───────────────┐
+│ Read full     │ │ Create new    │
+│ file via      │ │ file with     │
+│ obsidian-cli  │ │ description   │
+└───────┬───────┘ │ in frontmatter│
+        │         └───────┬───────┘
+        ▼                 │
+┌───────────────┐         │
+│ Step 3:       │         │
+│ ANALYZE       │         │
+│ Complement or │         │
+│ Conflict?     │         │
+└──┬─────────┬──┘         │
+   │         │            │
+   ▼         ▼            │
+COMPLEMENT  CONFLICT      │
+   │         │            │
+   ▼         ▼            │
+┌────────┐ ┌────────┐    │
+│ git    │ │ git    │    │
+│ commit │ │ commit │    │
+│ snap-  │ │ snap-  │    │
+│ shot   │ │ shot   │    │
+└───┬────┘ └───┬────┘    │
+    │          │          │
+    ▼          ▼          │
+ Append     Update +     │
+ with       NOTIFY       │
+ dated      USER         │
+ header     (what        │
+    │       changed,     │
+    │       git hash     │
+    │       for revert)  │
+    │          │          │
+    ▼          ▼          ▼
+┌─────────────────────────────────────┐
+│ Step 4: FINALIZE                    │
+│ Update description if expanded      │
+│ Update last_modified                │
+│ Update connected[] via script       │
+└─────────────────────────────────────┘</div>
+
+<h2>Frontmatter: The <code>description</code> Field</h2>
+
+<p>Every file in the vault now requires a <code>description</code> field in its YAML frontmatter:</p>
+
+<pre><code>---
+node_type: idea
+created: 2026-03-21
+description: "Gamification of daily habits with points earned for right actions and lost for missed commitments"
+status: active
+connected: []
+tags: []
+last_modified: 2026-03-21
+---</code></pre>
+
+<p>The description serves three purposes:</p>
+<ol>
+  <li><strong>Merge key:</strong> Used by <code>scan_descriptions.py</code> to find similar files</li>
+  <li><strong>File identity:</strong> The agent reads descriptions to decide merge vs create</li>
+  <li><strong>Retrieval aid:</strong> Future "what do I have about X?" queries can search descriptions</li>
+</ol>
+
+<h2>Merge Scope Rules</h2>
+
+<table>
+  <tr><th>Node Type</th><th>Scan Folder</th><th>Merge Behavior</th><th>Rationale</th></tr>
+  <tr><td><code>vision</code></td><td>Vision/</td><td>🔴 Aggressive</td><td>Few files expected — merge readily</td></tr>
+  <tr><td><code>strategy</code></td><td>Strategy/</td><td>🔴 Aggressive</td><td>Few files expected</td></tr>
+  <tr><td><code>idea</code></td><td>Work/Ideas/</td><td>🟡 Moderate</td><td>Similar ideas should consolidate</td></tr>
+  <tr><td><code>learning</code></td><td>Notes/Learnings/</td><td>🟡 Moderate</td><td>Same topic = same file</td></tr>
+  <tr><td><code>pattern</code></td><td>Notes/Patterns/</td><td>🟢 Conservative</td><td>Patterns are distinct concepts</td></tr>
+  <tr><td><code>project</code></td><td>Work/Projects/</td><td>⚪ No scan</td><td>Projects are always distinct</td></tr>
+  <tr><td><code>person</code></td><td>People/</td><td>⚪ No scan</td><td>People are always distinct</td></tr>
+  <tr><td><code>log-entry</code></td><td>Log/Daily/</td><td>📅 Date-based</td><td>Same date = append, different = create</td></tr>
+  <tr><td><code>kt</code></td><td>Work/KT/</td><td>🟡 Moderate</td><td>Same system/component = same file</td></tr>
+</table>
+
+<h2>Git as Safety Net</h2>
+
+<div class="diagram">
+BEFORE MODIFICATION          AFTER MODIFICATION
+         │                            │
+         ▼                            ▼
+┌─────────────────┐         ┌─────────────────┐
+│ git commit      │         │ File updated    │
+│ "pre-merge      │         │ with new content│
+│  snapshot"      │         │                 │
+│                 │         │ If user         │
+│ hash: abc123f   │ ──────► │ disagrees:      │
+│                 │         │ git diff abc123f│
+│ NOTHING LOST    │         │ git revert      │
+└─────────────────┘         └─────────────────┘</div>
+
+<div class="callout callout-success">
+  <strong>Setup requirement:</strong> Git must be installed before MemSpren setup proceeds. The setup protocol now initializes a git repo in the vault with an initial commit of all existing files. The <code>git_commit.py</code> script handles initialization if the vault isn't already a repo.
+</div>
+
+<h2>Conflict Resolution: User Notification</h2>
+
+<p>When new content <strong>conflicts</strong> with existing content (not just adds to it), the agent:</p>
+
+<ol>
+  <li>Commits the current file state (git snapshot)</li>
+  <li>Updates the file with reconciled content</li>
+  <li>Sends the user a notification:</li>
+</ol>
+
+<pre><code>"I updated [file].
+ Previous version said: [X]
+ New information says: [Y]
+ I've reconciled it to: [Z]
+
+ Previous version saved in git (commit abc123f).
+ Run `git diff abc123f` to see exactly what changed.
+ Run `git revert abc123f` to undo if you disagree."</code></pre>
+
+<h2>Files Changed</h2>
+
+<table>
+  <tr><th>File</th><th>Action</th><th>Purpose</th></tr>
+  <tr><td><code>scripts/scan_descriptions.py</code></td><td><span class="badge badge-new">NEW</span></td><td>Extract frontmatter descriptions from vault folder</td></tr>
+  <tr><td><code>scripts/git_commit.py</code></td><td><span class="badge badge-new">NEW</span></td><td>Commit file state before modification</td></tr>
+  <tr><td><code>Protocols/sync-protocol.md</code></td><td><span class="badge badge-modified">MODIFIED</span></td><td>Added smart merge flow + scope rules</td></tr>
+  <tr><td><code>Protocols/entity-protocol.md</code></td><td><span class="badge badge-modified">MODIFIED</span></td><td>Added description requirement to core rules</td></tr>
+  <tr><td><code>Protocols/linking-protocol.md</code></td><td><span class="badge badge-modified">MODIFIED</span></td><td>Added description to base frontmatter spec</td></tr>
+  <tr><td><code>Protocols/setup-protocol.md</code></td><td><span class="badge badge-modified">MODIFIED</span></td><td>Added git prerequisite + vault git init</td></tr>
+  <tr><td><code>SKILL.md</code></td><td><span class="badge badge-modified">MODIFIED</span></td><td>Added new scripts to bundled scripts table</td></tr>
+</table>
+
+<h2>What This Doesn't Solve (Future)</h2>
+
+<ul>
+  <li><strong>Cross-folder merging</strong> — e.g., an idea that should become a project (different concern, different workflow)</li>
+  <li><strong>Semantic similarity</strong> — would need embeddings for truly intelligent matching (current approach is description-based keyword matching by the agent)</li>
+  <li><strong>Retroactive cleanup</strong> — existing duplicate files need a separate cleanup cron job to identify and consolidate</li>
+  <li><strong>Auto-adding descriptions</strong> — existing files without descriptions need a migration pass</li>
+</ul>
+
+<hr>
+
+<p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 2rem;">
+  Internal document — not referenced from main docs site.<br>
+  Generated: March 21, 2026 | Branch: feature/making-openclaw-skill-seamless
+</p>
+
+</body>
+</html>

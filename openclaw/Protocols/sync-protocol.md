@@ -70,6 +70,38 @@ If sync-buffer.md is empty or `pending_sync: false` → skip sync, notify user "
 Read `Protocols/entity-protocol.md` now.
 Read `Protocols/linking-protocol.md` now.
 
+**Before writing ANY entity**, follow the Smart Merge flow:
+
+1. **Scan:** Run `scripts/scan_descriptions.py --vault-path [vault_path] --folder [relevant_folder]`
+   to get existing files with descriptions in that folder.
+
+2. **Decide:** Read the descriptions. Does an existing file match what you're about to create?
+   - If YES → read the full file via obsidian-cli, then:
+     - If new content COMPLEMENTS existing → git commit snapshot, then append
+     - If new content CONFLICTS with existing → git commit snapshot, update file,
+       notify user: "Updated [file]. Previous said [X], new says [Y]. Git commit [hash] for rollback."
+   - If NO match → create new file with `description` in frontmatter
+
+3. **Git safety:** Before modifying ANY existing file, run:
+   `scripts/git_commit.py --vault-path [vault_path] --file [file_path] --message "pre-sync snapshot"`
+
+4. **Description field:** Every new file MUST include `description` in frontmatter —
+   a one-line summary of what the file is about. This is the search key for future merges.
+
+**Scope rules for scanning:**
+
+| node_type | Scan folder | Merge aggressiveness |
+|---|---|---|
+| vision | `Vision/` | Aggressive — few files, merge readily |
+| strategy | `Strategy/` | Aggressive — few files |
+| idea | `Work/Ideas/` | Moderate — similar ideas should consolidate |
+| learning | `Notes/Learnings/` | Moderate — same topic = same file |
+| pattern | `Notes/Patterns/` | Conservative — patterns are distinct |
+| project | `Work/Projects/` | No scan — always distinct |
+| person | `People/` | No scan — always distinct |
+| log-entry | `Log/Daily/` | Date-based — same date = append |
+| kt | `Work/KT/` | Moderate — same system/component = same file |
+
 Process entities in this order:
 
 ### 4a — Daily log note

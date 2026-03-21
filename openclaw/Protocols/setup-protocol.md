@@ -16,21 +16,44 @@ All vault operations use obsidian-cli. Skill files (config, Memory) are written 
 Copy and track progress before starting:
 
 ```
-- [ ] Step 1: Greet user
-- [ ] Step 2: Vault location
-- [ ] Step 3: Check-in time
-- [ ] Step 4: Vision and goals
-- [ ] Step 5: Sync schedule
-- [ ] Step 6: Journaling (Phase 2 — skip for MMVP)
-- [ ] Step 7: Lifestyle tracking (Phase 2 — skip for MMVP)
-- [ ] Step 8: Create files and structure
-- [ ] Step 9: Guided tour
-- [ ] Step 10: Mark setup complete
+- [ ] Step 1: Check prerequisites (git, obsidian-cli)
+- [ ] Step 2: Greet user
+- [ ] Step 3: Vault location
+- [ ] Step 4: Check-in time
+- [ ] Step 5: Vision and goals
+- [ ] Step 6: Sync schedule
+- [ ] Step 7: Journaling (Phase 2 — skip for MMVP)
+- [ ] Step 8: Lifestyle tracking (Phase 2 — skip for MMVP)
+- [ ] Step 9: Create files and structure (includes git init)
+- [ ] Step 10: Guided tour
+- [ ] Step 11: Mark setup complete
 ```
 
 ---
 
-## Step 1: Greet user
+## Step 1: Check prerequisites
+
+### Git
+Verify git is installed:
+```bash
+git --version
+```
+
+If git not found:
+> "MemSpren requires git for version control of your vault. Every time I modify a file,
+> I commit the previous version first so nothing is ever lost. Please install git:
+> - macOS: `brew install git` or `xcode-select --install`
+> - Linux: `sudo apt install git`
+> - Windows: https://git-scm.com/download/win"
+
+Do NOT proceed with setup until git is available.
+
+### Obsidian CLI
+(Already covered in Prerequisites section of SKILL.md)
+
+---
+
+## Step 2: Greet user
 
 Say:
 > "Hey! I'm going to set up your second brain. Takes about 2 minutes.
@@ -39,7 +62,7 @@ Say:
 
 ---
 
-## Step 2: Vault location
+## Step 3: Vault location
 
 Ask:
 > "What's the full path to your Obsidian vault on your computer?
@@ -61,7 +84,7 @@ If Obsidian is not running, tell user: "Please open Obsidian and try again."
 
 ---
 
-## Step 3: Check-in time
+## Step 4: Check-in time
 
 Ask:
 > "What time works for your daily check-in? (e.g. 9pm, after work)"
@@ -92,7 +115,7 @@ obsidian vault="[vault_name]" create \
 
 ---
 
-## Step 5: Sync schedule
+## Step 6: Sync schedule
 
 Explain to the user how vault synchronization works, then set up cron jobs.
 
@@ -148,7 +171,7 @@ Say:
 
 ---
 
-## Step 6: Journaling *(Phase 2 — skip for MMVP)*
+## Step 7: Journaling *(Phase 2 — skip for MMVP)*
 
 Ask:
 > "Do you want a daily journaling prompt during check-ins?"
@@ -168,7 +191,7 @@ Default journaling questions:
 
 ---
 
-## Step 7: Lifestyle tracking *(Phase 2 — skip for MMVP)*
+## Step 8: Lifestyle tracking *(Phase 2 — skip for MMVP)*
 
 Ask:
 > "Do you want to track anything daily — health, habits,
@@ -188,7 +211,7 @@ Continue until user says they're done.
 
 ---
 
-## Step 8: Create files and structure
+## Step 9: Create files and structure
 
 **Two locations are used:**
 - **Skill folder** → `.second-brain/` in the mounted folder root (always fixed)
@@ -359,6 +382,16 @@ entry_count: 0
 
 Create the directory for archived sync buffers.
 
+### Initialize git in the vault
+
+```bash
+python3 scripts/git_commit.py --vault-path "[vault_path]" --init
+```
+
+Tell user:
+> "I've initialized git in your vault for version control. Every time I modify
+> a file, I'll commit the previous version first so nothing is ever lost."
+
 ### Create .second-brain/Memory/system-state.md
 
 Write using the Write tool:
@@ -386,7 +419,7 @@ moc_suggestions: true
 
 ---
 
-## Step 9: Guided tour
+## Step 10: Guided tour
 
 Say:
 > "Your second brain is ready. Here's what I built:"
@@ -420,7 +453,7 @@ Close with:
 
 ---
 
-## Step 10: Mark setup complete
+## Step 11: Mark setup complete
 
 **Update .second-brain/config.md:**
 

@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-03-21",
+    "title": "Smart merge system — description-based deduplication + git safety",
+    "content": "*OpenClaw skill only — Claude skill not yet updated.* Added governance layer to prevent duplicate file creation during sync. Two new scripts: scan_descriptions.py extracts frontmatter descriptions from all files in a vault folder so the agent can find similar files before creating new ones; git_commit.py commits file state before any modification as a safety checkpoint (nothing ever lost, user can always git diff/revert). New required frontmatter field 'description' on all entity types — serves as search key for merge decisions, file identity, and future retrieval. Agent decision flow: scan folder → read descriptions → decide merge or create → if modifying existing file, git commit first → if content conflicts, notify user with diff and rollback instructions. Scope rules per entity type: vision/strategy = aggressive merge, ideas/learnings = moderate, patterns = conservative, projects/people = no scan. Setup protocol now requires git as prerequisite and initializes git repo in vault during setup. See docs/smart-merge-architecture.html for detailed architecture diagrams and flow documentation.",
+    "tags": ["skill", "architecture", "governance", "deduplication", "git", "v0.02"]
+  },
+  {
+    "date": "2026-03-21",
+    "title": "Knowledge transfer capture protocol",
+    "content": "*OpenClaw skill only — Claude skill not yet updated.* New kt-protocol.md for capturing work knowledge transfer sessions. Triggered when user mentions KT/knowledge transfer/handoff. Produces two documents per KT: (1) structured summary in Work/KT/[topic].md extracting participants, technical details, decisions, gotchas, action items, unclear areas, and references; (2) raw transcript preserved in Work/KT/Transcripts/[topic].md. Both follow sync protocol (buffered, not immediate). Born from real incident: Supreet couldn't recall details from a May 2025 KT when his manager needed help with a production bug.",
+    "tags": ["skill", "protocol", "work", "knowledge-transfer", "v0.02"]
+  },
+  {
+    "date": "2026-03-21",
+    "title": "Daily log append fix — multi-sync deduplication",
+    "content": "*OpenClaw skill only — Claude skill not yet updated.* Fixed critical bug where multiple syncs per day (noon, 5 PM, 9 PM cron jobs) created separate daily log files instead of appending to the existing one. Sync protocol Step 4a now checks if Log/Daily/YYYY-MM-DD.md exists before creating — if yes, appends with timestamp header; if no, creates as before.",
+    "tags": ["skill", "bugfix", "sync", "v0.02"]
+  },
+  {
     "date": "2026-03-19",
     "title": "Batch sync architecture — 3-layer memory system (v0.02)",
     "content": "*OpenClaw skill only — Claude skill not yet updated.* Major architectural overhaul addressing the critical token explosion problem (Friction #4). Replaced immediate Obsidian sync with a 3-layer memory system: Layer 1 (Active Memory, ~2000 tokens) keeps insights.md (user patterns, energy, mindset), goals.md (priorities + weekly/quarterly tracking), and hot-memory.md (project state) in context. Layer 2 (Brain Dump Buffer) is a write-only append log during conversation — zero token cost, never read until sync. Layer 3 (Obsidian Vault) receives detailed entities with full YAML frontmatter and wiki links during batch sync (triggered by user, cron interval, or check-in close). Result: ~90% fewer file operations during conversation. New sync-protocol.md governs the 11-step batch process: validate → load state → process buffer → batch create/update Obsidian entities → recalculate insights + goals + hot-memory → archive buffer → confirm. First sync test processed 4 brain dump entries, created 11 entities (daily log, 3 ideas, 4 learnings, 1 person, tasks inbox), updated 2 existing entities, and established 12 cross-links. Buffer archived to sync-archive/ after successful sync. insights.md introduces inference about the user — patterns observed, strategies working/not working, energy state composite, mindset tracking, and vision alignment assessment. goals.md derives actionable priorities from insights and tracks weekly micro-goals and quarterly KRs. Hot-memory slimmed from 800 to 500 tokens by moving patterns/lifestyle/mindset to insights.md.",

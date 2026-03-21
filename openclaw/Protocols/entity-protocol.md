@@ -22,6 +22,7 @@ Check `sync_mode` in `.second-brain/config.md`:
 
 ## Core Rules
 
+- **Every file MUST have a `description` field in frontmatter** — one-line summary of what the file is about. This is the search key for finding similar files and preventing duplicates.
 - Always confirm before creating a new entity (except tasks)
 - Never delete existing content — always append
 - Always check if entity already exists before creating
