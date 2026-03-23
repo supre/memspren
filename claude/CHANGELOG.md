@@ -1,6 +1,34 @@
 # Changelog
 
-All notable changes to the Managing Second Brain skill are documented here.
+All notable changes to the MemSpren skill are documented here.
+
+---
+
+## [0.5.0] — 2026-03-23
+
+### Added
+- **Three-layer Memory + Buffer + Sync architecture** — Active memory (insights, goals, hot-memory, system-state ~2000 tokens), rotating write-only sync buffers, and batch Obsidian vault sync. Conversations never touch the vault; syncs process bounded buffer data.
+- **`Protocols/sync-protocol.md`** — NEW: 11-step batch sync protocol. Smart merge with description-based deduplication, optional git safety checkpoints, insights/goals recalculation, buffer archival. Fully adapted for native Read/Write/Edit tools.
+- **Rotating sync buffer system** — `sync-buffer-001.md`, `sync-buffer-002.md`, etc. with `sync-buffer-active.txt` pointer. Buffers seal at 1500 words; each sync processes one sealed buffer (bounded context). Prevents context window overflow on heavy days.
+- **`insights.md`** — Layer 1 memory file (700 tokens): user patterns, energy, mindset, strategies, vision alignment. Recalculated during sync.
+- **`goals.md`** — Layer 1 memory file (500 tokens): lead domino, top 3 priorities, failure modes, health/emotional check, weekly/quarterly goals. Recalculated during sync.
+- **Pattern entity type** — `Notes/Patterns/[name].md`: recurring behavioral themes with date-stamped evidence, triggers, and connected entities.
+- **`description` field** — REQUIRED in all entity frontmatter. One-line summary used for smart merge detection and retrieval.
+- **Custom protocols support** — User-created protocols in `.second-brain/Protocols/`, triggered via config.md intent mapping.
+- **`.memspren-config`** — Workspace-root config file with vault_path and setup_complete flag.
+- **Cron-based auto-sync** — Uses CronCreate for scheduled sync jobs. Session-scoped (re-created from config.md each session start).
+- **Sync schedule step in setup** — Step 6: configure automatic sync times during first-run setup.
+- **Prerequisites check in setup** — Step 1: checks git availability (non-blocking).
+
+### Changed
+- **`SKILL.md`**: Complete rewrite. Name changed to `memspren`. Three-layer architecture, session start flow (8 steps including cron re-creation), conversation flow section, sync triggers table, native operations table, expanded intent detection, custom protocols, updated critical rules (token limits, description field, buffer rules).
+- **`Protocols/check-in-protocol.md`**: Major rewrite. Reads insights.md + goals.md + hot-memory.md (not just hot-memory). Step 6 completely replaced: writes to rotating sync buffer instead of directly to vault. Step 9 adds sync prompt (Part 4). Step 10 simplified to system-state update only.
+- **`Protocols/entity-protocol.md`**: Added sync mode awareness section, `description` field to all entity templates, Pattern entity type, Glob-based existence check alternative.
+- **`Protocols/linking-protocol.md`**: Added `description` field to base frontmatter spec, `tasks-inbox` and `pattern` to valid node_types, step-by-step connected array update procedure.
+- **`Protocols/setup-protocol.md`**: Expanded from 9 to 11 steps. Added prerequisites check (Step 1), sync schedule (Step 6), .memspren-config creation, insights.md/goals.md/sync-buffer creation, git init, Logs/ and Notes/Patterns/ folders.
+- **`README.md`**: Rewritten with "What it does" section, three-layer memory explanation, "During conversation" and "During sync" subsections, expanded entity types and vault structure, key design decisions section, sync troubleshooting.
+- **hot-memory.md token limit** reduced from 800 to 500 (patterns/mindset moved to insights.md).
+- **hot-memory.md structure** updated: ACTIVE_PROJECTS, OPEN_THREADS, EVIDENCE_TRAIL, KEY_INSIGHTS, IDEAS_PARKED.
 
 ---
 

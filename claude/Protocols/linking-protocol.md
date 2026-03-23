@@ -62,6 +62,7 @@ Every file starts with this block. Fields vary by node type.
 ---
 node_type: [see valid values below]
 created: YYYY-MM-DD
+description: "[one-line summary of what this file is about]"
 status: [see valid values below]
 connected: []
 tags: []
@@ -69,12 +70,17 @@ last_modified: YYYY-MM-DD
 ---
 ```
 
+**The `description` field is REQUIRED for all node types.** It serves as:
+- Search key for finding similar/duplicate files during sync
+- Identity of the file for smart merge decisions
+- Retrieval aid for "what do I have about X?" queries
+
 ### Valid node_type values
 ```
 project       idea          person        task
-log-entry     learning      moc           hot-memory
-system-state  index         review        analysis
-resource      reference
+log-entry     learning      pattern       moc
+hot-memory    system-state  index         review
+analysis      resource      reference     tasks-inbox
 ```
 
 ### Valid status values
@@ -348,9 +354,17 @@ When updating an existing file:
 4. Never remove existing links — they are graph history
 5. Never modify existing `[[links]]` — append new ones only
 
-→ **How:** Read the full file, apply all changes in memory, Write back the complete file.
-For `connected:` arrays — parse the existing list, append the new path(s), deduplicate, rewrite the frontmatter block.
-For `last_modified` — update the value inline before writing back.
+### How to update `connected:` arrays
+
+Step-by-step procedure:
+1. **Read** the full file using the Read tool
+2. **Parse** the existing `connected:` list from YAML frontmatter
+3. **Append** new path(s) to the list
+4. **Deduplicate** — remove any paths that already exist in the list
+5. **Rewrite** the frontmatter block with the updated list (always use YAML block list form)
+6. **Write** back the complete file using the Write tool
+
+For `last_modified` — update the value inline in frontmatter before writing back.
 For body links — append new `[[link]]` lines under the relevant section.
 
 Example of what the `connected:` array looks like before and after:
