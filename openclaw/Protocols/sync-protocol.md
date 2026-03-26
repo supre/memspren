@@ -1,7 +1,14 @@
 # Sync Protocol
 
 Governs batch synchronization from brain dump log to Obsidian vault.
-Triggered by: user explicit ("sync now"), cron interval, end of check-in, or buffer overflow.
+
+**Triggered by:** user explicit ("sync now"), cron interval, end of check-in, or buffer overflow.
+
+**Key Behavior (Updated 2026-03-26):**
+- Sync processes ALL available entries (sealed buffers + active buffer with entries)
+- If active buffer has entries, it's sealed first, then synced
+- Daily logs are created even if buffer didn't hit 1500-word rotation cap
+- This ensures nightly sync always creates daily logs (no more missed days)
 
 Read `Protocols/entity-protocol.md` and `Protocols/linking-protocol.md` before creating/updating vault files.
 
@@ -44,24 +51,54 @@ If obsidian-cli not available or Obsidian not running:
 
 Read these files (all are `.second-brain/` files — use Read tool directly, not obsidian-cli):
 
-1. `.second-brain/Memory/sync-buffer.md` — the brain dump log (THIS is the primary data source)
-2. `.second-brain/Memory/insights.md` — previous user understanding
-3. `.second-brain/Memory/goals.md` — previous goals (check: were they met?)
-4. `.second-brain/Memory/hot-memory.md` — current project state
-5. `.second-brain/Memory/system-state.md` — config flags, last sync timestamp
+1. **Check for active buffer:**
+   - Read `.second-brain/Memory/sync-buffer-active.txt` to get current buffer ID
+   - Read `.second-brain/Memory/sync-buffer-{ID}.md` (the active buffer)
+   
+2. **Check for sealed buffers:**
+   - List all `sync-buffer-*.md` files with `state: sealed` in frontmatter
+   
+3. **Load context files:**
+   - `.second-brain/Memory/insights.md` — previous user understanding
+   - `.second-brain/Memory/goals.md` — previous goals (check: were they met?)
+   - `.second-brain/Memory/hot-memory.md` — current project state
+   - `.second-brain/Memory/system-state.md` — config flags, last sync timestamp
 
 ---
 
-## Step 3: Read and process sync buffer
+## Step 3: Seal active buffer if needed, then process all buffers
 
-Parse each entry in `sync-buffer.md`. For each entry:
+**NEW PROTOCOL (Updated 2026-03-26):**
+
+The sync should process **all available entries**, whether they're in sealed buffers or still in the active buffer.
+
+### 3a: Seal active buffer if it has entries
+
+1. Read the active buffer (from Step 2)
+2. Check `entry_count` in frontmatter OR count `## Entry` sections
+3. **If active buffer has ANY entries (entry_count > 0):**
+   - Update frontmatter: `state: sealed`, `sealed_at: [timestamp]`, `word_count: [actual count]`
+   - Create new active buffer with next ID
+   - Update `sync-buffer-active.txt` to point to new buffer
+4. **If active buffer is empty:** leave it as-is (nothing to seal)
+
+### 3b: Collect all sealed buffers for processing
+
+After sealing active buffer (if needed), gather all sealed buffers:
+- List all `sync-buffer-*.md` files with `state: sealed`
+- Sort by `sealed_at` timestamp (oldest first)
+- Read each buffer in order
+
+### 3c: Parse buffer entries
+
+For each sealed buffer, parse each entry:
 
 1. **Identify all extracted entities** (DAILY_LOG, PROJECT_UPDATE, PERSON_UPDATE, PATTERN_UPDATE, TASK_NEW, TASK_COMPLETE, IDEA, LEARNING)
 2. **Identify all proposed links** between entities
 3. **Group by entity type** for batch processing
 4. **Merge entries for same entity** (e.g., multiple PROJECT_UPDATEs for the same project → combine into one update)
 
-If sync-buffer.md is empty or `pending_sync: false` → skip sync, notify user "Nothing to sync."
+**If NO sealed buffers exist and active buffer is empty:** skip sync, notify user "Nothing to sync."
 
 ---
 
@@ -312,21 +349,20 @@ last_sync_summary: [one line summary of what was synced]
 
 ---
 
-## Step 9: Archive and clear buffer
+## Step 9: Archive and clear buffers
 
-1. **Archive:** Copy sync-buffer.md content to `.second-brain/Memory/sync-archive/YYYY-MM-DD-HHMMSS.md`
+**For each sealed buffer that was synced:**
+
+1. **Archive:** Copy buffer content to `.second-brain/Memory/sync-archive/YYYY-MM-DD-HHMMSS-{buffer_id}.md`
    - Create `sync-archive/` directory if it doesn't exist
    - Use Write tool (not obsidian-cli — this is a `.second-brain/` file)
+   - Include buffer ID in archive filename (e.g., `2026-03-26-053000-001.md`)
 
-2. **Clear buffer:** Write a fresh empty buffer:
-```
----
-node_type: sync-buffer
-last_updated: [timestamp]
-pending_sync: false
-entry_count: 0
----
-```
+2. **Delete sealed buffer:** Remove the sealed buffer file after archiving
+
+**Active buffer:**
+- Should already be fresh/empty (created in Step 3a when old active was sealed)
+- If sync happened without sealing active buffer (because it was empty), active buffer stays as-is
 
 ---
 

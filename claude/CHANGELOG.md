@@ -4,7 +4,7 @@ All notable changes to the MemSpren skill are documented here.
 
 ---
 
-## [0.5.0] — 2026-03-23
+## [0.3.0] — 2026-03-23
 
 ### Added
 - **Three-layer Memory + Buffer + Sync architecture** — Active memory (insights, goals, hot-memory, system-state ~2000 tokens), rotating write-only sync buffers, and batch Obsidian vault sync. Conversations never touch the vault; syncs process bounded buffer data.
