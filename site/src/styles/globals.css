@@ -78,7 +78,26 @@
     transition: transform 0.3s ease;
   }
 
-  /* How-to docs prose */
+  /* Custom scrollbar — used in modals and any overflow container */
+.custom-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(131, 213, 198, 0.25) transparent;
+}
+.custom-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: rgba(131, 213, 198, 0.25);
+  border-radius: 99px;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(131, 213, 198, 0.45);
+}
+
+/* How-to docs prose */
   .prose-doc p {
     color: rgba(225, 227, 225, 0.6);
     font-size: 0.9375rem;

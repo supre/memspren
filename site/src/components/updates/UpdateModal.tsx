@@ -18,7 +18,7 @@ export default function UpdateModal({ update, onClose }: UpdateModalProps) {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-surface/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-2xl max-h-[80vh] overflow-y-auto glass-card rounded-2xl p-8 md:p-10 focus:outline-none"
+          className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-2xl max-h-[80vh] overflow-y-auto custom-scroll glass-card rounded-2xl p-8 md:p-10 focus:outline-none"
           aria-describedby="update-details"
         >
           {update && (
