@@ -43,5 +43,14 @@
     "url": "https://dev.to/supreet_s/building-memspren-a-claude-skill-as-a-second-brain-v1-architecture-deep-dive-2p7o",
     "date": "2026-03-03",
     "tags": ["memspren", "architecture", "claude-skill", "zettelkasten", "deep-dive"]
+  },
+  {
+    "title": "I Wrote the Rules. My Agent Read Them. Then Did Whatever It Wanted.",
+    "medium": "dev.to",
+    "type": "article",
+    "context": "Built MemSpren to run through Telegram + Claude Code. Setup worked, protocol was explicit, and the agent still didn't follow it. This is the non-determinism problem: models acknowledge instructions but don't always execute them. The article documents the governance experiments (cron syncs, redundant state, archive-on-edit invariants) that help manage consequences but don't eliminate causes. Next experiment: micro skills — small, single-purpose files that narrow scope and enable tighter verification. You can't prompt your way to determinism.",
+    "url": "https://dev.to/supreet_s/i-wrote-the-rules-my-agent-read-them-then-did-whatever-it-wanted-1mc4",
+    "date": "2026-03-24",
+    "tags": ["non-determinism", "protocol-drift", "governance", "micro-skills", "claude-code", "telegram"]
   }
 ]

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "2026-03-26-react-migration",
+    "date": "2026-03-26",
+    "title": "Migrating the site to React",
+    "summary": "The site was getting complex to maintain as plain HTML. Switching to Vite + React + Tailwind + shadcn/ui to make it easier to add new pages and interactive components.",
+    "details": "The original site was a single 42KB index.html with vanilla JavaScript handling everything dynamically. As the project grew — publications, progress notes, and now an updates page with a modal — keeping all that in plain JS was becoming fragile.\n\nI've migrated to Vite + React with Tailwind CSS continuing as the styling layer. For interactive components (like the modal on this page), I'm using Radix UI primitives rather than a heavyweight component library, which keeps the bundle lean and the design fully custom.\n\nThe design is identical to the original — same dark theme, same glass-morphism cards, same fonts and color tokens. The difference is purely architectural: components are now composable, state is managed with React hooks, and adding new pages is just a new route."
+  },
+  {
+    "id": "2026-03-26-updates-page",
+    "date": "2026-03-26",
+    "title": "This is the updates page",
+    "summary": "A new place for development updates, pain points, and what's coming next — less technical than the old progress notes.",
+    "details": "Progress notes were useful as a dev log, but they were too granular and too technical to be interesting to anyone not deep in the codebase.\n\nThis updates page is different. It's for higher-level thoughts: what I'm focused on, what's been frustrating, what's working, and what's on the horizon. Less commit-level detail, more of a running narrative about where the project is going.\n\nEach update is a card. Short ones show the full text inline. Longer ones show a summary with a 'Read more' link that opens the full text in a dialog — which is what you're reading right now."
+  },
+  {
+    "id": "2026-03-21-sync-protocol",
+    "date": "2026-03-21",
+    "title": "Smart merge system for the sync protocol",
+    "summary": "Built a conflict-aware merge system that handles concurrent writes between the Obsidian vault and the agent's working buffer.",
+    "details": "The hardest part of building a sync protocol between an AI agent and a local Obsidian vault isn't the sync itself — it's what happens when both sides have written to the same note before sync runs.\n\nI spent this week building a smart merge system for OpenClaw. The approach: each note tracks a last-synced hash. On sync, if the vault version and the buffer version have both changed since the last sync, it runs a field-level merge rather than a last-write-wins overwrite.\n\nFor most fields (tags, aliases, relations), this is an additive merge — both sides' additions are preserved. For the body, it uses a simple diff-based approach, flagging conflicts in the note if they can't be auto-resolved.\n\nIt's not perfect, but it's dramatically better than silent overwrites, which was the previous behavior."
+  }
+]
