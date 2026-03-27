@@ -10,6 +10,8 @@ A Zettelkasten-based personal knowledge management ecosystem. Multiple integrati
 
 ### Claude (`claude/`)
 
+> **Development paused at v0.3.** The Claude skill is functional and will continue to work, but active development has been paused. New features and architecture improvements are being built on OpenClaw first. Once a more deterministic system is established there, those patterns will be brought back to the Claude skill. See the [v0.3 update](https://memspren.io/updates) for context.
+
 A Claude skill that turns Claude into your thinking partner for daily check-ins, capturing projects, ideas, people, and tasks as linked atomic notes in your Obsidian vault.
 
 - **No CLI required** — uses Claude's native file tools
