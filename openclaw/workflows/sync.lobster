@@ -108,7 +108,7 @@ steps:
     run: >
       python -m scripts.runner scripts/parallel_memory.py
       --extraction-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/extraction-output.json"
-      --task-inbox-file "$task_inbox.json.task_inbox_file"
+      --task-inbox-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/task-inbox.json"
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
     # Output: { insights: {ok, content}, goals: {ok, content}, tasks: {ok, content}, hot_memory: {ok, content} }
 
@@ -132,7 +132,7 @@ steps:
     run: >
       python -m scripts.runner scripts/read_frontmatter.py
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
-      --classifiers "$extraction.json.classifiers"
+      --classifiers "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/extraction-output.json"
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
     # Output: { frontmatter_file: str, count: int }
     # Side-effect: saves frontmatter array to MEMORY_PATH/run/frontmatter.json
@@ -147,8 +147,8 @@ steps:
     run: >
       python -m scripts.runner scripts/run_entity_plan.py
       --extraction-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/extraction-output.json"
-      --frontmatter-file "$read_frontmatter.json.frontmatter_file"
-      --task-inbox-file "$task_inbox.json.task_inbox_file"
+      --frontmatter-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/frontmatter.json"
+      --task-inbox-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/task-inbox.json"
       --agent memspren-heavy
     # Output: { entities: [{path, action, content_draft, node_type}], summary: str }
     # Prompt/schema hardcoded in run_entity_plan.py. All heavy inputs read from files.
@@ -162,9 +162,7 @@ steps:
     approval: |
       Sync ready to write.
 
-      Memory: $merge_layer1.json.summary
-      Vault:  $entity_plan.json.summary
-      Manual edits absorbed: $vault_diff.json.changed_count
+      Check state.json for details: memory updated, entity plan ready.
 
       Proceed with vault writes?
 
@@ -180,8 +178,8 @@ steps:
       python -m scripts.runner scripts/entity_pipeline.py
       --plan "$entity_plan.json"
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
-      --vault-name "$check_cli.json.vault_name"
-      --write-mode "$check_cli.json.write_mode"
+      --vault-name "$LOBSTER_ARG_VAULT_NAME"
+      --write-mode "filesystem"
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
     # Output: { ok, written, created, updated, merged, links_added, failed: [...] }
 
@@ -194,14 +192,13 @@ steps:
       python -m scripts.runner scripts/metrics_writer.py
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
-      --write-mode "$check_cli.json.write_mode"
-      --vault-name "$check_cli.json.vault_name"
+      --write-mode "filesystem"
+      --vault-name "$LOBSTER_ARG_VAULT_NAME"
       --extraction-result "$extraction.json"
       --layer1-result "$merge_layer1.json"
       --entity-result "$entity_writes.json"
       --vault-diff-result "$vault_diff.json"
-      --sealed-buffers "$rotate_buffer.json.sealed_buffers"
-      --entity-writes-ok "$entity_writes.json.ok"
+    # Reads sealed_buffers and entity_writes_ok from state
 
   - id: release_lock
     run: >

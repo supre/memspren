@@ -6,3 +6,4 @@ node_modules/
 dist/openclaw.bak.*/
 openclaw/sync-telemetry.log
 site/.vite/
+openclaw.bak.*/

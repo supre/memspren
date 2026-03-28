@@ -29,7 +29,11 @@ import json
 import os
 import re
 import glob
+import sys
 from datetime import datetime, timezone
+
+sys.path.insert(0, os.path.dirname(__file__))
+import state
 
 
 MEMORY_DIR = ".second-brain/Memory"
@@ -393,6 +397,11 @@ def main():
 
     if args.sync_check:
         result = sync_check(args.vault_path, memory_path=args.memory_path)
+        # Write sealed_buffers to state for metrics step
+        if args.memory_path and result.get("sealed_buffers"):
+            state.write_state(args.memory_path, {
+                "rotate_buffer_sealed_buffers": result["sealed_buffers"],
+            })
     elif args.check:
         result = check_status(args.vault_path, args.max_words)
     elif args.rotate:
