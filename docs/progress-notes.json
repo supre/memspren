@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-03-28",
+    "title": "Identify Lobster JSON path limitation + commit datetime fixes",
+    "content": "Fixed all datetime.utcnow() deprecation warnings (replaced with datetime.now(UTC)). Discovered Lobster limitation: no support for $step.json.field nested access in workflow commands - only $step.json (entire object), $step.stdout, $step.approved/skipped supported. Workflow needs refactor to use state file pattern: scripts write to MEMORY_PATH/run/state.json, subsequent steps read from known paths. This is a Lobster core limitation, not a bug in our workflow design.",
+    "tags": ["lobster", "sync", "bugfix", "architecture"]
+  },
+  {
+    "date": "2026-03-28",
     "title": "Fix Lobster workflow variable expansion and conditions",
     "content": "Fixed two critical Lobster workflow issues: (1) env: variable assignments don't expand LOBSTER_ARG_* references - must use them directly in run: commands. Removed env: section and replaced all $VAULT_PATH/$VAULT_NAME/$MEMORY_PATH with direct $LOBSTER_ARG_* references. (2) Lobster's when: clause only supports $step.approved|$step.skipped, not arbitrary JSON paths like $step.json.field. Removed early-exit conditional logic - downstream scripts handle empty buffers gracefully.",
     "tags": ["lobster", "sync", "bugfix", "workflow"]
