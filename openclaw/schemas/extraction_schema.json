@@ -45,14 +45,9 @@
     "classifiers": {
       "type": "array",
       "items": {
-        "type": "string",
-        "enum": [
-          "project:personal", "project:work", "idea", "people",
-          "learning", "log", "pattern", "relationship",
-          "vision", "strategy", "kt"
-        ]
+        "type": "string"
       },
-      "description": "Domain classifiers active in this sync — drive entity pipeline folder scope"
+      "description": "Domain classifiers active in this sync — drive entity pipeline folder scope. Common values: project:personal, project:work, idea, people, learning, log, pattern, relationship, vision, strategy, kt"
     }
   }
 }
