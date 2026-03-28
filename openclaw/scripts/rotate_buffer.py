@@ -290,10 +290,95 @@ def cleanup_buffer(vault_path: str, buffer_id: str, archive_dir: str = None) -> 
     return {"action": "cleaned", "buffer_id": buffer_id}
 
 
+def sync_check(vault_path: str, memory_path: str = None) -> dict:
+    """
+    Pre-flight check for the Lobster sync pipeline (--sync-check mode).
+
+    Seals the active buffer if it has entries, concatenates all sealed buffer
+    content, writes it to MEMORY_PATH/run/buffer-content.txt, and returns the
+    file path as buffer_content_file. The downstream run_extraction.py reads
+    from that file — this avoids shell interpolation of raw text in Lobster YAML.
+
+    Returns JSON-ready dict.
+    """
+    empty = {
+        "has_content":         False,
+        "should_exit":         True,
+        "sealed_buffers":      [],
+        "buffer_content_file": "",
+        "entry_count":         0,
+    }
+
+    active_id = read_active_id(vault_path)
+    if not active_id:
+        return empty
+
+    active_path = get_buffer_path(vault_path, active_id)
+    if os.path.exists(active_path):
+        with open(active_path, "r") as f:
+            content = f.read()
+        meta  = parse_frontmatter(content)
+        words = count_words(content)
+        count = int(meta.get("entry_count", 0))
+
+        if words > 0 and count > 0:
+            # Seal the active buffer so it's included in the sync
+            seal_buffer(vault_path, active_id)
+            new_id = next_buffer_id(active_id)
+            create_buffer(vault_path, new_id)
+
+    # Collect all sealed buffers
+    sealed = list_sealed(vault_path)
+    if not sealed:
+        return empty
+
+    # Concatenate content from all sealed buffers (oldest first)
+    parts = []
+    total_entries = 0
+    for buf in sealed:
+        buf_path = buf.get("path", "")
+        if os.path.exists(buf_path):
+            with open(buf_path, "r") as f:
+                buf_content = f.read()
+            # Strip frontmatter
+            if buf_content.startswith("---"):
+                end = buf_content.find("---", 3)
+                if end != -1:
+                    buf_content = buf_content[end + 3:].strip()
+            parts.append(buf_content)
+            total_entries += buf.get("entry_count", 0)
+
+    combined = "\n\n---\n\n".join(parts)
+
+    # Write to file so run_extraction.py can read without shell interpolation
+    derived_memory = memory_path or get_memory_path(vault_path)
+    run_dir = os.path.join(derived_memory, "run")
+    content_file = os.path.join(run_dir, "buffer-content.txt")
+    try:
+        os.makedirs(run_dir, exist_ok=True)
+        with open(content_file, "w", encoding="utf-8") as f:
+            f.write(combined)
+    except Exception as e:
+        import sys, json as _json
+        print(_json.dumps({"warn": f"could not write buffer-content file: {e}"}),
+              file=sys.stderr)
+        content_file = ""
+
+    return {
+        "has_content":         bool(parts),
+        "should_exit":         not bool(parts),
+        "sealed_buffers":      sealed,
+        "buffer_content_file": content_file,
+        "entry_count":         total_entries,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Manage rotating sync buffers")
     parser.add_argument("--vault-path", required=True, help="Full path to Obsidian vault")
     parser.add_argument("--check", action="store_true", help="Check current buffer status")
+    parser.add_argument("--sync-check", action="store_true",
+                        help="Pipeline pre-flight: seal active buffer if needed, return combined content")
     parser.add_argument("--rotate", action="store_true", help="Seal current buffer, create new")
     parser.add_argument("--list-sealed", action="store_true", help="List sealed buffers ready for sync")
     parser.add_argument("--list-all", action="store_true", help="List all buffer files")
@@ -302,9 +387,13 @@ def main():
     parser.add_argument("--buffer-id", help="Buffer ID for cleanup")
     parser.add_argument("--archive", action="store_true", default=True, help="Archive before cleanup")
     parser.add_argument("--max-words", type=int, default=DEFAULT_MAX_WORDS, help="Max words per buffer")
+    parser.add_argument("--memory-path", default=None,
+                        help="Explicit MEMORY_PATH for writing temp files (sync-check mode)")
     args = parser.parse_args()
 
-    if args.check:
+    if args.sync_check:
+        result = sync_check(args.vault_path, memory_path=args.memory_path)
+    elif args.check:
         result = check_status(args.vault_path, args.max_words)
     elif args.rotate:
         result = rotate(args.vault_path)

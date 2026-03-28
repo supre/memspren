@@ -1,0 +1,8 @@
+[
+  {
+    "date": "2026-03-28",
+    "title": "Fix Lobster workflow condition syntax",
+    "content": "Fixed unsupported condition syntax in sync.lobster workflow. Changed from `when: \"$rotate_buffer.json.has_content == false\"` to `when: $rotate_buffer.json.should_exit` with corresponding script update. Lobster's `when:` clause expects simple boolean references, not comparison expressions. Updated rotate_buffer.py to include `should_exit` field (inverted `has_content`) in JSON output.",
+    "tags": ["lobster", "sync", "bugfix"]
+  }
+]
