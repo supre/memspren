@@ -50,15 +50,16 @@ steps:
     # Exit 1 on lock exists → Lobster aborts with SYNC SKIPPED
 
   - id: check_cli
-    run: python -m scripts.runner scripts/check_cli.py --vault-path "$LOBSTER_ARG_VAULT_PATH" --vault "$LOBSTER_ARG_VAULT_NAME" --json
+    run: python -m scripts.runner scripts/check_cli.py --vault-path "$LOBSTER_ARG_VAULT_PATH" --vault "$LOBSTER_ARG_VAULT_NAME" --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory" --json
     # Output: { write_mode: "obsidian"|"filesystem", vault_name: str, last_sync: ISO|null }
+    # Also writes to state: check_cli_vault_name, check_cli_write_mode, check_cli_last_sync
 
   - id: vault_diff
     run: >
       python -m scripts.runner scripts/vault_diff_scanner.py
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
-      --since "$check_cli.json.last_sync"
+    # Reads check_cli_last_sync from state file
     # Output: { changed_files: [...], changed_files_content_file: str, changed_count: int }
     # On no git repo: returns empty result, logs WARN to telemetry — non-fatal
 
@@ -89,8 +90,8 @@ steps:
   - id: extraction
     run: >
       python -m scripts.runner scripts/run_extraction.py
-      --buffer-content-file "$rotate_buffer.json.buffer_content_file"
-      --manual-edits-file "$vault_diff.json.changed_files_content_file"
+      --buffer-content-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/buffer-content.txt"
+      --manual-edits-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/manual-edits.txt"
       --agent memspren-heavy
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
     # Output: { raw_insights, raw_goals, raw_tasks, raw_patterns, classifiers }
