@@ -1,399 +1,186 @@
 # Sync Protocol
 
-Governs batch synchronization from brain dump log to Obsidian vault.
+Governs batch synchronisation from rotating sync buffers to Obsidian vault.
 
 **Triggered by:** user explicit ("sync now"), cron interval, end of check-in, or buffer overflow.
 
-**Key Behavior (Updated 2026-03-26):**
-- Sync processes ALL available entries (sealed buffers + active buffer with entries)
-- If active buffer has entries, it's sealed first, then synced
-- Daily logs are created even if buffer didn't hit 1500-word rotation cap
-- This ensures nightly sync always creates daily logs (no more missed days)
-
-Read `Protocols/entity-protocol.md` and `Protocols/linking-protocol.md` before creating/updating vault files.
+**Architecture:** deterministic Lobster pipeline. The agent fires one Lobster tool call;
+Lobster executes the full pipeline and returns a structured result. The LLM is not in the
+loop between steps — it is only invoked inside the explicit `llm-task` steps defined in
+`workflows/sync.lobster`.
 
 ---
 
-## Checklist
+## How to invoke
 
-Copy and track:
-```
-- [ ] Step 1: Pre-sync validation
-- [ ] Step 2: Load current state
-- [ ] Step 3: Read and process sync buffer
-- [ ] Step 4: Batch create/update Obsidian entities
-- [ ] Step 5: Recalculate insights.md
-- [ ] Step 6: Recalculate goals.md
-- [ ] Step 7: Update hot-memory.md
-- [ ] Step 8: Update system-state.md
-- [ ] Step 9: Archive and clear buffer
-- [ ] Step 10: Log sync results
-- [ ] Step 11: Confirm to user
-```
+When sync triggers, execute:
 
----
-
-## Step 1: Pre-sync validation
-
-Verify obsidian-cli is available and vault is accessible:
 ```bash
-python scripts/check_cli.py --vault "<vault_name>"
+lobster run workflows/sync.lobster \
+  --args-json '{"vault_path":"<absolute path to vault root>","vault_name":"<exact name shown in Obsidian → Manage vaults>","config_path":"<vault_path>/.second-brain/config.md"}'
 ```
 
-If obsidian-cli not available or Obsidian not running:
-- Tell user: "Obsidian needs to be open for me to sync your vault. Please open Obsidian and try again."
-- Do NOT proceed with sync.
-- Buffer data is safe — it persists until next successful sync.
+The pipeline runs through Stage 0–3 automatically and pauses at the **approval gate** (Stage 4d).
+It returns a `resumeToken`.
 
 ---
 
-## Step 2: Load current state
+## Pipeline stages (summary)
 
-Read these files (all are `.second-brain/` files — use Read tool directly, not obsidian-cli):
-
-1. **Check for active buffer:**
-   - Read `.second-brain/Memory/sync-buffer-active.txt` to get current buffer ID
-   - Read `.second-brain/Memory/sync-buffer-{ID}.md` (the active buffer)
-   
-2. **Check for sealed buffers:**
-   - List all `sync-buffer-*.md` files with `state: sealed` in frontmatter
-   
-3. **Load context files:**
-   - `.second-brain/Memory/insights.md` — previous user understanding
-   - `.second-brain/Memory/goals.md` — previous goals (check: were they met?)
-   - `.second-brain/Memory/hot-memory.md` — current project state
-   - `.second-brain/Memory/system-state.md` — config flags, last sync timestamp
-
----
-
-## Step 3: Seal active buffer if needed, then process all buffers
-
-**NEW PROTOCOL (Updated 2026-03-26):**
-
-The sync should process **all available entries**, whether they're in sealed buffers or still in the active buffer.
-
-### 3a: Seal active buffer if it has entries
-
-1. Read the active buffer (from Step 2)
-2. Check `entry_count` in frontmatter OR count `## Entry` sections
-3. **If active buffer has ANY entries (entry_count > 0):**
-   - Update frontmatter: `state: sealed`, `sealed_at: [timestamp]`, `word_count: [actual count]`
-   - Create new active buffer with next ID
-   - Update `sync-buffer-active.txt` to point to new buffer
-4. **If active buffer is empty:** leave it as-is (nothing to seal)
-
-### 3b: Collect all sealed buffers for processing
-
-After sealing active buffer (if needed), gather all sealed buffers:
-- List all `sync-buffer-*.md` files with `state: sealed`
-- Sort by `sealed_at` timestamp (oldest first)
-- Read each buffer in order
-
-### 3c: Parse buffer entries
-
-For each sealed buffer, parse each entry:
-
-1. **Identify all extracted entities** (DAILY_LOG, PROJECT_UPDATE, PERSON_UPDATE, PATTERN_UPDATE, TASK_NEW, TASK_COMPLETE, IDEA, LEARNING)
-2. **Identify all proposed links** between entities
-3. **Group by entity type** for batch processing
-4. **Merge entries for same entity** (e.g., multiple PROJECT_UPDATEs for the same project → combine into one update)
-
-**If NO sealed buffers exist and active buffer is empty:** skip sync, notify user "Nothing to sync."
-
----
-
-## Step 4: Batch create/update Obsidian entities
-
-Read `Protocols/entity-protocol.md` now.
-Read `Protocols/linking-protocol.md` now.
-
-**Before writing ANY entity**, follow the Smart Merge flow:
-
-1. **Scan:** Run `scripts/scan_descriptions.py --vault-path [vault_path] --folder [relevant_folder]`
-   to get existing files with descriptions in that folder.
-
-2. **Decide:** Read the descriptions. Does an existing file match what you're about to create?
-   - If YES → read the full file via obsidian-cli, then:
-     - If new content COMPLEMENTS existing → git commit snapshot, then append
-     - If new content CONFLICTS with existing → git commit snapshot, update file,
-       notify user: "Updated [file]. Previous said [X], new says [Y]. Git commit [hash] for rollback."
-   - If NO match → create new file with `description` in frontmatter
-
-3. **Git safety:** Before modifying ANY existing file, run:
-   `scripts/git_commit.py --vault-path [vault_path] --file [file_path] --message "pre-sync snapshot"`
-
-4. **Description field:** Every new file MUST include `description` in frontmatter —
-   a one-line summary of what the file is about. This is the search key for future merges.
-
-**Scope rules for scanning:**
-
-| node_type | Scan folder | Merge aggressiveness |
+| Stage | Name | What happens |
 |---|---|---|
-| vision | `Vision/` | Aggressive — few files, merge readily |
-| strategy | `Strategy/` | Aggressive — few files |
-| idea | `Work/Ideas/` | Moderate — similar ideas should consolidate |
-| learning | `Notes/Learnings/` | Moderate — same topic = same file |
-| pattern | `Notes/Patterns/` | Conservative — patterns are distinct |
-| project | `Work/Projects/` | No scan — always distinct |
-| person | `People/` | No scan — always distinct |
-| log-entry | `Log/Daily/` | Date-based — same date = append |
-| kt | `Work/KT/` | Moderate — same system/component = same file |
+| 0 | Pre-flight | Lock file, obsidian-cli check, vault git diff, task inbox scan, buffer rotation |
+| 1 | Extraction | Single heavy llm-task reads the buffer once, returns structured raw material |
+| 2 | Parallel refinement | 4 llm-task jobs run simultaneously: insights, goals, tasks, hot-memory |
+| 3 | Merge + write Layer 1 | Validates and writes `.second-brain/Memory/` files (no vault writes yet) |
+| 4a | Frontmatter scan | Batch reads YAML frontmatter from classifier-scoped vault folders |
+| 4b | Entity plan | Single heavy llm-task generates the full vault write plan |
+| 4d | **Approval gate** | Pipeline pauses — agent presents write plan to user, waits for approval |
+| 4c | Entity writes | Per-entity: content directive → linking directive → write (parallel) |
+| 5 | Metrics + cleanup | metrics.json, buffer archive, system-state.md, system-log, lock release |
 
-Process entities in this order:
-
-### 4a — Daily log note
-
-**CRITICAL: Check if today's daily log already exists before creating.**
-
-```bash
-obsidian vault="[vault_name]" read path=Log/Daily/YYYY-MM-DD.md
-```
-
-- **If it exists:** APPEND new content to the existing log. Do NOT create a new file or overwrite.
-  Use `obsidian vault="[vault_name]" append` to add new sections for the time period covered
-  by the current buffer entries. Add a timestamp header (e.g., `## Afternoon Update (3:00 PM)`)
-  to separate from earlier content.
-
-- **If it does NOT exist:** Create `Log/Daily/YYYY-MM-DD.md` with FULL DETAILED content from
-  all buffer entries for that date.
-
-In both cases: include everything the user said, full emotional context, decisions made, specific
-names/numbers/quotes. This is the richest document — do not condense. Use the full context from
-buffer entries.
-
-Follow the daily log template from entity-protocol.md.
-Link to all entities created/updated during this sync.
-Update the `connected:` array using the helper script (append, don't replace).
-
-### 4b — Project updates
-
-For each project mentioned in buffer:
-- Read existing project file from Obsidian
-- Append detailed progress note with `### [DATE]` section
-- Update `last_modified` frontmatter
-- Add today's log to `connected:` array via `scripts/update_connected.py`
-- Write back with full wiki links to related entities
-
-### 4c — Ideas
-
-For each new idea in buffer:
-- Create atomic idea file with full context from buffer
-- Link to daily log and related projects/people
-- Include user's exact words and reasoning, not just summary
-
-### 4d — People
-
-For each person mentioned in buffer:
-- If exists: append interaction note under `## Interaction Log`
-- If new: create person file with full context
-- Link to daily log and connected projects
-
-### 4e — Tasks
-
-For each task in buffer:
-- New tasks: append to `Tasks/tasks-inbox.md`
-- Completed tasks: mark `- [x]` with completion date
-- Blocked tasks: update status, flag in hot-memory
-
-### 4f — Patterns
-
-For each pattern in buffer:
-- If pattern note exists: append new evidence with date
-- If new pattern: create pattern note in `Notes/Patterns/`
-- Link to daily log and related entities
-
-### 4g — Learnings
-
-For each learning in buffer:
-- Create or update learning note with full context
-- Link to source (daily log) and related projects/ideas
-
-### 4h — Cross-linking pass
-
-After all entities are created/updated:
-- Run through ALL proposed links from buffer
-- Update `connected:` arrays for BOTH sides of each link (using `scripts/update_connected.py`)
-- Add `[[wiki links]]` in body text where contextually relevant
-- Verify no orphan notes (every new file has at least one incoming link)
+Full step-by-step spec is in `workflows/sync.lobster`.
 
 ---
 
-## Step 5: Recalculate insights.md
+## Handling the approval gate
 
-**Data sources (in priority order, latest-weighted):**
+When Lobster returns a `resumeToken`, present the approval message to the user:
 
-1. **sync-buffer.md** (HIGHEST — what just happened)
-2. **Previous insights.md** (HIGH — accumulated inference)
-3. **hot-memory.md** (MEDIUM — project context)
-4. **goals.md** (LOW — were previous goals met or missed?)
-
-**Recalculation rules:**
-- New data OVERRIDES old data where conflicting
-- Patterns ACCUMULATE (add new evidence, don't discard old patterns)
-- Energy/mindset = LATEST snapshot (most recent state matters most)
-- Strategies: update working/not-working based on new evidence
-- What matters: recalculate based on what user ACTUALLY talked about (not what they stated aspirationally)
-
-**Compression rules (must stay under 700 tokens):**
-- Drop details older than ~7 days unless they're foundational patterns
-- Keep pattern names + latest evidence dates (not full history)
-- Specific > vague (dates, numbers, quotes > "user seemed stressed")
-- If over 700 tokens after recalculation, prioritize: WHAT_MATTERS_NOW > ENERGY_STATE > MINDSET_STATE > PATTERNS > STRATEGIES > VISION_ALIGNMENT
-
-**Write using Write tool** (this is a `.second-brain/` file, NOT vault content).
-
-**insights.md structure:**
 ```
-LAST_UPDATED: [timestamp]
+Sync ready to write.
 
-WHAT_MATTERS_NOW
-[Top 2-3 things genuinely occupying user's mental/emotional space. Inferred from recent brain dumps.]
+Memory: <Layer 1 summary — e.g. "insights OK, goals OK, tasks OK, hot-memory FALLBACK">
+Vault:  <entity plan summary — e.g. "2 create, 1 append, 1 merge">
+Manual edits absorbed: <N>
 
-RECENT_CHALLENGES
-[Active struggles with specific dates and details. Emotional, practical, professional.]
-
-PATTERNS_OBSERVED
-[Behavioral patterns with evidence dates. What triggers what. Both productive and destructive.]
-
-STRATEGIES_WORKING
-[What has demonstrably produced results. Cite specific evidence with dates.]
-
-STRATEGIES_NOT_WORKING
-[What's been attempted but isn't landing. Include WHY if inferable.]
-
-ENERGY_STATE
-[Composite: sleep quality/duration (last 3 days avg), physical activity, nutrition, hydration, mood trajectory. Include raw data points.]
-
-MINDSET_STATE
-[Where user's head is at. Inner critic? Confident? Spiraling? Growth-oriented? Recent emotional events. User's own frameworks.]
-
-VISION_ALIGNMENT
-[How recent actions connect or don't to stated future vision. Brief honest assessment.]
+Proceed with vault writes?
 ```
+
+**User says yes / approves:**
+Resume the pipeline with the token:
+```
+lobster resume <resumeToken> --approve
+```
+
+**User says no / declines:**
+```
+lobster resume <resumeToken> --decline
+```
+Buffer is preserved. Safe to re-trigger sync — all data is intact.
+
+**Token expires (default TTL: 24 hours):**
+Sync must be re-triggered. Buffer is intact. Stale tokens are pruned at the end of Stage 5.
 
 ---
 
-## Step 6: Recalculate goals.md
+## Config requirements
 
-Derive from updated insights.md + hot-memory.md + weekly/quarterly plans (if available in vault).
+The following fields must be present in `.second-brain/config.md` before the pipeline runs:
 
-**If weekly plan exists:** Read it from vault during sync to populate WEEKLY_MICRO_GOALS.
-**If quarterly plan exists:** Read it from vault to populate QUARTERLY_GOALS.
-
-**Write using Write tool.**
-
-**goals.md structure:**
-```
-LAST_UPDATED: [timestamp]
-
-LEAD_DOMINO
-[The ONE thing that moves everything else forward. Adjusted for current energy/emotional state.]
-
-TOP_3
-[Max 3 priorities. Realistic given energy, schedule, emotional state. Achievable, not aspirational.]
-
-WHAT_TO_AVOID
-[Most likely failure mode today based on patterns. What NOT to do.]
-
-HEALTH_PRIORITY
-[The ONE health thing with biggest impact today based on what's failing in ENERGY_STATE.]
-
-EMOTIONAL_CHECK
-[What user needs emotionally today. More structure? Freedom? Gentle push? Hard truth? Space?]
-
-WEEKLY_MICRO_GOALS [from weekly plan if available]
-[Week label] ([date range]):
-- KR1: [goal] | [STATUS]
-- KR2: [goal] | [STATUS]
-- KR3: [goal] | [STATUS]
-
-QUARTERLY_GOALS [from quarterly plan if available]
-[Quarter label] ([date range]):
-- [metric]: [current/target] | [STATUS]
-```
-
----
-
-## Step 7: Update hot-memory.md
-
-Update project/task state ONLY based on buffer data. No patterns, no lifestyle, no mindset (those are in insights.md now).
-
-**Must stay under 500 tokens.**
-
-**Write using Write tool.**
-
-**hot-memory.md structure:**
-```
-LAST_UPDATED: [timestamp]
-
-ACTIVE_PROJECTS [max 3, one line each with current status]
-
-OPEN_THREADS [bounded list of what's pending this week]
-
-EVIDENCE_TRAIL [cumulative date-stamped shipped artifacts]
-
-KEY_INSIGHTS [cumulative distilled learnings]
-
-IDEAS_PARKED [not building now]
-```
-
----
-
-## Step 8: Update system-state.md
-
-Update using Write tool:
 ```yaml
-last_sync: [ISO timestamp]
-last_sync_summary: [one line summary of what was synced]
+# Agent routing (must exist in OpenClaw agents.list)
+agents:
+  heavy: memspren-heavy    # extraction, insights, entity plan
+  light: memspren-light    # goals, tasks, hot-memory, content, linking
+  default: main            # fallback if named agents not found
+
+# Logging
+logging:
+  verbosity: INFO          # ERROR | WARN | INFO | DEBUG
+  max_log_bytes: 2097152   # 2 MB telemetry log rotation threshold
+  keep_lines: 2000         # lines to keep after rotation
+
+# Lobster
+lobster:
+  resume_token_ttl_hours: 24
 ```
 
----
-
-## Step 9: Archive and clear buffers
-
-**For each sealed buffer that was synced:**
-
-1. **Archive:** Copy buffer content to `.second-brain/Memory/sync-archive/YYYY-MM-DD-HHMMSS-{buffer_id}.md`
-   - Create `sync-archive/` directory if it doesn't exist
-   - Use Write tool (not obsidian-cli — this is a `.second-brain/` file)
-   - Include buffer ID in archive filename (e.g., `2026-03-26-053000-001.md`)
-
-2. **Delete sealed buffer:** Remove the sealed buffer file after archiving
-
-**Active buffer:**
-- Should already be fresh/empty (created in Step 3a when old active was sealed)
-- If sync happened without sealing active buffer (because it was empty), active buffer stays as-is
+If `agents.heavy` or `agents.light` are absent, all directives fall back to `agents.default`.
 
 ---
 
-## Step 10: Log sync results
+## Agent prerequisites
 
-Append to vault's `Logs/system-log.md` using obsidian-cli:
+Two named agents must exist in OpenClaw before the pipeline can run:
+
+| Agent ID | Role | Suggested model |
+|---|---|---|
+| `memspren-heavy` | Extraction, insights, entity plan | Sonnet or Opus |
+| `memspren-light` | Goals, tasks, hot-memory, content, linking | Haiku or Sonnet |
+
 ```bash
-obsidian vault="[vault_name]" append \
-  path=Logs/system-log.md \
-  content="\n[TIMESTAMP] SYNC COMPLETE\n  entries_processed: [count]\n  entities_created: [count and types]\n  entities_updated: [count and types]\n  insights_updated: [yes/no]\n  goals_updated: [yes/no]\n  buffer_archived: [archive filename]"
+python scripts/create_agents.py
 ```
 
+The script runs `openclaw agents add` for each agent and OpenClaw opens an interactive panel to set the model. Or add them manually:
+
+```bash
+openclaw agents add memspren-heavy
+openclaw agents add memspren-light
+```
+
+If neither agent is configured, all directives fall back to `default` — this works but loses
+the heavy/light routing benefit.
+
 ---
 
-## Step 11: Confirm to user
+## Pre-flight failure modes
 
-Brief, natural confirmation:
-> "Synced: [summary]. Created [X], updated [Y]. Your vault is up to date."
-
-Example:
-> "Synced 3 brain dumps. Created today's daily log, updated Ship Consistently project, added Juliana interaction note, updated Inner Critic pattern. Insights and goals recalculated."
+| Failure | Pipeline behaviour |
+|---|---|
+| `sync.lock` exists | Exit with SYNC SKIPPED (concurrent run) — buffer safe |
+| obsidian-cli unavailable | Switch to filesystem write mode — pipeline continues |
+| vault not a git repo | Skip bidirectional edit ingestion — pipeline continues |
+| no sealed buffers + active buffer empty | Exit with "Nothing to sync." |
+| rotate_buffer fails | Log ERROR, abort — buffer intact |
 
 ---
 
-## Error handling
+## Stage 2 failure handling
 
-| Problem | Action |
-| --- | --- |
-| Obsidian not running | Notify user. Buffer is safe — retry on next sync trigger. |
-| obsidian-cli error on specific file | Log error, skip that file, continue with remaining entities. Report skipped files in confirmation. |
-| Buffer is empty | "Nothing to sync." — no action needed. |
-| Entity already exists (duplicate detection) | Append to existing, do not create duplicate. |
-| insights.md exceeds 700 tokens after recalc | Compress: drop oldest details first, keep pattern names + dates, prioritize sections per Step 5. |
-| Sync interrupted mid-process | Buffer NOT cleared until Step 9. Safe to retry — buffer still has all data. |
+Each of the 4 parallel refinement jobs is independent:
+
+| Job result | What happens |
+|---|---|
+| OK + schema valid | File written to `.second-brain/Memory/` |
+| llm-task failed / timed out | Existing file kept, logged as WARN |
+| Schema validation failed | Existing file kept, logged as WARN |
+| All 4 fail | Pipeline aborts before vault writes |
+
+---
+
+## Telemetry
+
+Every step writes to `.second-brain/Memory/sync-telemetry.log`. Log format:
+
+```
+[ISO ts] [LEVEL] [runner] action=<step> result=OK|FAIL|TIMEOUT detail=<...>
+```
+
+Check this file to diagnose exactly where a failure occurred.
+Set `logging.verbosity: DEBUG` in config.md to capture full prompt/response pairs.
+
+---
+
+## Confirming to user
+
+After Lobster returns final results, send a natural confirmation:
+
+> "Synced. Created [X], updated [Y]. Memory files updated: insights, goals, tasks, hot-memory."
+
+If any entity writes failed, name them:
+> "Synced. 3 of 4 entities written. Failed: Work/Projects/foo.md (write error — check telemetry log)."
+
+If Stage 2 had fallbacks:
+> "Synced. Vault is up to date. Note: hot-memory update fell back to existing file — will retry on next sync."
+
+---
+
+## Filesystem fallback path
+
+When obsidian-cli is unavailable, the pipeline uses direct filesystem writes.
+Output is identical. The git_commit.py safety snapshot runs regardless of write path.
+
+After a filesystem-mode sync, allow Obsidian to complete its rescan on next launch
+before triggering another sync (Obsidian reconciles its index against changed files).

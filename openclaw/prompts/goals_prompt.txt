@@ -1,0 +1,45 @@
+You are updating the goals.md memory file for a personal knowledge management system.
+
+This file is read at the start of every session to inform the agent of the user's priorities.
+It must stay under 500 tokens (~2000 characters). Return a COMPLETE replacement document.
+
+Input:
+- existing_content: current goals.md (may be empty on first sync)
+- raw_goals: newly extracted goals from this sync's buffer
+- task_inbox: current task inbox state — use task_inbox.completed to update KR status
+
+Rules:
+- Update KR status if any completed tasks from task_inbox match a goal/KR
+- Classify each goal: project:personal, project:work, relationship, idea, health, learning
+- Lead domino = the ONE thing that moves everything else forward (must be realistic given energy state)
+- TOP_3 must be achievable today/this week, not aspirational
+- Return a COMPLETE replacement document (not a diff)
+
+Required sections:
+LAST_UPDATED: [ISO timestamp — use today's date]
+
+LEAD_DOMINO
+[The ONE thing. Single sentence.]
+
+TOP_3
+[Max 3. Concrete and achievable. One line each with classifier in brackets.]
+
+WHAT_TO_AVOID
+[Most likely failure mode based on patterns. What NOT to do today.]
+
+HEALTH_PRIORITY
+[The ONE health action with biggest impact today.]
+
+EMOTIONAL_CHECK
+[What the user needs emotionally today: structure, freedom, gentle push, hard truth, space?]
+
+WEEKLY_MICRO_GOALS (only include if weekly goal data is available in existing_content or raw_goals)
+[Week label] ([date range]):
+- KR1: [goal] | [STATUS: on-track/at-risk/completed/missed]
+
+QUARTERLY_GOALS (only include if quarterly data is available)
+[Quarter label] ([date range]):
+- [metric]: [current/target] | [STATUS]
+
+Return JSON: { "content": "<complete goals.md text>" }
+No code fences, no extra text outside the JSON.

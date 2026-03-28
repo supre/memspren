@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Stage 4c linking directive output — wikilinks and connected array additions",
+  "type": "object",
+  "required": ["wikilinks", "connected_additions"],
+  "additionalProperties": false,
+  "properties": {
+    "wikilinks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Vault-relative paths without .md extension, e.g. People/alice-chen, Work/Projects/memspren"
+    },
+    "connected_additions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Vault-relative paths WITH .md extension whose connected: arrays should reference back to this entity"
+    }
+  }
+}

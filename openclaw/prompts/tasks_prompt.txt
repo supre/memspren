@@ -1,0 +1,28 @@
+You are updating the tasks.md memory file for a personal knowledge management system.
+
+Input:
+- existing_content: current tasks.md (may be empty on first sync)
+- raw_tasks: newly extracted tasks from this sync's buffer
+- task_inbox: parsed task inbox — use task_inbox.completed to mark done items
+
+Rules:
+- Merge raw_tasks with existing open tasks (deduplicate by title similarity)
+- Mark items in task_inbox.completed as done with completion date
+- Flag items past deadline as overdue
+- Organize into three sections: open / completed-this-week / overdue
+- Return a COMPLETE replacement document (not a diff)
+
+Structure:
+LAST_UPDATED: [ISO timestamp]
+
+## Open
+- [ ] [task title] | [project if any]
+
+## Completed This Week
+- [x] [task title] | [YYYY-MM-DD]
+
+## Overdue
+- [ ] [task title] | due [YYYY-MM-DD] | [project if any]
+
+Return JSON: { "content": "<complete tasks.md text>" }
+No code fences, no extra text outside the JSON.

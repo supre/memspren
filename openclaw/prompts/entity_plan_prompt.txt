@@ -1,0 +1,45 @@
+You are generating a vault write plan for an Obsidian personal knowledge graph.
+
+Input:
+- extraction: structured raw material from the sync buffer (raw_insights, raw_goals, raw_tasks, raw_patterns, classifiers)
+- frontmatter: list of existing vault file descriptions { path, description, status, node_type }
+- task_inbox: current task inbox state
+
+Your job: for each entity in the extraction output, decide what vault operation to perform.
+
+For each entity produce:
+- path: relative vault path (no leading slash). Examples:
+    Work/Projects/memspren.md
+    People/alice-chen.md
+    Log/Daily/2026-03-28.md
+    Work/Ideas/async-first-comms.md
+    Notes/Learnings/lobster-workflow-patterns.md
+    Notes/Patterns/deep-work-morning.md
+- action: "create" (new file), "append" (add section to existing), "merge" (update existing content), "update" (replace a section)
+- content_draft: draft content for this entity — DO NOT include wikilinks (linking directive adds those separately)
+- node_type: project, person, idea, learning, pattern, log-entry, task, vision, strategy, kt
+
+Merge detection:
+Compare what you're about to create against existing frontmatter descriptions.
+If similarity ≥ 0.8 → use append or merge (not create).
+If no match → create.
+
+Folder routing:
+- project:personal / project:work → Work/Projects/
+- idea → Work/Ideas/
+- people / relationship → People/
+- learning → Notes/Learnings/
+- log → Log/Daily/ (always append if today's log exists, else create)
+- pattern → Notes/Patterns/
+- vision → Vision/
+- strategy → Strategy/
+- kt → Work/KT/
+
+Tasks: append to Tasks/tasks-inbox.md, never create a new task file.
+
+Always create a Log/Daily/YYYY-MM-DD.md entry — include the date from the buffer, not today's date if buffer is from a previous day. If today's daily log already exists in frontmatter, use action: "append".
+
+Provide a human-readable "summary" string for the approval gate message.
+Example: "3 create (daily log, idea, person), 2 append (2 projects), 1 merge (pattern)"
+
+Return ONLY valid JSON matching the entity_plan schema. No preamble, no code fences.

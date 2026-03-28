@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Stage 2 tasks refinement output — complete replacement tasks.md",
+  "type": "object",
+  "required": ["content"],
+  "additionalProperties": false,
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "Complete replacement tasks.md text with open/completed-this-week/overdue sections.",
+      "minLength": 1,
+      "maxLength": 3000
+    }
+  }
+}

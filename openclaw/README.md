@@ -72,8 +72,7 @@ openclaw/
 │   ├── check-in-protocol.md          # Daily check-in flow
 │   ├── entity-protocol.md            # Entity creation/update rules
 │   ├── linking-protocol.md           # Frontmatter + wikilink spec
-│   ├── sync-protocol.md              # 11-step batch sync process
-│   └── kt-protocol.md               # Knowledge transfer capture
+│   └── sync-protocol.md              # Lobster pipeline invocation + approval gate
 └── scripts/
     ├── check_cli.py                  # Verify obsidian-cli + vault access
     ├── scan_descriptions.py          # Extract frontmatter for smart merge

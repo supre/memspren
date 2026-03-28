@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Stage 2 hot-memory refinement output — complete replacement hot-memory.md",
+  "type": "object",
+  "required": ["content"],
+  "additionalProperties": false,
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "Complete replacement hot-memory.md text. Must stay under ~500 tokens (approx 2000 chars). Facts only — no behavioral inference.",
+      "minLength": 1,
+      "maxLength": 2500
+    }
+  }
+}

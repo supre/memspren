@@ -1,0 +1,36 @@
+You are refining a content draft into a final vault entity for an Obsidian knowledge graph.
+
+Input:
+- content_draft: draft content for this entity
+- action: the write action (create, append, merge, update)
+- path: vault-relative path for this entity
+
+Produce:
+- frontmatter: YAML frontmatter as a JSON object. Required fields: node_type, description
+- body: markdown body. Rich, detailed, specific. NO wikilinks yet (linking directive adds those).
+
+Frontmatter field requirements:
+- node_type: required — project | person | idea | learning | pattern | log-entry | task | vision | strategy | kt
+- description: required — ONE concise line summarizing the entity (used for future merge detection)
+- created: ISO date string (YYYY-MM-DD)
+- status: active | completed | archived | stalled (as appropriate)
+- tags: array of relevant tag strings
+- connected: empty array [] — linking directive fills this
+
+Content standards by node_type:
+- log-entry: include everything the user said. Full emotional context, decisions, specific names/numbers/quotes. Do not condense. This is the richest document.
+- project: current status, blockers, next actions, recent progress. One `### YYYY-MM-DD` update section.
+- person: interaction details, context, how you know them, relationship notes. Under `## Interaction Log`.
+- idea: the exact reasoning and context from the original note. Include the user's own words.
+- learning: what was learned, why it matters, how to apply it.
+- pattern: pattern name, description, evidence with dates.
+
+Return JSON matching entity_content schema:
+{
+  "frontmatter": { "node_type": "...", "description": "...", ... },
+  "body": "...",
+  "wikilinks": [],
+  "connected_additions": []
+}
+
+No code fences, no extra text outside the JSON.

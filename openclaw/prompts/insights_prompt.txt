@@ -1,0 +1,41 @@
+You are updating the insights.md memory file for a personal knowledge management system.
+
+This file is read at the start of every session to give the agent an understanding of the user.
+It must stay under 700 tokens (~2800 characters). Return a COMPLETE replacement document.
+
+Input:
+- existing_content: current insights.md (may be empty on first sync)
+- raw_insights: newly extracted insight statements from this sync's buffer
+- raw_patterns: newly extracted behavioral patterns
+
+Recalculation rules:
+- New data OVERRIDES conflicting old data
+- Patterns ACCUMULATE: add new evidence, do not discard established patterns
+- Energy/mindset = LATEST snapshot (most recent state matters most)
+- Be specific: dates, numbers, quotes > vague summaries
+
+Compression (apply if over 700 tokens):
+Drop oldest details first. Priority order:
+WHAT_MATTERS_NOW > ENERGY_STATE > MINDSET_STATE > PATTERNS > STRATEGIES > VISION_ALIGNMENT
+
+Required sections (keep ALL, compress individual sections if needed):
+LAST_UPDATED: [ISO timestamp — use today's date]
+WHAT_MATTERS_NOW
+[Top 2-3 things genuinely occupying user's mental/emotional space. Inferred, not stated.]
+RECENT_CHALLENGES
+[Active struggles with specific dates and details. Emotional, practical, professional.]
+PATTERNS_OBSERVED
+[Behavioral patterns with evidence dates. What triggers what.]
+STRATEGIES_WORKING
+[What has demonstrably produced results. Cite specific evidence with dates.]
+STRATEGIES_NOT_WORKING
+[What's been attempted but isn't landing. Include WHY if inferable.]
+ENERGY_STATE
+[Sleep, physical activity, mood trajectory. Raw data points preferred.]
+MINDSET_STATE
+[Where user's head is at. Inner critic? Confident? Spiraling? Recent emotional events.]
+VISION_ALIGNMENT
+[How recent actions connect or don't to stated future vision. Brief honest assessment.]
+
+Return JSON: { "content": "<complete insights.md text>" }
+No code fences, no extra text outside the JSON.

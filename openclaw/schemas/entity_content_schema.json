@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Stage 4c entity content and linking directive outputs",
+  "type": "object",
+  "required": ["frontmatter", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "frontmatter": {
+      "type": "object",
+      "required": ["node_type", "description"],
+      "properties": {
+        "node_type":   { "type": "string" },
+        "description": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "One-line summary — used for future merge detection"
+        },
+        "created":  { "type": "string" },
+        "status":   { "type": "string" },
+        "tags":     { "type": "array", "items": { "type": "string" } },
+        "connected":{ "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "body": {
+      "type": "string",
+      "description": "Markdown body. Rich and detailed. No wikilinks yet — linking directive adds those."
+    },
+    "wikilinks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Populated by linking directive only"
+    },
+    "connected_additions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Vault-relative paths whose connected: arrays should reference this entity"
+    }
+  }
+}

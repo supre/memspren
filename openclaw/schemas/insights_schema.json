@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Stage 2 insights refinement output — complete replacement insights.md",
+  "type": "object",
+  "required": ["content"],
+  "additionalProperties": false,
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "Complete replacement insights.md text. Must stay under ~700 tokens (approx 2800 chars).",
+      "minLength": 1,
+      "maxLength": 3500
+    }
+  }
+}

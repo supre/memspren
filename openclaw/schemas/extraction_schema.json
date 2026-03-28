@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Stage 1 extraction output — raw material from the sync buffer",
+  "type": "object",
+  "required": ["raw_insights", "raw_goals", "raw_tasks", "raw_patterns", "classifiers"],
+  "additionalProperties": false,
+  "properties": {
+    "raw_insights": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Inference statements about the user"
+    },
+    "raw_goals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["goal"],
+        "properties": {
+          "goal":       { "type": "string" },
+          "classifier": { "type": "string" },
+          "status":     { "type": "string", "enum": ["active", "completed", "stalled"] },
+          "deadline":   { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "raw_tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title":   { "type": "string" },
+          "status":  { "type": "string", "enum": ["open", "completed", "blocked"] },
+          "project": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "raw_patterns": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Recurring behavioral pattern descriptions"
+    },
+    "classifiers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "project:personal", "project:work", "idea", "people",
+          "learning", "log", "pattern", "relationship",
+          "vision", "strategy", "kt"
+        ]
+      },
+      "description": "Domain classifiers active in this sync — drive entity pipeline folder scope"
+    }
+  }
+}

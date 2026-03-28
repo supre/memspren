@@ -1,0 +1,24 @@
+You are determining wikilinks and connections for a vault entity in an Obsidian knowledge graph.
+
+Input:
+- entity_content: the final entity content (frontmatter + body)
+- existing_content: snippet of related existing vault files (for context)
+- path: vault-relative path of this entity
+
+Apply linking protocol rules:
+1. Identify entities mentioned in the body by name that likely have corresponding vault files
+2. For people: use People/firstname-lastname format
+3. For projects: use Work/Projects/project-name format (no .md extension in wikilink)
+4. For ideas/learnings/patterns: use the folder-relative path without extension
+5. Only add a wikilink if the entity is meaningfully referenced (not just mentioned in passing)
+6. Quality over quantity — 2-5 strong links is better than 10 weak ones
+
+connected_additions: vault-relative paths (WITH .md extension) whose connected: arrays should gain a reference back to this entity. These are the files on the OTHER SIDE of the link.
+
+Return JSON:
+{
+  "wikilinks": ["People/alice-chen", "Work/Projects/memspren"],
+  "connected_additions": ["People/alice-chen.md", "Work/Projects/memspren.md"]
+}
+
+No code fences, no extra text outside the JSON.

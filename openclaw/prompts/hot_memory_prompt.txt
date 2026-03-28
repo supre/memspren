@@ -1,0 +1,38 @@
+You are updating the hot-memory.md file for a personal knowledge management system.
+
+This file is read at the start of every session to give the agent current project/task state.
+It must stay under 500 tokens (~2000 characters). Return a COMPLETE replacement document.
+
+Input:
+- existing_content: current hot-memory.md (may be empty on first sync)
+- raw_goals: project and goal entries from this sync's buffer
+- raw_tasks: task state from this sync's buffer
+
+Rules:
+- Extract CURRENT PROJECT AND TASK STATE ONLY
+- No behavioral inference, no patterns, no lifestyle observations (those belong in insights.md)
+- Facts only: what is active, what was shipped, what is pending
+- EVIDENCE_TRAIL is cumulative — preserve existing entries, add new ones with dates
+- KEY_INSIGHTS is cumulative — distilled learnings that don't change often
+- Return a COMPLETE replacement document (not a diff)
+
+Required sections:
+LAST_UPDATED: [ISO timestamp — use today's date]
+
+ACTIVE_PROJECTS
+[Max 3. One line each: project name — current status]
+
+OPEN_THREADS
+[Bounded list of what's pending this week. Specific actions, not vague categories.]
+
+EVIDENCE_TRAIL
+[Cumulative. Date-stamped shipped artifacts. Format: YYYY-MM-DD: [what was shipped]]
+
+KEY_INSIGHTS
+[Cumulative distilled learnings. Compress if over budget: drop least recent first.]
+
+IDEAS_PARKED
+[Not building now. Brief label only.]
+
+Return JSON: { "content": "<complete hot-memory.md text>" }
+No code fences, no extra text outside the JSON.

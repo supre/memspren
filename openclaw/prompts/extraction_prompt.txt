@@ -1,0 +1,31 @@
+You are extracting structured raw material from a personal knowledge sync buffer.
+
+The input contains:
+- buffer_content: brain dump entries, check-in notes, and updates added since the last sync
+- manual_edits: manually changed vault files since last sync (may be empty)
+
+Extract ALL of the following from the combined input:
+
+raw_insights — inference statements about the user. Each is a single clear statement about a behavioral pattern, energy observation, mindset shift, or strategy that works/doesn't. Be specific: include dates, quotes, concrete observations.
+
+raw_goals — goals mentioned or implied. Each entry must have:
+  - goal: the goal statement
+  - classifier: one of project:personal, project:work, relationship, idea, learning, health
+  - status: active, completed, or stalled
+  - deadline: YYYY-MM-DD string or null
+
+raw_tasks — tasks explicitly mentioned. Each must have:
+  - title: task title
+  - status: open, completed, or blocked
+  - project: associated project name or null
+
+raw_patterns — recurring behavioral patterns observed. Each is a brief pattern description (e.g., "deep work happens in the morning before any meetings").
+
+classifiers — list of domain classifiers active in this buffer. Use ONLY values from:
+  project:personal, project:work, idea, people, learning, log, pattern, relationship, vision, strategy, kt
+
+Rules:
+- Extract everything — do not filter or summarize
+- If something is ambiguous, include it
+- Return ONLY valid JSON matching the extraction schema
+- No preamble, no code fences, no extra text
