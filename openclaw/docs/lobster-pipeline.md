@@ -106,10 +106,18 @@ The pipeline definition. A YAML workflow file that Lobster executes as a single 
 
 **Key properties:**
 - Steps are identified by `id:`, prior step outputs referenced as `$stepId.json.field`
-- All `llm-task` invocations use `openclaw.invoke --tool llm-task --action json --agent <name> --args-json '<payload>'`
+- All `llm-task` invocations use `openclaw.invoke --tool llm-task --action invoke --agent <name>` with args passed as `{"args": {...}}` in the request body
 - The approval gate (`id: approval`) pauses execution; resume with `lobster resume <token> --approve`
 - All script steps are invoked via `python -m scripts.runner` — never directly
 - Lobster does not support `on_error:`/`finally:` handlers. Lock safety relies on stale-lock auto-detection (2h) in `write_lock.py`. To release immediately after a crash: `python scripts/write_lock.py --memory-path <path> --release`
+
+**Lobster limitations discovered during v0.4 implementation:**
+1. **No JSON path access**: `$step.json.field` syntax not supported (only `$step.json`, `$step.stdout`, `$step.approved`, `$step.skipped`)
+2. **env: variables don't expand**: `$LOBSTER_ARG_*` references in `env:` section remain literal
+3. **when: clause limitations**: Only supports boolean step properties (`.approved`, `.skipped`), not arbitrary expressions like `$var.field == false`
+
+**Workaround: State file pattern**
+All scripts write their output to `{MEMORY_PATH}/run/state.json` using `scripts/state.py` helper module. Downstream scripts read from known file paths instead of relying on Lobster's JSON path interpolation. This enables multi-step workflows despite Lobster's interpolation limitations.
 
 ### `scripts/runner.py`
 
@@ -148,7 +156,25 @@ Parses `Tasks/tasks-inbox.md` and extracts open/completed tasks. Deduplicates by
 ### Stage 1 — Extraction
 
 **`run_extraction.py`** (new wrapper)
-Reads buffer content and manual edits from temp files, builds a `{"prompt": ..., "input": ..., "schema": ...}` payload, and calls `openclaw.invoke --tool llm-task --action json --agent memspren-heavy --args-json '<payload>'` directly. Prompt and schema paths are hardcoded inside the script — they are not exposed as CLI flags. Saves the LLM output to `MEMORY_PATH/run/extraction-output.json` for downstream steps, then prints it to stdout.
+Reads buffer content and manual edits from temp files, builds a payload, and calls the OpenClaw Gateway `/tools/invoke` endpoint directly via curl to avoid all shell quoting issues. The payload format is:
+
+```json
+{
+  "tool": "llm-task",
+  "action": "invoke",
+  "args": {
+    "prompt": "...",
+    "input": {...},
+    "schema": {...},
+    "timeoutMs": 120000
+  }
+}
+```
+
+The script writes the payload to a temp JSON file and passes it via curl's `@file` syntax. Prompt and schema paths are hardcoded inside the script — they are not exposed as CLI flags. Saves the LLM output to `MEMORY_PATH/run/extraction-output.json` for downstream steps, then prints it to stdout.
+
+**Why curl instead of Python subprocess → openclaw.invoke?**
+After 6 hours of debugging, discovered that shell quoting of nested JSON payloads (buffer content with quotes, braces, newlines) breaks when passed through Python subprocess → Lobster → openclaw.invoke. Direct HTTP API call with curl bypasses all quoting layers and works reliably.
 
 Extraction output:
 
@@ -158,18 +184,18 @@ Extraction output:
   "raw_goals":     [...],
   "raw_tasks":     [...],
   "raw_patterns":  [...],
-  "classifiers":   ["project:work", "people", "learning"]
+  "classifiers":   ["project:personal", "relationship", "pattern", "health", "log"]
 }
 ```
 
 All downstream stages work from this structured output. Raw buffer text is never read again. The `classifiers` field drives which vault folders the entity pipeline scans.
 
-Validated against `schemas/extraction_schema.json`.
+Validated against `schemas/extraction_schema.json`. **Note:** The classifier enum was initially strict (project:personal, project:work, idea, people, learning, log, pattern, relationship, vision, strategy, kt) but caused schema validation failures when the LLM output values like "health" or partial names. The schema was relaxed to accept any string in v0.4, with suggested values documented in the description field instead of a hard enum.
 
 ### Stage 2 — Parallel refinement dispatcher
 
 **`parallel_memory.py`** (new)
-Dispatches four `llm-task` jobs simultaneously via `ThreadPoolExecutor(max_workers=4)`. Reads extraction output from `MEMORY_PATH/run/extraction-output.json` and task inbox from the file path passed via `--task-inbox-file`. Each job reads its prompt and schema from disk, builds the `--args-json` payload, and calls `openclaw.invoke --tool llm-task` directly.
+Dispatches four `llm-task` jobs simultaneously via `ThreadPoolExecutor(max_workers=4)`. Reads extraction output from `MEMORY_PATH/run/extraction-output.json` and task inbox from the file path passed via `--task-inbox-file`. Each job reads its prompt and schema from disk, builds the payload as `{"tool": "llm-task", "action": "invoke", "args": {...}}`, and calls the OpenClaw Gateway `/tools/invoke` endpoint directly via curl (same pattern as run_extraction.py).
 
 | Job | Agent | Input | Output |
 |---|---|---|---|
@@ -207,7 +233,7 @@ Classifier → folder mapping:
 ### Stage 4b — Entity plan
 
 **`run_entity_plan.py`** (new wrapper)
-Reads extraction, frontmatter, and task inbox all from files (never from shell-interpolated CLI strings). Builds the `--args-json` payload and calls `openclaw.invoke --tool llm-task --action json --agent memspren-heavy` directly. Prompt and schema paths are hardcoded inside the script.
+Reads extraction, frontmatter, and task inbox all from files (never from shell-interpolated CLI strings). Builds the payload as `{"tool": "llm-task", "action": "invoke", "args": {...}}` and calls the OpenClaw Gateway `/tools/invoke` endpoint via curl. Prompt and schema paths are hardcoded inside the script.
 
 Entity plan output:
 
@@ -244,7 +270,7 @@ Token expires (default 24h) → re-trigger sync (buffer intact)
 ### Stage 4c — Entity pipeline
 
 **`entity_pipeline.py`** (new)
-Runs three sequential steps per entity, entities in parallel via `ThreadPoolExecutor(max_workers=4)`. Each step calls `openclaw.invoke --tool llm-task --args-json` directly.
+Runs three sequential steps per entity, entities in parallel via `ThreadPoolExecutor(max_workers=4)`. Each step calls the OpenClaw Gateway `/tools/invoke` endpoint directly via curl with `{"tool": "llm-task", "action": "invoke", "args": {...}}`.
 
 1. **Content directive** (light agent) — takes `content_draft` from the entity plan, produces final frontmatter + body. `description` field is required. No wikilinks yet.
 2. **Linking directive** (light agent) — takes the final content, returns `wikilinks` (appended as a footer) and `connected_additions`. The `update_connected_for` function updates both sides of each link:
@@ -517,6 +543,64 @@ lobster run workflows/sync.lobster \
 | last_sync on failed write | Always updated | Only updated when entity writes succeed |
 | Lock on pipeline crash | Permanent until manual delete | Stale-lock auto-detection (2h); manual release: `python scripts/write_lock.py --release` |
 | Vault name for CLI calls | Derived from folder name | Explicitly provided via vault_name arg |
+
+---
+
+## Implementation Notes: v0.4 Integration Breakthrough (2026-03-28)
+
+After 6 hours of debugging, the full Stage 0 + Stage 1 extraction pipeline is working end-to-end. Key discoveries:
+
+### OpenClaw Gateway API Format
+
+The `/tools/invoke` endpoint expects:
+```json
+{
+  "tool": "llm-task",
+  "action": "invoke",
+  "args": {
+    "prompt": "...",
+    "input": {...},
+    "schema": {...},
+    "timeoutMs": 120000
+  }
+}
+```
+
+**Not** `"action": "json"` (that's for different tools). **Not** parameters flattened at the top level. The `args` wrapper is required.
+
+### Why Direct HTTP Calls
+
+Initial attempts used:
+1. Python `subprocess.run(['openclaw.invoke', '--tool', 'llm-task', '--args-json', json.dumps(payload)])` → shell quote escaping broke on nested JSON
+2. Lobster pipeline string with `openclaw.invoke` → same quoting issues
+3. Base64 encoding → still broke
+4. Temp file + stdin piping → Lobster's stdin mode doesn't support openclaw.invoke
+5. Python urllib.request with direct HTTP API call to `/tools/invoke` → **this works**
+6. Switched to curl for reliability → **production solution**
+
+The curl approach bypasses all shell/subprocess quoting layers by writing the payload to a temp JSON file and using curl's `@file` syntax. This is now the standard pattern for all LLM invocations in the pipeline.
+
+### State File Pattern
+
+Lobster's documented `$step.json.field` syntax for accessing nested JSON is not implemented. Workaround: all scripts write their complete output to `{MEMORY_PATH}/run/state.json` using the `scripts/state.py` helper module. Downstream scripts read from known file paths.
+
+Current state fields:
+- `check_cli_vault_name`, `check_cli_write_mode`, `check_cli_last_sync`
+- `vault_diff_changed_count`
+- `task_inbox_file`, `task_inbox_open_count`
+- `rotate_buffer_sealed_buffers`
+
+### Schema Validation
+
+The extraction schema initially had a strict enum for classifiers. The LLM sometimes output values like "health" or partial names that weren't in the enum, causing validation failures. The schema was relaxed to accept any string, with suggested values moved to the description field. This allows the LLM to infer appropriate classifiers while still enforcing the array structure.
+
+### Proven Working (as of 2026-03-28 19:16 EDT)
+
+- ✅ Stage 0 (pre-flight): lock, obsidian-cli check, vault diff scan, task inbox parse, buffer rotation
+- ✅ Stage 1 (extraction): LLM successfully parsed emotional complexity (bank rejection, inner critic spike, patterns) and returned structured output
+- ⚠️ Stage 2-6: Not yet implemented (merge.py failure expected)
+
+The extraction output quality validates the architecture. Raw insights like "Inner critic activation after bank rejection was LOUD: 'You're fat, you're old, you're short'" were correctly captured and structured.
 
 ---
 
