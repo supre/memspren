@@ -1,16 +1,11 @@
 # Sync Protocol
 
-Governs batch synchronization from brain dump log to Obsidian vault.
-
-**Triggered by:** user explicit ("sync now"), cron interval, end of check-in, or buffer overflow.
-
-**Key Behavior (Updated 2026-03-26):**
-- Sync processes ALL available entries (sealed buffers + active buffer with entries)
-- If active buffer has entries, it's sealed first, then synced
-- Daily logs are created even if buffer didn't hit 1500-word rotation cap
-- This ensures nightly sync always creates daily logs (no more missed days)
+Governs batch synchronization from rotating sync buffers to Obsidian vault.
+Triggered by: user explicit ("sync now"), cron interval, end of check-in, or buffer overflow.
 
 Read `Protocols/entity-protocol.md` and `Protocols/linking-protocol.md` before creating/updating vault files.
+
+All vault operations use the Read/Write/Edit tools. Vault content paths are prefixed with `vault_path` from `.second-brain/config.md`. Skill operational files (Memory, config) are at `.second-brain/` — not in the vault.
 
 ---
 
@@ -21,12 +16,12 @@ Copy and track:
 - [ ] Step 1: Pre-sync validation
 - [ ] Step 2: Load current state
 - [ ] Step 3: Read and process sync buffer
-- [ ] Step 4: Batch create/update Obsidian entities
+- [ ] Step 4: Batch create/update vault entities
 - [ ] Step 5: Recalculate insights.md
 - [ ] Step 6: Recalculate goals.md
 - [ ] Step 7: Update hot-memory.md
 - [ ] Step 8: Update system-state.md
-- [ ] Step 9: Archive and clear buffer
+- [ ] Step 9: Archive and clean up buffer
 - [ ] Step 10: Log sync results
 - [ ] Step 11: Confirm to user
 ```
@@ -35,92 +30,78 @@ Copy and track:
 
 ## Step 1: Pre-sync validation
 
-Verify obsidian-cli is available and vault is accessible:
-```bash
-python scripts/check_cli.py --vault "<vault_name>"
-```
+Verify vault is accessible by reading a known file:
+- Read `{vault_path}/Tasks/tasks-inbox.md` (or any seed file created during setup)
+- If the file cannot be read, tell user: "I can't access your vault at [vault_path]. Please check the path in `.second-brain/config.md`."
+- Do NOT proceed with sync if vault is inaccessible.
 
-If obsidian-cli not available or Obsidian not running:
-- Tell user: "Obsidian needs to be open for me to sync your vault. Please open Obsidian and try again."
-- Do NOT proceed with sync.
-- Buffer data is safe — it persists until next successful sync.
+**Git availability check (optional):**
+- Run `git --version` via Bash
+- If git is available, it will be used for safety checkpoints in Step 4
+- If git is not available, skip safety checkpoints — buffer data is still safe
 
 ---
 
 ## Step 2: Load current state
 
-Read these files (all are `.second-brain/` files — use Read tool directly, not obsidian-cli):
+Read these files (all are `.second-brain/` files — use Read tool directly):
 
-1. **Check for active buffer:**
-   - Read `.second-brain/Memory/sync-buffer-active.txt` to get current buffer ID
-   - Read `.second-brain/Memory/sync-buffer-{ID}.md` (the active buffer)
-   
-2. **Check for sealed buffers:**
-   - List all `sync-buffer-*.md` files with `state: sealed` in frontmatter
-   
-3. **Load context files:**
-   - `.second-brain/Memory/insights.md` — previous user understanding
-   - `.second-brain/Memory/goals.md` — previous goals (check: were they met?)
-   - `.second-brain/Memory/hot-memory.md` — current project state
-   - `.second-brain/Memory/system-state.md` — config flags, last sync timestamp
+1. `.second-brain/Memory/insights.md` — previous user understanding
+2. `.second-brain/Memory/goals.md` — previous goals (check: were they met?)
+3. `.second-brain/Memory/hot-memory.md` — current project state
+4. `.second-brain/Memory/system-state.md` — config flags, last sync timestamp
+
+**Identify sealed buffers:**
+5. Read `.second-brain/Memory/sync-buffer-active.txt` — get active buffer ID
+6. Use Glob to find all `.second-brain/Memory/sync-buffer-*.md` files
+7. Read frontmatter of each buffer file — find those with `state: sealed`
+8. Sort sealed buffers by buffer ID (process oldest first)
 
 ---
 
-## Step 3: Seal active buffer if needed, then process all buffers
+## Step 3: Read and process sync buffer
 
-**NEW PROTOCOL (Updated 2026-03-26):**
+**If sealed buffers exist:** Read the **oldest sealed buffer** (lowest buffer ID with `state: sealed`). This is the primary data source for this sync.
 
-The sync should process **all available entries**, whether they're in sealed buffers or still in the active buffer.
+**If no sealed buffers exist:** Check the active buffer:
+- If active buffer has entries (`entry_count > 0`), seal it first:
+  - Edit its frontmatter: set `state: sealed`, `sealed_at: [ISO timestamp]`
+  - Create a new active buffer with the next ID
+  - Update `sync-buffer-active.txt` with the new ID
+  - Then read the now-sealed buffer
 
-### 3a: Seal active buffer if it has entries
+**If no buffers have entries:** Skip sync, notify user "Nothing to sync."
 
-1. Read the active buffer (from Step 2)
-2. Check `entry_count` in frontmatter OR count `## Entry` sections
-3. **If active buffer has ANY entries (entry_count > 0):**
-   - Update frontmatter: `state: sealed`, `sealed_at: [timestamp]`, `word_count: [actual count]`
-   - Create new active buffer with next ID
-   - Update `sync-buffer-active.txt` to point to new buffer
-4. **If active buffer is empty:** leave it as-is (nothing to seal)
-
-### 3b: Collect all sealed buffers for processing
-
-After sealing active buffer (if needed), gather all sealed buffers:
-- List all `sync-buffer-*.md` files with `state: sealed`
-- Sort by `sealed_at` timestamp (oldest first)
-- Read each buffer in order
-
-### 3c: Parse buffer entries
-
-For each sealed buffer, parse each entry:
+For the selected sealed buffer, parse each entry:
 
 1. **Identify all extracted entities** (DAILY_LOG, PROJECT_UPDATE, PERSON_UPDATE, PATTERN_UPDATE, TASK_NEW, TASK_COMPLETE, IDEA, LEARNING)
 2. **Identify all proposed links** between entities
 3. **Group by entity type** for batch processing
 4. **Merge entries for same entity** (e.g., multiple PROJECT_UPDATEs for the same project → combine into one update)
 
-**If NO sealed buffers exist and active buffer is empty:** skip sync, notify user "Nothing to sync."
-
 ---
 
-## Step 4: Batch create/update Obsidian entities
+## Step 4: Batch create/update vault entities
 
 Read `Protocols/entity-protocol.md` now.
 Read `Protocols/linking-protocol.md` now.
 
 **Before writing ANY entity**, follow the Smart Merge flow:
 
-1. **Scan:** Run `scripts/scan_descriptions.py --vault-path [vault_path] --folder [relevant_folder]`
-   to get existing files with descriptions in that folder.
+1. **Scan:** Use Glob to list all `.md` files in the target folder within `vault_path`. Read the first ~20 lines of each file to extract the `description` field from frontmatter.
 
-2. **Decide:** Read the descriptions. Does an existing file match what you're about to create?
-   - If YES → read the full file via obsidian-cli, then:
-     - If new content COMPLEMENTS existing → git commit snapshot, then append
-     - If new content CONFLICTS with existing → git commit snapshot, update file,
-       notify user: "Updated [file]. Previous said [X], new says [Y]. Git commit [hash] for rollback."
+2. **Decide:** Compare descriptions. Does an existing file match what you're about to create?
+   - If YES → read the full file, then:
+     - If new content COMPLEMENTS existing → git safety checkpoint, then append
+     - If new content CONFLICTS with existing → git safety checkpoint, update file,
+       notify user: "Updated [file]. Previous said [X], new says [Y]."
    - If NO match → create new file with `description` in frontmatter
 
-3. **Git safety:** Before modifying ANY existing file, run:
-   `scripts/git_commit.py --vault-path [vault_path] --file [file_path] --message "pre-sync snapshot"`
+3. **Git safety (if git available):** Before modifying ANY existing vault file, run via Bash:
+   ```
+   cd [vault_path] && git add "[file_path]" && git commit -m "pre-sync snapshot: [file]"
+   ```
+   If git is not available, skip this step.
 
 4. **Description field:** Every new file MUST include `description` in frontmatter —
    a one-line summary of what the file is about. This is the search key for future merges.
@@ -137,7 +118,6 @@ Read `Protocols/linking-protocol.md` now.
 | project | `Work/Projects/` | No scan — always distinct |
 | person | `People/` | No scan — always distinct |
 | log-entry | `Log/Daily/` | Date-based — same date = append |
-| kt | `Work/KT/` | Moderate — same system/component = same file |
 
 Process entities in this order:
 
@@ -145,13 +125,10 @@ Process entities in this order:
 
 **CRITICAL: Check if today's daily log already exists before creating.**
 
-```bash
-obsidian vault="[vault_name]" read path=Log/Daily/YYYY-MM-DD.md
-```
+Read `{vault_path}/Log/Daily/YYYY-MM-DD.md`.
 
 - **If it exists:** APPEND new content to the existing log. Do NOT create a new file or overwrite.
-  Use `obsidian vault="[vault_name]" append` to add new sections for the time period covered
-  by the current buffer entries. Add a timestamp header (e.g., `## Afternoon Update (3:00 PM)`)
+  Add a timestamp header (e.g., `## Afternoon Update (3:00 PM)`)
   to separate from earlier content.
 
 - **If it does NOT exist:** Create `Log/Daily/YYYY-MM-DD.md` with FULL DETAILED content from
@@ -163,15 +140,15 @@ buffer entries.
 
 Follow the daily log template from entity-protocol.md.
 Link to all entities created/updated during this sync.
-Update the `connected:` array using the helper script (append, don't replace).
+Update the `connected:` array (read, parse, append, deduplicate, write back).
 
 ### 4b — Project updates
 
 For each project mentioned in buffer:
-- Read existing project file from Obsidian
+- Read existing project file from `{vault_path}/Work/Projects/`
 - Append detailed progress note with `### [DATE]` section
 - Update `last_modified` frontmatter
-- Add today's log to `connected:` array via `scripts/update_connected.py`
+- Add today's log to `connected:` array (read, parse, append, write)
 - Write back with full wiki links to related entities
 
 ### 4c — Ideas
@@ -191,7 +168,7 @@ For each person mentioned in buffer:
 ### 4e — Tasks
 
 For each task in buffer:
-- New tasks: append to `Tasks/tasks-inbox.md`
+- New tasks: read `{vault_path}/Tasks/tasks-inbox.md`, append the task, write back
 - Completed tasks: mark `- [x]` with completion date
 - Blocked tasks: update status, flag in hot-memory
 
@@ -212,7 +189,7 @@ For each learning in buffer:
 
 After all entities are created/updated:
 - Run through ALL proposed links from buffer
-- Update `connected:` arrays for BOTH sides of each link (using `scripts/update_connected.py`)
+- Update `connected:` arrays for BOTH sides of each link (read, parse, append, write)
 - Add `[[wiki links]]` in body text where contextually relevant
 - Verify no orphan notes (every new file has at least one incoming link)
 
@@ -222,7 +199,7 @@ After all entities are created/updated:
 
 **Data sources (in priority order, latest-weighted):**
 
-1. **sync-buffer.md** (HIGHEST — what just happened)
+1. **sync buffer just processed** (HIGHEST — what just happened)
 2. **Previous insights.md** (HIGH — accumulated inference)
 3. **hot-memory.md** (MEDIUM — project context)
 4. **goals.md** (LOW — were previous goals met or missed?)
@@ -341,7 +318,7 @@ IDEAS_PARKED [not building now]
 
 ## Step 8: Update system-state.md
 
-Update using Write tool:
+Update using Edit tool:
 ```yaml
 last_sync: [ISO timestamp]
 last_sync_summary: [one line summary of what was synced]
@@ -349,31 +326,39 @@ last_sync_summary: [one line summary of what was synced]
 
 ---
 
-## Step 9: Archive and clear buffers
+## Step 9: Archive and clean up buffer
 
-**For each sealed buffer that was synced:**
+1. **Archive:** Copy the processed sealed buffer's content to `.second-brain/Memory/sync-archive/YYYY-MM-DD-HHMMSS-[buffer_id].md`
+   - Use Write tool (this is a `.second-brain/` file)
 
-1. **Archive:** Copy buffer content to `.second-brain/Memory/sync-archive/YYYY-MM-DD-HHMMSS-{buffer_id}.md`
-   - Create `sync-archive/` directory if it doesn't exist
-   - Use Write tool (not obsidian-cli — this is a `.second-brain/` file)
-   - Include buffer ID in archive filename (e.g., `2026-03-26-053000-001.md`)
+2. **Delete processed buffer:** Remove the sealed buffer file that was just processed.
+   - Run `rm "{vault_path}/.second-brain/Memory/sync-buffer-[ID].md"` via Bash
 
-2. **Delete sealed buffer:** Remove the sealed buffer file after archiving
-
-**Active buffer:**
-- Should already be fresh/empty (created in Step 3a when old active was sealed)
-- If sync happened without sealing active buffer (because it was empty), active buffer stays as-is
+3. **Check for remaining sealed buffers:**
+   - If more sealed buffers remain, notify user: "Synced buffer [ID]. [X] more sealed buffers to process — say 'sync now' to continue."
+   - If no sealed buffers remain, reset buffer IDs:
+     - Read the active buffer, rename it to `sync-buffer-001.md` (update `buffer_id` in frontmatter)
+     - Update `sync-buffer-active.txt` to `001`
 
 ---
 
 ## Step 10: Log sync results
 
-Append to vault's `Logs/system-log.md` using obsidian-cli:
-```bash
-obsidian vault="[vault_name]" append \
-  path=Logs/system-log.md \
-  content="\n[TIMESTAMP] SYNC COMPLETE\n  entries_processed: [count]\n  entities_created: [count and types]\n  entities_updated: [count and types]\n  insights_updated: [yes/no]\n  goals_updated: [yes/no]\n  buffer_archived: [archive filename]"
+Read `{vault_path}/Logs/system-log.md`, append sync log entry, write back:
+
 ```
+[TIMESTAMP] SYNC COMPLETE
+  buffer_processed: [buffer_id]
+  entries_processed: [count]
+  entities_created: [count and types]
+  entities_updated: [count and types]
+  insights_updated: [yes/no]
+  goals_updated: [yes/no]
+  buffer_archived: [archive filename]
+  sealed_remaining: [count]
+```
+
+If `Logs/system-log.md` does not exist, create it with a header first.
 
 ---
 
@@ -385,15 +370,19 @@ Brief, natural confirmation:
 Example:
 > "Synced 3 brain dumps. Created today's daily log, updated Ship Consistently project, added Juliana interaction note, updated Inner Critic pattern. Insights and goals recalculated."
 
+If sealed buffers remain:
+> "Synced buffer [ID]. [X] more to go — say 'sync now' to continue, or I'll pick them up on the next scheduled sync."
+
 ---
 
 ## Error handling
 
 | Problem | Action |
 | --- | --- |
-| Obsidian not running | Notify user. Buffer is safe — retry on next sync trigger. |
-| obsidian-cli error on specific file | Log error, skip that file, continue with remaining entities. Report skipped files in confirmation. |
+| Vault path not accessible | Notify user. Buffer is safe — retry on next sync trigger. |
+| File read/write error on specific file | Log error, skip that file, continue with remaining entities. Report skipped files in confirmation. |
 | Buffer is empty | "Nothing to sync." — no action needed. |
 | Entity already exists (duplicate detection) | Append to existing, do not create duplicate. |
 | insights.md exceeds 700 tokens after recalc | Compress: drop oldest details first, keep pattern names + dates, prioritize sections per Step 5. |
-| Sync interrupted mid-process | Buffer NOT cleared until Step 9. Safe to retry — buffer still has all data. |
+| Sync interrupted mid-process | Buffer NOT archived/deleted until Step 9. Safe to retry — buffer still has all data. |
+| Git not available | Skip safety checkpoints. Proceed with sync normally. |

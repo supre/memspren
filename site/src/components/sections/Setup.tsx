@@ -1,6 +1,14 @@
+import { useState } from 'react'
 import RevealWrapper from '@/components/ui/RevealWrapper'
+import UpdateModal from '@/components/updates/UpdateModal'
+import updatesData from '@/data/updates.json'
+import type { Update } from '@/lib/updates'
+
+const v03Update = (updatesData as Update[]).find(u => u.id === '2026-03-26-v03-direction') ?? null
 
 export default function Setup() {
+  const [modalUpdate, setModalUpdate] = useState<Update | null>(null)
+
   return (
     <section id="setup" className="py-24 md:py-32 relative">
       <div className="max-w-4xl mx-auto px-8">
@@ -23,7 +31,16 @@ export default function Setup() {
               <span className="material-symbols-outlined text-primary text-2xl">psychology</span>
             </div>
             <h3 className="text-2xl font-headline font-semibold text-primary mb-4 italic">Claude Skill</h3>
-            <p className="text-on-surface/50 text-sm leading-relaxed mb-6">For Claude Code users. Uses Claude's native file tools — no CLI required.</p>
+            <p className="text-on-surface/50 text-sm leading-relaxed mb-2">For Claude Code users. Uses Claude's native file tools — no CLI required.</p>
+            <p className="text-on-surface/40 text-xs leading-relaxed mb-6">
+              Paused at v0.3 to reduce overhead.{' '}
+              <button
+                onClick={() => setModalUpdate(v03Update)}
+                className="text-primary/60 hover:text-primary underline underline-offset-2 transition-colors cursor-pointer bg-transparent border-none p-0 text-xs"
+              >
+                Details
+              </button>
+            </p>
             <ol className="space-y-4 text-on-surface/60 text-sm leading-relaxed">
               <li className="flex items-start gap-3">
                 <span className="font-label text-primary font-bold text-xs mt-0.5">01</span>
@@ -82,6 +99,8 @@ export default function Setup() {
           </div>
         </RevealWrapper>
       </div>
+
+      <UpdateModal update={modalUpdate} onClose={() => setModalUpdate(null)} />
     </section>
   )
 }

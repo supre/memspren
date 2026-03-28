@@ -8,10 +8,23 @@ Use the **Write** tool to create files, **Read** to load them,
 **Edit** to update frontmatter properties, and append new content
 by reading the file and writing back the full updated content.
 
+## Sync Mode Awareness
+
+Check `sync_mode` in `.second-brain/config.md`:
+
+- **`sync_mode: batch`** (default) — This protocol is ONLY executed during sync
+  (triggered by `Protocols/sync-protocol.md`). During conversation, entities are
+  extracted and written to the rotating sync buffer instead. Do NOT interact with
+  the vault during conversation.
+
+- **`sync_mode: immediate`** (legacy) — Entities are created/updated immediately
+  during conversation using Read/Write/Edit tools as described below.
+
 ---
 
 ## Core Rules
 
+- **Every file MUST have a `description` field in frontmatter** — one-line summary of what the file is about. This is the search key for finding similar files and preventing duplicates.
 - Always confirm before creating a new entity (except tasks)
 - Never delete existing content — always append
 - Always check if entity already exists before creating
@@ -25,12 +38,9 @@ by reading the file and writing back the full updated content.
 
 Before creating any entity, check whether it already exists:
 
-```
-MMVP: Check if the file already exists at its expected path
-      (e.g. People/jason.md, Work/Projects/second brain.md)
+**Primary method:** Read the file at its expected path (e.g., `People/Jason Smith.md`, `Work/Projects/Second Brain.md`).
 
-Phase 2: Search Context-Docs/index.md Node Registry for a match
-```
+**Alternative:** Use Glob to search for files matching the expected name pattern in the target folder (e.g., `Work/Projects/*.md`), then read descriptions from frontmatter to find matches.
 
 If a match is found → load the existing file → append, do not create.
 If no match → confirm with user → create new file.
@@ -61,6 +71,7 @@ If user says no → capture inline in daily log only.
 ---
 node_type: project
 created: [TODAY]
+description: "[one-line summary of this project]"
 status: active
 deadline: [date or TBD]
 connected:
@@ -129,6 +140,7 @@ develops it further.
 ---
 node_type: idea
 created: [TODAY]
+description: "[one-line summary of this idea]"
 status: active
 maturity: seed
 connected:
@@ -196,6 +208,7 @@ new context about them.
 ---
 node_type: person
 created: [TODAY]
+description: "[one-line summary — role, relationship to user]"
 status: active
 connected:
   - [projects they're involved in]
@@ -292,6 +305,7 @@ to something new.
 ---
 node_type: learning
 created: [TODAY]
+description: "[one-line summary of the learning]"
 status: active
 source: [where it came from — article, conversation, book, etc.]
 connected:
@@ -333,6 +347,62 @@ last_modified: [TODAY]
 
 ---
 
+### Pattern
+
+**Folder:** `Notes/Patterns/[Pattern Name].md`
+**When to create:** Recurring behavioral theme observed across multiple check-ins —
+repeated struggles, avoidance patterns, energy cycles, productive habits.
+**When to update:** New evidence for an existing pattern (new date, new instance).
+
+**Confirmation:**
+> "I'm noticing a pattern around [theme] — want me to track it?"
+
+**New file template:**
+```markdown
+---
+node_type: pattern
+created: [TODAY]
+description: "[one-line summary of the pattern]"
+status: active
+connected:
+  - [log entries where observed]
+  - [projects affected]
+tags: []
+last_modified: [TODAY]
+---
+
+# [Pattern Name]
+
+## Core Pattern
+[What the pattern is — the recurring behavior, trigger, or cycle]
+
+## Evidence
+
+### [TODAY]
+[First observation — what happened, when, context]
+
+## Triggers
+[What seems to cause or precede this pattern]
+
+## Connected To
+- [[Log/Daily/[date]|First observed]]
+- [[Work/Projects/[project]|Affected project]]
+
+## Notes
+[Strategies attempted, what works, what doesn't]
+```
+
+→ **Create:** Write the filled template to `{vault_path}/Notes/Patterns/<pattern-name>.md`
+
+**When updating:**
+- Read the file
+- Append a new `### [TODAY]` section under `## Evidence` with the new observation
+- Update `last_modified` in frontmatter
+- Add the log entry path to the `connected:` array
+- Write the updated file back
+
+---
+
 ### Daily Log
 
 **Folder:** `Log/Daily/YYYY-MM-DD.md`
@@ -345,6 +415,7 @@ atomic file.
 ---
 node_type: log-entry
 created: [TODAY]
+description: "[one-line summary of the day]"
 status: active
 connected:
   - [project files updated today]
@@ -399,6 +470,7 @@ is crossed — 8+ notes connecting to the same topic or concept.
 ---
 node_type: moc
 created: [TODAY]
+description: "[one-line summary of this map of content]"
 status: active
 topic: [topic name]
 connected:
@@ -477,3 +549,4 @@ new `[[links]]` today.
 | Project mentioned with no clear goal         | Create with `deadline: TBD` — flag in synthesis to clarify      |
 | Duplicate topic detected                     | Load existing file — append, do not create second file          |
 | User declines confirmation                   | Capture inline in daily log only — no standalone file           |
+| Description field missing on existing file   | Add one based on file content when updating — never leave blank |
