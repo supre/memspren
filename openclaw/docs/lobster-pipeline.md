@@ -550,6 +550,35 @@ lobster run workflows/sync.lobster \
 
 After 6 hours of debugging, the full Stage 0 + Stage 1 extraction pipeline is working end-to-end. Key discoveries:
 
+### Why Python Scripts Call Gateway Directly (Not via openclaw.invoke)
+
+**The Problem:**
+Scripts need to pass large JSON payloads (buffer content with quotes, newlines, user text) to llm-task. Standard approaches all failed due to shell quoting:
+
+1. **Python subprocess → openclaw.invoke shim**: The shim does `shellQuote()` on every argument, breaking JSON payloads
+2. **Lobster `llm.invoke` pipeline command**: Expects response from `/invoke` endpoint which doesn't exist on Gateway
+3. **Shell variable substitution**: `$VAR` in workflow files gets shell-parsed, breaking on special characters
+4. **Base64 encoding**: Still requires passing through shell, which breaks on the decode step
+
+**The Solution:**
+Python scripts call the OpenClaw Gateway HTTP API directly using curl with temp files:
+
+```python
+# Write payload to temp JSON file
+with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+    json.dump(payload, f)
+    temp_file = f.name
+
+# Call Gateway via curl with @file syntax (bypasses all shell quoting)
+subprocess.run([
+    "curl", "-s", "-X", "POST",
+    "-H", "Content-Type: application/json",
+    "-H", f"Authorization: Bearer {gateway_token}",
+    "-d", f"@{temp_file}",
+    f"{gateway_url}/tools/invoke"
+])
+```
+
 ### OpenClaw Gateway API Format
 
 The `/tools/invoke` endpoint expects:
@@ -566,19 +595,44 @@ The `/tools/invoke` endpoint expects:
 }
 ```
 
-**Not** `"action": "json"` (that's for different tools). **Not** parameters flattened at the top level. The `args` wrapper is required.
+**Not** `"action": "json"` (incorrect action). **Not** parameters flattened at the top level. The `args` wrapper is required.
 
-### Why Direct HTTP Calls
+### Why Not Use Lobster's `llm.invoke`?
 
-Initial attempts used:
-1. Python `subprocess.run(['openclaw.invoke', '--tool', 'llm-task', '--args-json', json.dumps(payload)])` → shell quote escaping broke on nested JSON
-2. Lobster pipeline string with `openclaw.invoke` → same quoting issues
-3. Base64 encoding → still broke
-4. Temp file + stdin piping → Lobster's stdin mode doesn't support openclaw.invoke
-5. Python urllib.request with direct HTTP API call to `/tools/invoke` → **this works**
-6. Switched to curl for reliability → **production solution**
+Lobster's native `llm.invoke` command is designed for simple prompts passed inline:
+```yaml
+pipeline: llm.invoke --prompt "Summarize this"
+stdin: $previous_step.json
+```
 
-The curl approach bypasses all shell/subprocess quoting layers by writing the payload to a temp JSON file and using curl's `@file` syntax. This is now the standard pattern for all LLM invocations in the pipeline.
+But our use case requires:
+- Large prompts loaded from separate files (extraction_prompt.txt is 1.5KB)
+- Complex nested input objects (buffer content + manual edits + existing memory files)
+- Schema validation payloads (JSON schemas are 200-500 lines)
+
+Passing these through shell arguments would require escaping/encoding that reintroduces the quoting problem. Direct HTTP API calls are simpler and more explicit.
+
+### Alternative Considered: Workflow-Native llm.invoke
+
+We evaluated splitting each LLM step into:
+```yaml
+- id: prepare_extraction
+  run: python prepare_extraction.py  # outputs JSON payload
+- id: extraction
+  pipeline: llm.invoke --prompt "$(cat prompts/extraction_prompt.txt)"
+  stdin: $prepare_extraction.json
+- id: save_extraction
+  run: python save_extraction.py  # saves to file for downstream steps
+  stdin: $extraction.stdout
+```
+
+But this:
+- Adds 2 extra steps per LLM call (12 total for 6 LLM invocations)
+- Requires Lobster to correctly parse `$(cat ...)` command substitution in pipeline strings
+- Still hits the quoting issue when the prompt file contains single quotes or backticks
+- Makes debugging harder (3 steps to trace instead of 1)
+
+**Decision:** Keep LLM invocations in Python scripts that call Gateway HTTP API directly. One step per LLM call, explicit and debuggable.
 
 ### State File Pattern
 

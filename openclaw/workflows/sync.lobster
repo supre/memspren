@@ -87,16 +87,26 @@ steps:
   # All downstream stages work from this structured output.
   # Raw buffer text is NEVER read again after this step.
 
-  - id: extraction
+  - id: prepare_extraction
     run: >
-      python -m scripts.runner scripts/run_extraction.py
+      python -m scripts.runner scripts/prepare_extraction.py
       --buffer-content-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/buffer-content.txt"
       --manual-edits-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/manual-edits.txt"
-      --agent memspren-heavy
+    # Output: { input: {...}, schema: {...} }
+
+  - id: extraction
+    pipeline: >
+      llm.invoke --provider openclaw --prompt "$(cat prompts/extraction_prompt.txt)"
+    stdin: $prepare_extraction.json
+    # Output from llm.invoke: { raw_insights, raw_goals, raw_tasks, raw_patterns, classifiers }
+
+  - id: save_extraction
+    run: >
+      python -m scripts.runner scripts/save_extraction.py
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
+    stdin: $extraction.stdout
+    # Saves extraction output to MEMORY_PATH/run/extraction-output.json for entity_plan step
     # Output: { raw_insights, raw_goals, raw_tasks, raw_patterns, classifiers }
-    # Prompt/schema are hardcoded in run_extraction.py; output also saved to
-    # MEMORY_PATH/run/extraction-output.json for the entity_plan step.
 
   # ─── STAGE 2: PARALLEL REFINEMENT ─────────────────────────────────────────
   # Python dispatcher (ThreadPoolExecutor) runs 4 llm-task jobs simultaneously.
