@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-03-28",
+    "title": "Implement state file pattern (partial) - Stage 0 working",
+    "content": "Implemented shared state file pattern to work around Lobster's JSON path limitation. Created scripts/state.py helper with read/write/get_field methods. Updated check_cli.py and vault_diff_scanner.py to use state. Workflow now progresses through Stage 0 (pre-flight) successfully. Stops at extraction step (openclaw.invoke not available in test env). Remaining work: update all remaining scripts (task_inbox, extraction, parallel_refinement, entity_plan, entity_writes, metrics) to use state pattern.",
+    "tags": ["lobster", "sync", "state-pattern", "progress"]
+  },
+  {
+    "date": "2026-03-28",
     "title": "Identify Lobster JSON path limitation + commit datetime fixes",
     "content": "Fixed all datetime.utcnow() deprecation warnings (replaced with datetime.now(UTC)). Discovered Lobster limitation: no support for $step.json.field nested access in workflow commands - only $step.json (entire object), $step.stdout, $step.approved/skipped supported. Workflow needs refactor to use state file pattern: scripts write to MEMORY_PATH/run/state.json, subsequent steps read from known paths. This is a Lobster core limitation, not a bug in our workflow design.",
     "tags": ["lobster", "sync", "bugfix", "architecture"]
