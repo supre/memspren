@@ -38,11 +38,6 @@ args:
     description: Path to .second-brain/config.md
     required: true
 
-env:
-  VAULT_PATH: "$LOBSTER_ARG_VAULT_PATH"
-  VAULT_NAME: "$LOBSTER_ARG_VAULT_NAME"
-  MEMORY_PATH: "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
-
 steps:
 
   # ─── STAGE 0: PRE-FLIGHT ──────────────────────────────────────────────────
@@ -50,19 +45,19 @@ steps:
   # exits cleanly — no partial state is left behind.
 
   - id: lock
-    run: python -m scripts.runner scripts/write_lock.py --memory-path "$MEMORY_PATH"
+    run: python -m scripts.runner scripts/write_lock.py --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
     # Output: { ok: bool, action: "locked"|"skipped", error: str|null }
     # Exit 1 on lock exists → Lobster aborts with SYNC SKIPPED
 
   - id: check_cli
-    run: python -m scripts.runner scripts/check_cli.py --vault-path "$VAULT_PATH" --vault "$VAULT_NAME" --json
+    run: python -m scripts.runner scripts/check_cli.py --vault-path "$LOBSTER_ARG_VAULT_PATH" --vault "$LOBSTER_ARG_VAULT_NAME" --json
     # Output: { write_mode: "obsidian"|"filesystem", vault_name: str, last_sync: ISO|null }
 
   - id: vault_diff
     run: >
       python -m scripts.runner scripts/vault_diff_scanner.py
-      --vault-path "$VAULT_PATH"
-      --memory-path "$MEMORY_PATH"
+      --vault-path "$LOBSTER_ARG_VAULT_PATH"
+      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
       --since "$check_cli.json.last_sync"
     # Output: { changed_files: [...], changed_files_content_file: str, changed_count: int }
     # On no git repo: returns empty result, logs WARN to telemetry — non-fatal
@@ -70,26 +65,21 @@ steps:
   - id: task_inbox
     run: >
       python -m scripts.runner scripts/task_inbox_scanner.py
-      --vault-path "$VAULT_PATH"
-      --memory-path "$MEMORY_PATH"
+      --vault-path "$LOBSTER_ARG_VAULT_PATH"
+      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
     # Output: { tasks: [...], completed: [...], open_count: int, task_inbox_file: str }
     # Side-effect: saves full result to MEMORY_PATH/run/task-inbox.json
 
   - id: rotate_buffer
     run: >
       python -m scripts.runner scripts/rotate_buffer.py
-      --vault-path "$VAULT_PATH"
-      --memory-path "$MEMORY_PATH"
+      --vault-path "$LOBSTER_ARG_VAULT_PATH"
+      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
       --sync-check
     # Output: { has_content: bool, should_exit: bool, sealed_buffers: [...], buffer_content_file: str, entry_count: int }
 
-  - id: exit_if_empty
-    when: $rotate_buffer.json.should_exit
-    run: >
-      python -m scripts.runner scripts/clean_exit.py
-      --message "Nothing to sync."
-      --release-lock
-      --memory-path "$MEMORY_PATH"
+  # Note: If rotate_buffer returns has_content=false, extraction and downstream
+  # steps will handle empty input gracefully. No early exit needed.
 
   # ─── STAGE 1: EXTRACTION ──────────────────────────────────────────────────
   # Single llm-task call. Heavy agent. Reads raw buffer once.
@@ -102,7 +92,7 @@ steps:
       --buffer-content-file "$rotate_buffer.json.buffer_content_file"
       --manual-edits-file "$vault_diff.json.changed_files_content_file"
       --agent memspren-heavy
-      --memory-path "$MEMORY_PATH"
+      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
     # Output: { raw_insights, raw_goals, raw_tasks, raw_patterns, classifiers }
     # Prompt/schema are hardcoded in run_extraction.py; output also saved to
     # MEMORY_PATH/run/extraction-output.json for the entity_plan step.
@@ -116,9 +106,9 @@ steps:
   - id: parallel_refinement
     run: >
       python -m scripts.runner scripts/parallel_memory.py
-      --extraction-file "$MEMORY_PATH/run/extraction-output.json"
+      --extraction-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/extraction-output.json"
       --task-inbox-file "$task_inbox.json.task_inbox_file"
-      --memory-path "$MEMORY_PATH"
+      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
     # Output: { insights: {ok, content}, goals: {ok, content}, tasks: {ok, content}, hot_memory: {ok, content} }
 
   # ─── STAGE 3: MERGE + WRITE LAYER 1 ───────────────────────────────────────
@@ -130,7 +120,7 @@ steps:
     run: >
       python -m scripts.runner scripts/merge.py
       --results "$parallel_refinement.json"
-      --memory-path "$MEMORY_PATH"
+      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
     # Output: { ok: bool, written: [...], fallback: [...], summary: str }
 
   # ─── STAGE 4a: FRONTMATTER BATCH READ ─────────────────────────────────────
@@ -140,9 +130,9 @@ steps:
   - id: read_frontmatter
     run: >
       python -m scripts.runner scripts/read_frontmatter.py
-      --vault-path "$VAULT_PATH"
+      --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --classifiers "$extraction.json.classifiers"
-      --memory-path "$MEMORY_PATH"
+      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
     # Output: { frontmatter_file: str, count: int }
     # Side-effect: saves frontmatter array to MEMORY_PATH/run/frontmatter.json
     # Note: --classifiers only interpolates classifier names (short safe strings, no quotes)
@@ -155,7 +145,7 @@ steps:
   - id: entity_plan
     run: >
       python -m scripts.runner scripts/run_entity_plan.py
-      --extraction-file "$MEMORY_PATH/run/extraction-output.json"
+      --extraction-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/extraction-output.json"
       --frontmatter-file "$read_frontmatter.json.frontmatter_file"
       --task-inbox-file "$task_inbox.json.task_inbox_file"
       --agent memspren-heavy
@@ -188,10 +178,10 @@ steps:
     run: >
       python -m scripts.runner scripts/entity_pipeline.py
       --plan "$entity_plan.json"
-      --vault-path "$VAULT_PATH"
+      --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --vault-name "$check_cli.json.vault_name"
       --write-mode "$check_cli.json.write_mode"
-      --memory-path "$MEMORY_PATH"
+      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
     # Output: { ok, written, created, updated, merged, links_added, failed: [...] }
 
   # ─── STAGE 5: METRICS + CLEANUP ───────────────────────────────────────────
@@ -201,8 +191,8 @@ steps:
   - id: metrics
     run: >
       python -m scripts.runner scripts/metrics_writer.py
-      --memory-path "$MEMORY_PATH"
-      --vault-path "$VAULT_PATH"
+      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
+      --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --write-mode "$check_cli.json.write_mode"
       --vault-name "$check_cli.json.vault_name"
       --extraction-result "$extraction.json"
@@ -215,6 +205,6 @@ steps:
   - id: release_lock
     run: >
       python -m scripts.runner scripts/write_lock.py
-      --memory-path "$MEMORY_PATH"
+      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
       --release
       --prune-tokens-older-than-hours 24

@@ -1,8 +1,8 @@
 [
   {
     "date": "2026-03-28",
-    "title": "Fix Lobster workflow condition syntax",
-    "content": "Fixed unsupported condition syntax in sync.lobster workflow. Changed from `when: \"$rotate_buffer.json.has_content == false\"` to `when: $rotate_buffer.json.should_exit` with corresponding script update. Lobster's `when:` clause expects simple boolean references, not comparison expressions. Updated rotate_buffer.py to include `should_exit` field (inverted `has_content`) in JSON output.",
-    "tags": ["lobster", "sync", "bugfix"]
+    "title": "Fix Lobster workflow variable expansion and conditions",
+    "content": "Fixed two critical Lobster workflow issues: (1) env: variable assignments don't expand LOBSTER_ARG_* references - must use them directly in run: commands. Removed env: section and replaced all $VAULT_PATH/$VAULT_NAME/$MEMORY_PATH with direct $LOBSTER_ARG_* references. (2) Lobster's when: clause only supports $step.approved|$step.skipped, not arbitrary JSON paths like $step.json.field. Removed early-exit conditional logic - downstream scripts handle empty buffers gracefully.",
+    "tags": ["lobster", "sync", "bugfix", "workflow"]
   }
 ]
