@@ -10,7 +10,7 @@ Dispatches 4 llm-task jobs simultaneously via ThreadPoolExecutor:
 
 Each job:
   1. Builds input from extraction output + existing memory file content
-  2. Calls openclaw.invoke --tool llm-task --args-json with prompt/schema/input payload
+  2. Calls OpenClaw Gateway /tools/invoke via the urllib-based gateway client
   3. Validates output immediately against its schema (jsonschema if available)
   4. On failure: slot returns ok=false, existing file retained by merge.py
 
@@ -25,14 +25,13 @@ Returns JSON to stdout:
 
 import argparse
 import json
-import subprocess
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).parent.resolve()
-SCHEMA_DIR = SCRIPT_DIR.parent / "schemas"
-PROMPT_DIR = SCRIPT_DIR.parent / "prompts"
+from .. import gateway_client
+from .. import PROMPTS_DIR, SCHEMAS_DIR
 
 try:
     import jsonschema
@@ -92,7 +91,7 @@ def load_existing(memory_path: Path, filename: str) -> str:
 
 
 def load_schema(schema_file: str) -> dict | None:
-    path = SCHEMA_DIR / schema_file
+    path = SCHEMAS_DIR / schema_file
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
@@ -117,15 +116,18 @@ def run_job(
 ) -> tuple[str, dict]:
     name = job["name"]
 
+    gateway_url = os.environ.get("OPENCLAW_URL", "http://127.0.0.1:18789")
+    gateway_token = os.environ.get("OPENCLAW_TOKEN", "")
+
     job_input: dict = {k: extraction.get(k, []) for k in job["extraction_keys"]}
     job_input["existing_content"] = load_existing(memory_path, job["memory_file"])
     for key in job["extra_keys"]:
         if key == "task_inbox":
             job_input["task_inbox"] = task_inbox
 
-    # Read prompt and schema files; build --args-json payload for openclaw.invoke
+    # Read prompt and schema files
     try:
-        prompt = (PROMPT_DIR / job["prompt_file"]).read_text(encoding="utf-8").strip()
+        prompt = (PROMPTS_DIR / job["prompt_file"]).read_text(encoding="utf-8").strip()
     except Exception as e:
         return name, {"ok": False, "content": "", "error": f"could not read prompt file: {e}"}
 
@@ -133,64 +135,82 @@ def run_job(
     if schema_obj is None:
         return name, {"ok": False, "content": "", "error": f"could not load schema: {job['schema_file']}"}
 
-    payload = {"prompt": prompt, "input": job_input, "schema": schema_obj}
-
-    cmd = [
-        "openclaw.invoke", "--tool", "llm-task", "--action", "json",
-        "--agent",    job["agent"],
-        "--args-json", json.dumps(payload),
-    ]
-
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=130)
-    except subprocess.TimeoutExpired:
-        return name, {"ok": False, "content": "", "error": "llm-task timed out (120s)"}
-    except Exception as e:
-        return name, {"ok": False, "content": "", "error": f"subprocess error: {e}"}
-
-    if proc.returncode != 0:
-        return name, {
-            "ok": False, "content": "",
-            "error": f"openclaw.invoke exited {proc.returncode}: {proc.stderr[:200]}",
+    # Build Gateway API payload
+    payload = {
+        "tool": "llm-task",
+        "action": "invoke",
+        "args": {
+            "prompt": prompt,
+            "input": job_input,
+            "schema": schema_obj,
+            "timeoutMs": 120000
         }
+    }
+
+    endpoint = gateway_url.rstrip("/") + "/tools/invoke"
 
     try:
-        parsed = json.loads(proc.stdout.strip())
-    except json.JSONDecodeError:
-        return name, {"ok": False, "content": "", "error": "openclaw.invoke output is not valid JSON"}
+        result = gateway_client.post_json(endpoint, payload, token=gateway_token, timeout=130)
+    except RuntimeError as exc:
+        return name, {"ok": False, "content": "", "error": str(exc)}
 
-    if not validate(parsed, schema_obj):
-        return name, {"ok": False, "content": "", "error": "schema validation failed"}
+    # Check for error response
+    if isinstance(result, dict) and result.get("ok") == False:
+        error_msg = result.get("error", {}).get("message", "Unknown error")
+        return name, {"ok": False, "content": "", "error": f"Gateway error: {error_msg}"}
 
-    content = parsed.get("content", "")
+    # Extract JSON from Gateway response
+    if isinstance(result, dict) and "result" in result:
+        if "details" in result["result"] and "json" in result["result"]["details"]:
+            output = result["result"]["details"]["json"]
+        else:
+            output = result["result"]
+    else:
+        output = result
+
+    # Validate against schema
+    if not validate(output, schema_obj):
+        return name, {"ok": False, "content": "", "error": "output failed schema validation"}
+
+    # Extract content string from output
+    if isinstance(output, dict) and "content" in output:
+        content = output["content"]
+    elif isinstance(output, str):
+        content = output
+    else:
+        content = json.dumps(output)
+
     return name, {"ok": True, "content": content, "error": None}
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--extraction-file", required=True,
-                        help="Path to extraction-output.json saved by run_extraction.py")
-    parser.add_argument("--memory-path", required=True)
-    parser.add_argument("--task-inbox-file", default="",
-                        help="Path to task-inbox.json saved by task_inbox_scanner.py")
+def main():
+    parser = argparse.ArgumentParser(description="Parallel memory refinement dispatcher")
+    parser.add_argument("--extraction-file", required=True, help="Path to extraction output JSON")
+    parser.add_argument("--task-inbox-file", required=True, help="Path to task inbox JSON")
+    parser.add_argument("--memory-path", required=True, help="Memory directory path")
     args = parser.parse_args()
 
-    try:
-        extraction = json.loads(Path(args.extraction_file).read_text(encoding="utf-8"))
-    except Exception as e:
-        print(json.dumps({"ok": False, "error": f"could not read extraction file: {e}"}))
+    extraction_path = Path(args.extraction_file)
+    task_inbox_path = Path(args.task_inbox_file)
+    memory_path = Path(args.memory_path)
+
+    if not extraction_path.exists():
+        print(json.dumps({"error": f"Extraction file not found: {extraction_path}"}))
         sys.exit(1)
 
-    task_inbox: dict = {}
-    if args.task_inbox_file:
-        try:
-            task_inbox = json.loads(Path(args.task_inbox_file).read_text(encoding="utf-8"))
-        except Exception:
-            task_inbox = {}
+    if not task_inbox_path.exists():
+        print(json.dumps({"error": f"Task inbox file not found: {task_inbox_path}"}))
+        sys.exit(1)
 
-    memory_path = Path(args.memory_path)
-    results: dict = {}
+    try:
+        extraction = json.loads(extraction_path.read_text(encoding="utf-8"))
+        task_inbox = json.loads(task_inbox_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        print(json.dumps({"error": f"Failed to load input files: {e}"}))
+        sys.exit(1)
 
+    # Run jobs in parallel
+    results = {}
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {
             executor.submit(run_job, job, extraction, memory_path, task_inbox): job["name"]

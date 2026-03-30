@@ -14,7 +14,7 @@ This wrapper:
   - On failure: emits a structured JSON error object to stdout (never crashes)
 
 Usage from Lobster workflow:
-    python -m scripts.runner scripts/my_script.py --arg value
+    python -m scripts.runner scripts/memcli.py <command> --arg value
 
 The runner is invoked as a module so it resolves from the skill root directory.
 """

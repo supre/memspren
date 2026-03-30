@@ -7,19 +7,19 @@ the word cap, create new active buffer, list sealed buffers ready for sync.
 
 Usage:
     # Check current buffer status
-    python3 scripts/rotate_buffer.py --vault-path "/path/to/vault" --check
+    python3 -m openclaw.scripts.buffer.rotate_buffer --vault-path "/path/to/vault" --check
 
     # Rotate: seal current buffer, create new active
-    python3 scripts/rotate_buffer.py --vault-path "/path/to/vault" --rotate
+    python3 -m openclaw.scripts.buffer.rotate_buffer --vault-path "/path/to/vault" --rotate
 
     # List all sealed buffers ready for sync
-    python3 scripts/rotate_buffer.py --vault-path "/path/to/vault" --list-sealed
+    python3 -m openclaw.scripts.buffer.rotate_buffer --vault-path "/path/to/vault" --list-sealed
 
     # Get path to active buffer (for writing)
-    python3 scripts/rotate_buffer.py --vault-path "/path/to/vault" --active-path
+    python3 -m openclaw.scripts.buffer.rotate_buffer --vault-path "/path/to/vault" --active-path
 
     # Clean up after sync: delete processed buffer
-    python3 scripts/rotate_buffer.py --vault-path "/path/to/vault" --cleanup --buffer-id 001
+    python3 -m openclaw.scripts.buffer.rotate_buffer --vault-path "/path/to/vault" --cleanup --buffer-id 001
 
 Output: JSON to stdout
 """
@@ -32,8 +32,7 @@ import glob
 import sys
 from datetime import datetime, timezone
 
-sys.path.insert(0, os.path.dirname(__file__))
-import state
+from .. import state
 
 
 MEMORY_DIR = ".second-brain/Memory"
@@ -363,8 +362,7 @@ def sync_check(vault_path: str, memory_path: str = None) -> dict:
         with open(content_file, "w", encoding="utf-8") as f:
             f.write(combined)
     except Exception as e:
-        import sys, json as _json
-        print(_json.dumps({"warn": f"could not write buffer-content file: {e}"}),
+        print(json.dumps({"warn": f"could not write buffer-content file: {e}"}),
               file=sys.stderr)
         content_file = ""
 

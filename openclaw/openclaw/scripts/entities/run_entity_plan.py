@@ -16,10 +16,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).parent.resolve()
+from .. import PROMPTS_DIR, SCHEMAS_DIR
+
 # Prompt and schema are fixed for Stage 4b entity plan — not exposed as CLI flags
-PROMPT_FILE = SCRIPT_DIR.parent / "prompts" / "entity_plan_prompt.txt"
-SCHEMA_FILE = SCRIPT_DIR.parent / "schemas" / "entity_plan_schema.json"
+PROMPT_FILE = PROMPTS_DIR / "entity_plan_prompt.txt"
+SCHEMA_FILE = SCHEMAS_DIR / "entity_plan_schema.json"
 
 
 def main() -> None:

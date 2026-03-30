@@ -147,7 +147,8 @@ When sync triggers → read `Protocols/sync-protocol.md` and invoke the Lobster 
 | `scripts/check_cli.py` | Existing (updated) | Verify obsidian-cli; resolve write mode (--json flag for pipeline) |
 | `scripts/rotate_buffer.py` | Existing (updated) | Buffer rotation; --sync-check mode for pipeline pre-flight |
 | `scripts/runner.py` | New | Enforce JSON-only stdout contract for all Lobster script steps |
-| `scripts/write_lock.py` | New | Write/release sync.lock; prune stale Lobster resume tokens |
+| `scripts/memcli.py` | New | Dispatch commands through runner (single entry point) |
+| `scripts/write_lock.py` | New | Acquire/release sync.lock; prune stale Lobster resume tokens |
 | `scripts/clean_exit.py` | New | Clean exit signal when nothing to sync |
 | `scripts/vault_diff_scanner.py` | New | Git diff since last_sync → manually changed vault files |
 | `scripts/task_inbox_scanner.py` | New | Parse + deduplicate tasks-inbox.md |
@@ -161,9 +162,10 @@ When sync triggers → read `Protocols/sync-protocol.md` and invoke the Lobster 
 | `scripts/scan_descriptions.py` | Existing | Merge decision support |
 
 **Critical stdout contract:** every script run by Lobster must emit ONLY valid JSON to stdout.
-Always invoke scripts via `python -m scripts.runner scripts/foo.py` — the runner wrapper
-enforces the contract, captures stderr to the telemetry log, and emits structured JSON errors
-on failure. Never run scripts directly from a Lobster step.
+Always invoke scripts via `python -m scripts.runner scripts/memcli.py <command> --arg value` —
+the runner enforces the JSON contract while memcli keeps a single dispatch path.
+Global locking is handled by `scripts/write_lock.py` (Stage 0 + Stage 5).
+Never run scripts directly from a Lobster step.
 
 ## Protocol files (load only when needed)
 

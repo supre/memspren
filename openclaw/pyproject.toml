@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "memcli"
+version = "0.4.0"
+description = "memspren pipeline CLI — OpenClaw skill command dispatcher"
+requires-python = ">=3.9"
+dependencies = [
+    "click>=8.1",
+    "jsonschema>=4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov",
+]
+
+[project.scripts]
+memcli = "openclaw.scripts.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["openclaw*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

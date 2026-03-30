@@ -108,8 +108,8 @@ The pipeline definition. A YAML workflow file that Lobster executes as a single 
 - Steps are identified by `id:`, prior step outputs referenced as `$stepId.json.field`
 - All `llm-task` invocations use `openclaw.invoke --tool llm-task --action invoke --agent <name>` with args passed as `{"args": {...}}` in the request body
 - The approval gate (`id: approval`) pauses execution; resume with `lobster resume <token> --approve`
-- All script steps are invoked via `python -m scripts.runner` — never directly
-- Lobster does not support `on_error:`/`finally:` handlers. Lock safety relies on stale-lock auto-detection (2h) in `write_lock.py`. To release immediately after a crash: `python scripts/write_lock.py --memory-path <path> --release`
+- All script steps are invoked via `python -m scripts.runner scripts/memcli.py <command>` — memcli centralizes argument handling (locking is handled globally)
+- Lobster does not support `on_error:`/`finally:` handlers. Lock safety relies on `scripts/write_lock.py` acquiring `.second-brain/Memory/sync.lock` at Stage 0 and releasing it in Stage 5 (stale-lock auto-detection defaults to 2h).
 
 **Lobster limitations discovered during v0.4 implementation:**
 1. **No JSON path access**: `$step.json.field` syntax not supported (only `$step.json`, `$step.stdout`, `$step.approved`, `$step.skipped`)
@@ -130,16 +130,36 @@ Lobster parses stdout as a JSON envelope. Any stray `print()`, debug output, or 
 - Routes all stderr to `sync-telemetry.log`
 - On any failure (empty stdout, invalid JSON, timeout, launch error): emits a structured JSON error object to stdout instead of crashing
 
-Usage: `python -m scripts.runner scripts/foo.py --arg value`
+Usage (indirect via memcli): `python -m scripts.runner scripts/memcli.py <command> --arg value`
 
 This is the only way scripts should be invoked from Lobster steps.
 
+### `scripts/memcli.py`
+
+`memcli` is the single entry point for all pipeline scripts. Lobster now calls:
+
+```
+python -m scripts.runner scripts/memcli.py <command> --arg value
+```
+
+Each `<command>` maps to a script in `openclaw/scripts/`. memcli simply forwards
+the provided arguments to that script through the runner so Lobster always has a
+single invocation shape. Concurrency protection is provided by the global
+`sync.lock` managed by `write_lock.py` (Stage 0/Stage 5).
+
 ### Stage 0 — Pre-flight scripts
 
-Five serial checks that must all pass before the pipeline proceeds.
+Five serial checks that must all pass before the pipeline proceeds. The first
+step acquires the global pipeline lock (`sync.lock`); no other step runs until
+it succeeds.
 
 **`write_lock.py`**
-Writes `sync.lock` to `.second-brain/Memory/`. If the lock already exists it inspects the `locked_at` timestamp — locks older than the configured threshold (default 2 hours) are treated as stale and auto-released rather than aborting. This handles the case where a previous pipeline crashed without releasing. Live locks still abort with SYNC SKIPPED. The `on_error`/`finally` handlers in `sync.lobster` ensure the lock is released even when the pipeline fails mid-run. Prunes stale Lobster resume tokens at the end of Stage 5.
+Writes `sync.lock` to `.second-brain/Memory/`. If the lock already exists it
+inspects the `locked_at` timestamp — locks older than the configured threshold
+(default 2 hours) are treated as stale and auto-released rather than aborting.
+This handles the case where a previous pipeline crashed without releasing. Live
+locks still abort with SYNC SKIPPED. Stage 5 releases the lock and prunes stale
+Lobster resume tokens.
 
 **`check_cli.py`** (updated)
 Supports `--json` flag for pipeline mode. Accepts `--vault <name>` explicitly — no longer derives vault_name from the folder path (which silently produced wrong names). Returns `{ write_mode, vault_name, last_sync }`. Probes obsidian-cli with the exact vault name provided. If the CLI is unavailable or vault access fails, sets `write_mode: "filesystem"` (non-fatal fallback).
@@ -156,7 +176,7 @@ Parses `Tasks/tasks-inbox.md` and extracts open/completed tasks. Deduplicates by
 ### Stage 1 — Extraction
 
 **`run_extraction.py`** (new wrapper)
-Reads buffer content and manual edits from temp files, builds a payload, and calls the OpenClaw Gateway `/tools/invoke` endpoint directly via curl to avoid all shell quoting issues. The payload format is:
+Reads buffer content and manual edits from temp files, builds a payload, and calls the OpenClaw Gateway `/tools/invoke` endpoint via the shared `gateway_client` (thin urllib wrapper) to avoid all shell quoting issues. The payload format is:
 
 ```json
 {
@@ -171,10 +191,10 @@ Reads buffer content and manual edits from temp files, builds a payload, and cal
 }
 ```
 
-The script writes the payload to a temp JSON file and passes it via curl's `@file` syntax. Prompt and schema paths are hardcoded inside the script — they are not exposed as CLI flags. Saves the LLM output to `MEMORY_PATH/run/extraction-output.json` for downstream steps, then prints it to stdout.
+Prompt and schema paths are hardcoded inside the script — they are not exposed as CLI flags. The response body is parsed from the Gateway JSON envelope and also saved to `MEMORY_PATH/run/extraction-output.json` for downstream steps.
 
-**Why curl instead of Python subprocess → openclaw.invoke?**
-After 6 hours of debugging, discovered that shell quoting of nested JSON payloads (buffer content with quotes, braces, newlines) breaks when passed through Python subprocess → Lobster → openclaw.invoke. Direct HTTP API call with curl bypasses all quoting layers and works reliably.
+**Why a custom urllib client instead of Python subprocess → openclaw.invoke?**
+After 6 hours of debugging, discovered that shell quoting of nested JSON payloads (buffer content with quotes, braces, newlines) breaks when passed through Python subprocess → Lobster → openclaw.invoke. Making the HTTP call directly from Python via urllib bypasses all shell quoting layers and works reliably.
 
 Extraction output:
 
@@ -195,7 +215,7 @@ Validated against `schemas/extraction_schema.json`. **Note:** The classifier enu
 ### Stage 2 — Parallel refinement dispatcher
 
 **`parallel_memory.py`** (new)
-Dispatches four `llm-task` jobs simultaneously via `ThreadPoolExecutor(max_workers=4)`. Reads extraction output from `MEMORY_PATH/run/extraction-output.json` and task inbox from the file path passed via `--task-inbox-file`. Each job reads its prompt and schema from disk, builds the payload as `{"tool": "llm-task", "action": "invoke", "args": {...}}`, and calls the OpenClaw Gateway `/tools/invoke` endpoint directly via curl (same pattern as run_extraction.py).
+Dispatches four `llm-task` jobs simultaneously via `ThreadPoolExecutor(max_workers=4)`. Reads extraction output from `MEMORY_PATH/run/extraction-output.json` and task inbox from the file path passed via `--task-inbox-file`. Each job reads its prompt and schema from disk, builds the payload as `{"tool": "llm-task", "action": "invoke", "args": {...}}`, and calls the OpenClaw Gateway `/tools/invoke` endpoint through `gateway_client.post_json` (same pattern as run_extraction.py).
 
 | Job | Agent | Input | Output |
 |---|---|---|---|
@@ -233,7 +253,7 @@ Classifier → folder mapping:
 ### Stage 4b — Entity plan
 
 **`run_entity_plan.py`** (new wrapper)
-Reads extraction, frontmatter, and task inbox all from files (never from shell-interpolated CLI strings). Builds the payload as `{"tool": "llm-task", "action": "invoke", "args": {...}}` and calls the OpenClaw Gateway `/tools/invoke` endpoint via curl. Prompt and schema paths are hardcoded inside the script.
+Reads extraction, frontmatter, and task inbox all from files (never from shell-interpolated CLI strings). Builds the payload as `{"tool": "llm-task", "action": "invoke", "args": {...}}` and calls the OpenClaw Gateway `/tools/invoke` endpoint via the shared urllib client. Prompt and schema paths are hardcoded inside the script.
 
 Entity plan output:
 
@@ -270,7 +290,7 @@ Token expires (default 24h) → re-trigger sync (buffer intact)
 ### Stage 4c — Entity pipeline
 
 **`entity_pipeline.py`** (new)
-Runs three sequential steps per entity, entities in parallel via `ThreadPoolExecutor(max_workers=4)`. Each step calls the OpenClaw Gateway `/tools/invoke` endpoint directly via curl with `{"tool": "llm-task", "action": "invoke", "args": {...}}`.
+Runs three sequential steps per entity, entities in parallel via `ThreadPoolExecutor(max_workers=4)`. Each step calls the OpenClaw Gateway `/tools/invoke` endpoint via the urllib client with `{"tool": "llm-task", "action": "invoke", "args": {...}}`.
 
 1. **Content directive** (light agent) — takes `content_draft` from the entity plan, produces final frontmatter + body. `description` field is required. No wikilinks yet.
 2. **Linking directive** (light agent) — takes the final content, returns `wikilinks` (appended as a footer) and `connected_additions`. The `update_connected_for` function updates both sides of each link:
@@ -311,6 +331,10 @@ Archives sealed buffers to `sync-archive/` only after confirmed entity writes. R
   }
 }
 ```
+
+**`write_lock.py --release`**
+Runs at the end of Stage 5 to release `sync.lock` and prune stale Lobster
+`resumeToken` files (default threshold: 24 hours).
 
 ### Schemas (`schemas/`)
 
@@ -482,14 +506,14 @@ Run the pre-flight checks manually before the first sync:
 
 ```bash
 # Check obsidian-cli with your exact vault name
-python scripts/check_cli.py --vault "Your Vault Name"
+python -m scripts.runner scripts/memcli.py check-cli --vault "Your Vault Name" --vault-path "/path/to/vault" --memory-path "/path/to/vault/.second-brain/Memory" --json
 
 # Check buffer state
-python scripts/rotate_buffer.py --vault-path "/path/to/vault" --check
+python -m scripts.runner scripts/memcli.py rotate-buffer --vault-path "/path/to/vault" --memory-path "/path/to/vault/.second-brain/Memory" --check
 
 # Test runner wrapper
-python -m scripts.runner scripts/write_lock.py --memory-path "/tmp/test-memspren" && \
-python -m scripts.runner scripts/write_lock.py --memory-path "/tmp/test-memspren" --release
+python -m scripts.runner scripts/memcli.py write-lock --memory-path "/tmp/test-memspren" && \
+python -m scripts.runner scripts/memcli.py write-lock --memory-path "/tmp/test-memspren" --release
 ```
 
 Run a first sync from the session:
@@ -541,7 +565,7 @@ lobster run workflows/sync.lobster \
 | Manual Obsidian edits | Invisible to sync | Ingested via git diff (committed + working tree) |
 | Buffer rotation | Word-count threshold only | Seals on any entries at sync time |
 | last_sync on failed write | Always updated | Only updated when entity writes succeed |
-| Lock on pipeline crash | Permanent until manual delete | Stale-lock auto-detection (2h); manual release: `python scripts/write_lock.py --release` |
+| Command-level locking | Single `sync.lock` gate | Global `sync.lock` managed by `write_lock.py`; manual release: `python scripts/write_lock.py --release` |
 | Vault name for CLI calls | Derived from folder name | Explicitly provided via vault_name arg |
 
 ---
@@ -561,22 +585,18 @@ Scripts need to pass large JSON payloads (buffer content with quotes, newlines, 
 4. **Base64 encoding**: Still requires passing through shell, which breaks on the decode step
 
 **The Solution:**
-Python scripts call the OpenClaw Gateway HTTP API directly using curl with temp files:
+Python scripts call the OpenClaw Gateway HTTP API directly using urllib via `scripts/gateway_client.py`:
 
 ```python
-# Write payload to temp JSON file
-with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-    json.dump(payload, f)
-    temp_file = f.name
+from scripts import gateway_client
 
-# Call Gateway via curl with @file syntax (bypasses all shell quoting)
-subprocess.run([
-    "curl", "-s", "-X", "POST",
-    "-H", "Content-Type: application/json",
-    "-H", f"Authorization: Bearer {gateway_token}",
-    "-d", f"@{temp_file}",
-    f"{gateway_url}/tools/invoke"
-])
+payload = {"tool": "llm-task", "action": "invoke", "args": {...}}
+result = gateway_client.post_json(
+    f"{gateway_url}/tools/invoke",
+    payload,
+    token=gateway_token,
+    timeout=120,
+)
 ```
 
 ### OpenClaw Gateway API Format

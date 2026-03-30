@@ -18,7 +18,6 @@ Used in two ways:
 
 import argparse
 import json
-import os
 import platform
 import re
 import shutil
@@ -26,9 +25,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Import state module
-sys.path.insert(0, os.path.dirname(__file__))
-import state
+from .. import state
 
 
 def print_path_fix():
@@ -206,7 +203,7 @@ def main():
             "last_sync":  last_sync,
         }
         print(json.dumps(result))
-        
+
         # Write to shared state for subsequent steps
         if args.memory_path:
             state.write_state(args.memory_path, {

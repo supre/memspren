@@ -16,16 +16,13 @@ Returns JSON to stdout:
 import argparse
 import datetime
 import json
-import os
 import re
-import sys
-
-sys.path.insert(0, os.path.dirname(__file__))
-import state
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+from .. import state
 
 DEFAULT_MAX_LOG_BYTES = 2 * 1024 * 1024  # 2 MB
 DEFAULT_KEEP_LINES    = 2000
@@ -161,7 +158,7 @@ def main() -> None:
     sealed_bufs = parse(args.sealed_buffers) if args.sealed_buffers and args.sealed_buffers != "[]" else []
     if not sealed_bufs:
         sealed_bufs = state.get_field(str(memory_path), "rotate_buffer_sealed_buffers", [])
-    
+
     entity_writes_ok_arg = str(args.entity_writes_ok).lower() in ("true", "1", "yes")
     entity_writes_ok_state = state.get_field(str(memory_path), "entity_writes_ok", False)
     # Only archive buffers if entity writes actually succeeded.

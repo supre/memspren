@@ -23,13 +23,11 @@ Returns JSON to stdout:
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(__file__))
-import state
+from .. import state
 
 
 def run_git(cmd: list, cwd: str, timeout: int = 30) -> tuple[int, str]:
@@ -55,7 +53,7 @@ def main() -> None:
     vault_path  = Path(args.vault_path)
     memory_path = Path(args.memory_path)
     empty = {"changed_files": [], "changed_files_content_file": "", "changed_count": 0}
-    
+
     # Read since timestamp from state if not provided
     since = args.since
     if not since:
@@ -165,7 +163,7 @@ def main() -> None:
         "changed_count":              len(valid_files),
     }
     print(json.dumps(result))
-    
+
     # Write to shared state
     state.write_state(str(memory_path), {
         "vault_diff_changed_count": len(valid_files),

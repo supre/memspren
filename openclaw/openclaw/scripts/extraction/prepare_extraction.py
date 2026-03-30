@@ -8,6 +8,8 @@ import json
 import sys
 from pathlib import Path
 
+from .. import SCHEMAS_DIR
+
 
 def main():
     parser = argparse.ArgumentParser(description="Prepare extraction input")
@@ -26,13 +28,12 @@ def main():
     manual_edits = edits_path.read_text(encoding="utf-8") if edits_path.exists() else ""
 
     # Load schema
-    script_dir = Path(__file__).parent
-    schema_file = script_dir.parent / "schemas" / "extraction_schema.json"
-    
+    schema_file = SCHEMAS_DIR / "extraction_schema.json"
+
     if not schema_file.exists():
         print(json.dumps({"error": f"Schema file not found: {schema_file}"}), file=sys.stderr)
         sys.exit(1)
-    
+
     schema = json.loads(schema_file.read_text(encoding="utf-8"))
 
     # Output payload for llm.invoke

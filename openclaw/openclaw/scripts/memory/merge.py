@@ -34,13 +34,20 @@ MEMORY_FILES: dict[str, str] = {
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--results", required=True,
-                        help="JSON string from parallel_memory.py")
     parser.add_argument("--memory-path", required=True)
     args = parser.parse_args()
 
+    # Read results from stdin
+    stdin_text = sys.stdin.read().strip()
+    if not stdin_text:
+        print(json.dumps({
+            "ok": False, "error": "empty input from parallel_memory",
+            "written": [], "fallback": [], "summary": "",
+        }))
+        sys.exit(1)
+
     try:
-        results = json.loads(args.results)
+        results = json.loads(stdin_text)
     except json.JSONDecodeError as e:
         print(json.dumps({
             "ok": False, "error": f"invalid results JSON: {e}",

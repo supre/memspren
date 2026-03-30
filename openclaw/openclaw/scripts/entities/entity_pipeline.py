@@ -32,10 +32,11 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).parent.resolve()
-SCHEMA_DIR  = SCRIPT_DIR.parent / "schemas"
-PROMPT_DIR  = SCRIPT_DIR.parent / "prompts"
-MAX_WORKERS = 4
+from .. import PROMPTS_DIR, SCHEMAS_DIR
+from ..vault.git_commit import commit_file as _git_commit_file
+
+SCRIPT_DIR   = Path(__file__).parent.resolve()
+MAX_WORKERS  = 4
 CONTENT_TASK_TIMEOUT = 90
 LINK_TASK_TIMEOUT    = 60
 
@@ -51,8 +52,8 @@ def run_llm_task(
     Returns parsed JSON output, or None on any failure.
     """
     try:
-        prompt = (PROMPT_DIR / prompt_file).read_text(encoding="utf-8").strip()
-        schema = json.loads((SCHEMA_DIR / schema_file).read_text(encoding="utf-8"))
+        prompt = (PROMPTS_DIR / prompt_file).read_text(encoding="utf-8").strip()
+        schema = json.loads((SCHEMAS_DIR / schema_file).read_text(encoding="utf-8"))
     except Exception:
         return None
 
@@ -76,13 +77,7 @@ def run_llm_task(
 def git_snapshot(vault_path: Path, rel_path: str) -> None:
     """Best-effort git commit before modifying an existing vault file."""
     try:
-        subprocess.run(
-            [sys.executable, str(SCRIPT_DIR / "git_commit.py"),
-             "--vault-path", str(vault_path),
-             "--file", rel_path,
-             "--message", "pre-sync snapshot"],
-            capture_output=True, timeout=30, cwd=str(vault_path),
-        )
+        _git_commit_file(str(vault_path), rel_path, "pre-sync snapshot")
     except Exception:
         pass
 
@@ -179,13 +174,14 @@ def update_connected_for(
 ) -> None:
     """Add source_path to target file's connected: array.
 
-    obsidian mode → delegates to update_connected.py (uses obsidian-cli for both read/write)
+    obsidian mode → delegates to vault/update_connected.py (uses obsidian-cli for both read/write)
     filesystem mode → direct in-place edit via _fs_add_connected
     """
     if write_mode == "obsidian" and vault_name:
+        update_connected_script = SCRIPT_DIR.parent / "vault" / "update_connected.py"
         try:
             subprocess.run(
-                [sys.executable, str(SCRIPT_DIR / "update_connected.py"),
+                [sys.executable, str(update_connected_script),
                  "--vault", vault_name,
                  "--file",  target_path,   # vault-relative path
                  "--add",   source_path],
@@ -254,7 +250,7 @@ def process_entity(
     linking_result = run_llm_task(
         "entity_linking_prompt.txt",
         {"entity_content": full_content, "existing_content": existing_snippet, "path": path},
-        "entity_linking_schema.json",   # correct schema: { wikilinks, connected_additions }
+        "entity_linking_schema.json",
         "memspren-light",
         timeout=LINK_TASK_TIMEOUT,
     )

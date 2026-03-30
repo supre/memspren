@@ -15,13 +15,11 @@ Returns JSON to stdout:
 
 import argparse
 import json
-import os
 import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(__file__))
-import state
+from .. import state
 
 
 def levenshtein_ratio(s1: str, s2: str) -> float:
@@ -118,7 +116,7 @@ def main() -> None:
 
     result["task_inbox_file"] = task_inbox_file
     print(json.dumps(result))
-    
+
     # Write to shared state
     if args.memory_path:
         state.write_state(args.memory_path, {
