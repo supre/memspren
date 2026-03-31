@@ -14,9 +14,13 @@ Usage:
 
 from __future__ import annotations
 
+import datetime
 import sys
+import tempfile
 
 import click
+
+_LOG_PATH = tempfile.gettempdir() + "/memcli.log"
 
 
 @click.group()
@@ -26,8 +30,19 @@ def cli() -> None:
 
 # ── Helper ─────────────────────────────────────────────────────────────────
 
+def _log(cmd_name: str, args: tuple) -> None:
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    line = f"[{ts}] {cmd_name} {' '.join(args)}\n"
+    try:
+        with open(_LOG_PATH, "a") as f:
+            f.write(line)
+    except OSError:
+        pass
+
+
 def _run(main_fn, cmd_name: str, extra_args: tuple) -> None:
     """Reconstruct sys.argv and call a module's main()."""
+    _log(cmd_name, extra_args)
     old_argv = sys.argv[:]
     sys.argv = [cmd_name] + list(extra_args)
     try:
