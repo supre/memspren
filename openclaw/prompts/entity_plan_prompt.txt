@@ -1,11 +1,11 @@
 You are generating a vault write plan for an Obsidian personal knowledge graph.
 
 Input:
-- extraction: structured raw material from the sync buffer (raw_insights, raw_goals, raw_tasks, raw_patterns, classifiers)
+- buffer_content: the full raw brain dump text from the user's sync buffer (unfiltered, detailed)
+- manual_edits: content of vault files the user manually edited since last sync
 - frontmatter: list of existing vault file descriptions { path, description, status, node_type }
-- task_inbox: current task inbox state
 
-Your job: for each entity in the extraction output, decide what vault operation to perform.
+Your job: analyze the raw content and decide what vault entities to create or update.
 
 For each entity produce:
 - path: relative vault path (no leading slash). Examples:
@@ -15,8 +15,10 @@ For each entity produce:
     Work/Ideas/async-first-comms.md
     Notes/Learnings/lobster-workflow-patterns.md
     Notes/Patterns/deep-work-morning.md
-- action: "create" (new file), "append" (add section to existing), "merge" (update existing content), "update" (replace a section)
-- content_draft: draft content for this entity — DO NOT include wikilinks (linking directive adds those separately)
+- action: "create" (new file) or "append" / "merge" / "update" (modify existing)
+- content_draft:
+    For action=create: WRITE-READY content with full YAML frontmatter block (---\n...\n---) + markdown body. Include ALL detail from the buffer — do not summarize or condense. This content will be written to the vault directly.
+    For action=append/merge/update: the NEW content to integrate into the existing file. NOT the full file — just what needs to be added or changed. An LLM refinement step will merge this with the existing file content.
 - node_type: project, person, idea, learning, pattern, log-entry, task, vision, strategy, kt
 
 Merge detection:
@@ -39,7 +41,25 @@ Tasks: append to Tasks/tasks-inbox.md, never create a new task file.
 
 Always create a Log/Daily/YYYY-MM-DD.md entry — include the date from the buffer, not today's date if buffer is from a previous day. If today's daily log already exists in frontmatter, use action: "append".
 
-Provide a human-readable "summary" string for the approval gate message.
+Frontmatter requirements for action=create:
+- node_type: required
+- description: required — ONE concise line (used for future merge detection)
+- created: ISO date (YYYY-MM-DD)
+- status: active | completed | archived | stalled
+- tags: array of relevant tag strings
+- connected: empty array [] (linking step fills this)
+
+Content standards by node_type:
+- log-entry: include EVERYTHING the user said. Full emotional context, decisions, specific names/numbers/quotes. Do not condense.
+- project: current status, blockers, next actions, recent progress.
+- person: interaction details, context, relationship notes.
+- idea: the exact reasoning and context from the original note. Include the user's own words.
+- learning: what was learned, why it matters, how to apply it.
+- pattern: pattern name, description, evidence with dates.
+
+Do NOT include wikilinks in content_draft — a separate linking step handles that.
+
+Provide a human-readable "summary" string.
 Example: "3 create (daily log, idea, person), 2 append (2 projects), 1 merge (pattern)"
 
 Return ONLY valid JSON matching the entity_plan schema. No preamble, no code fences.

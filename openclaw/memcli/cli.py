@@ -208,38 +208,51 @@ def merge_layer1_cmd(vault_path, verbosity):
           vault_path=Path(vault_path), parallel_results=parallel_results)
 
 
-# ── Stage 5: Entity planning & writes ─────────────────────────────────────
+# ── Stage 5: Entity planning, writing & linking ──────────────────────────
 
 @cli.command("entity-plan")
 @click.option("--vault-path", required=True, type=click.Path())
-@click.option("--extraction-file", required=True, type=click.Path())
+@click.option("--buffer-content-file", required=True, type=click.Path())
+@click.option("--manual-edits-file", required=True, type=click.Path())
 @click.option("--frontmatter-file", default="")
-@click.option("--task-inbox-file", default="")
 @click.option("--agent", default="memspren-heavy")
 @click.option("--timeout", type=int, default=120)
 @click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
-def entity_plan_cmd(vault_path, extraction_file, frontmatter_file, task_inbox_file, agent, timeout, verbosity):
-    """Generate entity write plan via LLM."""
+def entity_plan_cmd(vault_path, buffer_content_file, manual_edits_file,
+                    frontmatter_file, agent, timeout, verbosity):
+    """Generate entity write plan from raw buffer content via LLM."""
     from .entities.run_entity_plan import run
     _exec("entity-plan", run, _log_dir(vault_path), verbosity,
-          extraction_file=Path(extraction_file),
+          buffer_content_file=Path(buffer_content_file),
+          manual_edits_file=Path(manual_edits_file),
           frontmatter_file=frontmatter_file,
-          task_inbox_file=task_inbox_file,
           agent=agent, timeout=timeout)
 
 
-@cli.command("entity-pipeline")
+@cli.command("entity-write")
 @click.option("--vault-path", required=True, type=click.Path())
 @click.option("--plan", required=True)
 @click.option("--vault-name", default="")
 @click.option("--write-mode", default="filesystem", type=click.Choice(["obsidian", "filesystem"]))
 @click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
-def entity_pipeline_cmd(vault_path, plan, vault_name, write_mode, verbosity):
-    """Run per-entity content generation, linking, and vault writes."""
-    from .entities.entity_pipeline import run
-    _exec("entity-pipeline", run, _log_dir(vault_path), verbosity,
+def entity_write_cmd(vault_path, plan, vault_name, write_mode, verbosity):
+    """Write entities to vault (create directly, merge existing via LLM)."""
+    from .entities.entity_writer import run
+    _exec("entity-write", run, _log_dir(vault_path), verbosity,
           plan=plan, vault_path=Path(vault_path),
           vault_name=vault_name, write_mode=write_mode)
+
+
+@cli.command("entity-link")
+@click.option("--vault-path", required=True, type=click.Path())
+@click.option("--written-entities", default="[]")
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def entity_link_cmd(vault_path, written_entities, verbosity):
+    """Determine and write wikilinks for newly written entities."""
+    from .entities.entity_linker import run
+    _exec("entity-link", run, _log_dir(vault_path), verbosity,
+          vault_path=Path(vault_path),
+          written_entities=written_entities)
 
 
 # ── Stage 6: Metrics & finalization ────────────────────────────────────────

@@ -118,38 +118,39 @@ steps:
       --classifiers "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/extraction-output.json"
 
   # ─── STAGE 4b: ENTITY PLAN ────────────────────────────────────────────────
+  # Uses raw buffer content + manual edits (not extraction output) for full context.
 
   - id: entity_plan
     run: >
       uv run scripts/memcli.py
       entity-plan
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
-      --extraction-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/extraction-output.json"
+      --buffer-content-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/buffer-content.txt"
+      --manual-edits-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/manual-edits.txt"
       --frontmatter-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/frontmatter.json"
-      --task-inbox-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/task-inbox.json"
       --agent memspren-heavy
 
-  # ─── STAGE 4d: APPROVAL GATE ──────────────────────────────────────────────
-
-  - id: approval
-    approval: |
-      Sync ready to write.
-
-      Check state.json for details: memory updated, entity plan ready.
-
-      Proceed with vault writes?
-
   # ─── STAGE 4c: ENTITY WRITES ──────────────────────────────────────────────
+  # Creates write directly. Append/merge/update get LLM refinement with existing content.
 
   - id: entity_writes
-    when: $approval.approved
     run: >
       uv run scripts/memcli.py
-      entity-pipeline
+      entity-write
       --plan "$entity_plan.json"
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --vault-name "$LOBSTER_ARG_VAULT_NAME"
       --write-mode "filesystem"
+
+  # ─── STAGE 4d: ENTITY LINKING ─────────────────────────────────────────────
+  # Separate step: determine wikilinks, create stubs for missing targets.
+
+  - id: entity_links
+    run: >
+      uv run scripts/memcli.py
+      entity-link
+      --vault-path "$LOBSTER_ARG_VAULT_PATH"
+      --written-entities "$entity_writes.json"
 
   # ─── STAGE 5: METRICS + CLEANUP ───────────────────────────────────────────
 
