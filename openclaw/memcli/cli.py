@@ -216,7 +216,7 @@ def merge_layer1_cmd(vault_path, verbosity):
 @click.option("--manual-edits-file", required=True, type=click.Path())
 @click.option("--frontmatter-file", default="")
 @click.option("--agent", default="memspren-heavy")
-@click.option("--timeout", type=int, default=120)
+@click.option("--timeout", type=int, default=180)
 @click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
 def entity_plan_cmd(vault_path, buffer_content_file, manual_edits_file,
                     frontmatter_file, agent, timeout, verbosity):
