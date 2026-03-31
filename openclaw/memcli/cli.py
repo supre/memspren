@@ -261,26 +261,12 @@ def entity_link_cmd(vault_path, written_entities, verbosity):
 @click.option("--vault-path", required=True, type=click.Path())
 @click.option("--write-mode", default="filesystem")
 @click.option("--vault-name", default="")
-@click.option("--extraction-result", default="{}")
-@click.option("--layer1-result", default="{}")
-@click.option("--entity-result", default="{}")
-@click.option("--vault-diff-result", default="{}")
-@click.option("--sealed-buffers", default="[]")
-@click.option("--entity-writes-ok", default="false")
-@click.option("--max-log-bytes", type=int, default=2097152)
-@click.option("--keep-lines", type=int, default=2000)
 @click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
-def metrics_cmd(vault_path, write_mode, vault_name,
-                extraction_result, layer1_result, entity_result, vault_diff_result,
-                sealed_buffers, entity_writes_ok, max_log_bytes, keep_lines, verbosity):
+def metrics_cmd(vault_path, write_mode, vault_name, verbosity):
     """Write metrics.json, archive buffers, update system-state.md."""
     from .finalize.metrics_writer import run
     _exec("metrics", run, _log_dir(vault_path), verbosity,
-          vault_path=Path(vault_path), write_mode=write_mode, vault_name=vault_name,
-          extraction_result=extraction_result, layer1_result=layer1_result,
-          entity_result=entity_result, vault_diff_result=vault_diff_result,
-          sealed_buffers=sealed_buffers, entity_writes_ok=entity_writes_ok,
-          max_log_bytes=max_log_bytes, keep_lines=keep_lines)
+          vault_path=Path(vault_path), write_mode=write_mode, vault_name=vault_name)
 
 
 def main() -> None:

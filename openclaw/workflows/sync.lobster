@@ -162,10 +162,6 @@ steps:
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --write-mode "filesystem"
       --vault-name "$LOBSTER_ARG_VAULT_NAME"
-      --extraction-result "$extraction.json"
-      --layer1-result "$merge_layer1.json"
-      --entity-result "$entity_writes.json"
-      --vault-diff-result "$vault_diff.json"
 
   - id: release_lock
     run: >

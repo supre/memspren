@@ -124,38 +124,42 @@ def test_main_writes_metrics_json(tmp_path):
 
 
 def test_main_archives_buffers_only_when_entity_writes_ok(tmp_path):
+    from memcli import state
     vault = _make_vault(tmp_path)
     buffers = vault / ".second-brain" / "buffers"
+    run_dir = vault / ".second-brain" / "run"
 
     buf_file = buffers / "sync-buffer-001.md"
     buf_file.write_text("buf", encoding="utf-8")
 
-    sealed = json.dumps([{"buffer_id": "001", "filename": "sync-buffer-001.md"}])
+    # Write sealed buffers to state but no entity write result
+    state.write_state(str(run_dir), {
+        "rotate_buffer_sealed_buffers": [{"buffer_id": "001", "filename": "sync-buffer-001.md"}],
+    })
 
-    result = run(
-        vault_path=vault,
-        sealed_buffers=sealed,
-        entity_writes_ok="false",
-        log=_log,
-    )
+    result = run(vault_path=vault, log=_log)
     assert result["archive_count"] == 0
     assert buf_file.exists()
 
 
 def test_main_archives_buffers_when_entity_writes_ok(tmp_path):
+    from memcli import state
     vault = _make_vault(tmp_path)
     buffers = vault / ".second-brain" / "buffers"
+    run_dir = vault / ".second-brain" / "run"
 
     buf_file = buffers / "sync-buffer-001.md"
     buf_file.write_text("buf", encoding="utf-8")
 
-    sealed = json.dumps([{"buffer_id": "001", "filename": "sync-buffer-001.md"}])
-
-    result = run(
-        vault_path=vault,
-        sealed_buffers=sealed,
-        entity_writes_ok="true",
-        log=_log,
+    # Write sealed buffers to state + entity write result file
+    state.write_state(str(run_dir), {
+        "rotate_buffer_sealed_buffers": [{"buffer_id": "001", "filename": "sync-buffer-001.md"}],
+    })
+    (run_dir / "entity-write-result.json").write_text(
+        json.dumps({"entities": [{"path": "test.md", "action": "create"}]}),
+        encoding="utf-8",
     )
+
+    result = run(vault_path=vault, log=_log)
     assert result["archive_count"] == 1
     assert not buf_file.exists()

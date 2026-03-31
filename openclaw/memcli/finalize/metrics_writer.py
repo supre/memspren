@@ -94,17 +94,19 @@ def rotate_telemetry_log(logs_path: Path, max_bytes: int, keep_lines: int) -> No
         pass
 
 
+def _read_json(path: Path) -> dict | list:
+    """Read a JSON file, return {} on any failure."""
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
 def run(
     *,
     vault_path: Path,
     write_mode: str = "filesystem",
     vault_name: str = "",
-    extraction_result: str = "{}",
-    layer1_result: str = "{}",
-    entity_result: str = "{}",
-    vault_diff_result: str = "{}",
-    sealed_buffers: str = "[]",
-    entity_writes_ok: str = "false",
     max_log_bytes: int = DEFAULT_MAX_LOG_BYTES,
     keep_lines: int = DEFAULT_KEEP_LINES,
     log: Logger,
@@ -112,31 +114,29 @@ def run(
     paths = VaultPaths(vault_path)
     paths.ensure()
 
-    def parse(s: str) -> dict | list:
-        try:
-            return json.loads(s)
-        except json.JSONDecodeError:
-            return {}
+    # Read all prior step results from run/ files
+    extraction = _read_json(paths.run / "extraction-output.json")
+    entity = _read_json(paths.run / "entity-write-result.json")
+    vault_diff_state = state.get_field(str(paths.run), "vault_diff_changed_count", 0)
 
-    extraction = parse(extraction_result)
-    layer1 = parse(layer1_result)
-    entity = parse(entity_result)
-    vault_diff = parse(vault_diff_result)
+    sealed_bufs = state.get_field(str(paths.run), "rotate_buffer_sealed_buffers", [])
 
-    sealed_bufs = parse(sealed_buffers) if sealed_buffers and sealed_buffers != "[]" else []
-    if not sealed_bufs:
-        sealed_bufs = state.get_field(str(paths.run), "rotate_buffer_sealed_buffers", [])
-
-    entity_writes_ok_flag = str(entity_writes_ok).lower() in ("true", "1", "yes")
+    # Entity writes considered OK if the result file exists and has written > 0
+    entity_ok = isinstance(entity, dict) and entity.get("entities") and len(entity.get("entities", [])) > 0
     entity_writes_ok_state = state.get_field(str(paths.run), "entity_writes_ok", False)
-    do_archive = entity_writes_ok_flag or entity_writes_ok_state
+    do_archive = entity_ok or entity_writes_ok_state
     archive_count = archive_buffers(paths.buffers, sealed_bufs) if do_archive else 0
     if not do_archive:
         log.info("buffer archival skipped — entity writes did not succeed")
 
     ts = datetime.datetime.utcnow().isoformat() + "Z"
 
-    written_keys = layer1.get("written", []) if isinstance(layer1, dict) else []
+    # Check which memory files exist to determine what was written
+    written_keys = []
+    for key, filename in [("insights", "insights.md"), ("goals", "goals.md"),
+                          ("tasks", "tasks.md"), ("hot_memory", "hot-memory.md")]:
+        if (paths.memory / filename).exists():
+            written_keys.append(key)
     metrics = {
         "last_sync": ts,
         "buffers_processed": archive_count,
@@ -144,7 +144,7 @@ def run(
         "entities_updated": entity.get("updated", 0) if isinstance(entity, dict) else 0,
         "entities_merged": entity.get("merged", 0) if isinstance(entity, dict) else 0,
         "links_added": entity.get("links_added", 0) if isinstance(entity, dict) else 0,
-        "manual_edits_absorbed": vault_diff.get("changed_count", 0) if isinstance(vault_diff, dict) else 0,
+        "manual_edits_absorbed": vault_diff_state if isinstance(vault_diff_state, int) else 0,
         "memory_files_updated": written_keys,
         "inference_results": {
             "extraction": "ok" if extraction else "fail",
