@@ -6,7 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from memcli.log import make_logger
 from memcli.scanning.read_frontmatter import CLASSIFIER_FOLDER_MAP, run, read_frontmatter
+
+_log = make_logger("test")
 
 
 def _write_md(path: Path, frontmatter: dict, body: str = "") -> None:
@@ -64,32 +67,28 @@ def test_main_scans_classifier_folder(tmp_path):
         "status": "active",
     })
 
-    mem = tmp_path / "Memory"
-    mem.mkdir()
-
     result = run(
         vault_path=vault,
         classifiers='["project:personal"]',
-        memory_path=mem,
+        log=_log,
     )
 
     assert result["count"] == 1
-    assert (mem / "run" / "frontmatter.json").exists()
+    run_dir = vault / ".second-brain" / "run"
+    assert (run_dir / "frontmatter.json").exists()
 
-    items = json.loads((mem / "run" / "frontmatter.json").read_text())
+    items = json.loads((run_dir / "frontmatter.json").read_text())
     assert items[0]["description"] == "An exciting project"
 
 
 def test_main_empty_folder_returns_zero_count(tmp_path):
     vault = tmp_path / "vault"
     vault.mkdir()
-    mem = tmp_path / "Memory"
-    mem.mkdir()
 
     result = run(
         vault_path=vault,
         classifiers='["idea"]',
-        memory_path=mem,
+        log=_log,
     )
 
     assert result["count"] == 0

@@ -7,15 +7,18 @@ from unittest import mock
 
 import pytest
 
+from memcli.log import make_logger
 from memcli.extraction.run_extraction import run
 
+_log = make_logger("test")
 
-def test_extraction_success(tmp_memory_dir, monkeypatch, fake_buffer_files, fake_extraction_output):
+
+def test_extraction_success(tmp_vault_dir, monkeypatch, fake_buffer_files, fake_extraction_output):
     """Gateway returns valid extraction JSON; it should be returned and saved to file."""
     from tests.conftest import make_extraction_response
 
     buf_file, edits_file = fake_buffer_files
-    mem = tmp_memory_dir
+    vault = tmp_vault_dir
 
     monkeypatch.setenv("OPENCLAW_URL", "http://gw.test")
     monkeypatch.setenv("OPENCLAW_TOKEN", "tok")
@@ -25,25 +28,29 @@ def test_extraction_success(tmp_memory_dir, monkeypatch, fake_buffer_files, fake
         result = run(
             buffer_content_file=buf_file,
             manual_edits_file=edits_file,
-            memory_path=mem,
+            vault_path=vault,
+            log=_log,
         )
 
     assert result["raw_insights"] == fake_extraction_output["raw_insights"]
-    assert (mem / "run" / "extraction-output.json").exists()
+    assert (vault / ".second-brain" / "run" / "extraction-output.json").exists()
 
 
 def test_missing_buffer_file_exits_1(tmp_path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
     with pytest.raises(RuntimeError, match="Buffer file not found"):
         run(
             buffer_content_file=tmp_path / "missing.txt",
             manual_edits_file=tmp_path / "edits.txt",
-            memory_path=tmp_path,
+            vault_path=vault,
+            log=_log,
         )
 
 
-def test_gateway_error_exits_1(tmp_memory_dir, monkeypatch, fake_buffer_files):
+def test_gateway_error_exits_1(tmp_vault_dir, monkeypatch, fake_buffer_files):
     buf_file, edits_file = fake_buffer_files
-    mem = tmp_memory_dir
+    vault = tmp_vault_dir
 
     monkeypatch.setenv("OPENCLAW_URL", "http://gw.test")
     monkeypatch.setenv("OPENCLAW_TOKEN", "tok")
@@ -54,15 +61,16 @@ def test_gateway_error_exits_1(tmp_memory_dir, monkeypatch, fake_buffer_files):
             run(
                 buffer_content_file=buf_file,
                 manual_edits_file=edits_file,
-                memory_path=mem,
+                vault_path=vault,
+                log=_log,
             )
 
 
-def test_extraction_saves_to_run_dir(tmp_memory_dir, monkeypatch, fake_buffer_files, fake_extraction_output):
+def test_extraction_saves_to_run_dir(tmp_vault_dir, monkeypatch, fake_buffer_files, fake_extraction_output):
     from tests.conftest import make_extraction_response
 
     buf_file, edits_file = fake_buffer_files
-    mem = tmp_memory_dir
+    vault = tmp_vault_dir
 
     monkeypatch.setenv("OPENCLAW_URL", "http://gw.test")
     monkeypatch.setenv("OPENCLAW_TOKEN", "tok")
@@ -72,25 +80,27 @@ def test_extraction_saves_to_run_dir(tmp_memory_dir, monkeypatch, fake_buffer_fi
         run(
             buffer_content_file=buf_file,
             manual_edits_file=edits_file,
-            memory_path=mem,
+            vault_path=vault,
+            log=_log,
         )
 
-    saved = json.loads((mem / "run" / "extraction-output.json").read_text())
+    saved = json.loads((vault / ".second-brain" / "run" / "extraction-output.json").read_text())
     assert saved["classifiers"] == fake_extraction_output["classifiers"]
 
 
-def test_missing_prompt_file_exits_1(tmp_memory_dir, monkeypatch, fake_buffer_files):
+def test_missing_prompt_file_exits_1(tmp_vault_dir, monkeypatch, fake_buffer_files):
     """If prompts/extraction_prompt.txt doesn't exist the script should fail gracefully."""
     buf_file, edits_file = fake_buffer_files
-    mem = tmp_memory_dir
+    vault = tmp_vault_dir
 
     monkeypatch.setenv("OPENCLAW_URL", "http://gw.test")
     monkeypatch.setenv("OPENCLAW_TOKEN", "tok")
 
-    with mock.patch("memcli.extraction.run_extraction.PROMPTS_DIR", tmp_memory_dir / "noprompts"):
+    with mock.patch("memcli.extraction.run_extraction.PROMPTS_DIR", vault / "noprompts"):
         with pytest.raises(RuntimeError, match="Prompt file not found"):
             run(
                 buffer_content_file=buf_file,
                 manual_edits_file=edits_file,
-                memory_path=mem,
+                vault_path=vault,
+                log=_log,
             )

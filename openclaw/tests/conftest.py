@@ -13,35 +13,47 @@ from unittest import mock
 
 import pytest
 
+from memcli.log import make_logger
+
+
+# ── Logger fixture ─────────────────────────────────────────────────────────
+
+@pytest.fixture
+def test_log():
+    """Returns a Logger instance for tests (no log_dir)."""
+    return make_logger("test")
+
 
 # ── Directory fixtures ──────────────────────────────────────────────────────
 
 @pytest.fixture
-def tmp_memory_dir(tmp_path: Path) -> Path:
-    """Creates Memory/ with run/ subdir and seed memory files."""
-    mem = tmp_path / "Memory"
-    run = mem / "run"
-    run.mkdir(parents=True)
+def tmp_vault_dir(tmp_path: Path) -> Path:
+    """Creates a vault directory with the full .second-brain layout."""
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    sb = vault / ".second-brain"
+    (sb / "memory").mkdir(parents=True)
+    (sb / "run").mkdir(parents=True)
+    (sb / "buffers").mkdir(parents=True)
+    (sb / "logs").mkdir(parents=True)
+    # Seed memory files
     for fname in ("insights.md", "goals.md", "tasks.md", "hot-memory.md"):
-        (mem / fname).write_text(f"Existing {fname}", encoding="utf-8")
-    return mem
+        (sb / "memory" / fname).write_text(f"Existing {fname}", encoding="utf-8")
+    return vault
 
 
 @pytest.fixture
-def tmp_vault_dir(tmp_path: Path) -> Path:
-    """Creates a minimal vault directory."""
-    vault = tmp_path / "vault"
-    vault.mkdir()
-    (vault / ".obsidian").mkdir()
-    return vault
+def tmp_memory_dir(tmp_vault_dir: Path) -> Path:
+    """Legacy alias: returns the vault dir (with VaultPaths layout created)."""
+    return tmp_vault_dir
 
 
 # ── Input file fixtures ─────────────────────────────────────────────────────
 
 @pytest.fixture
-def fake_buffer_files(tmp_memory_dir: Path):
-    """Writes buffer-content.txt and manual-edits.txt in run/."""
-    run = tmp_memory_dir / "run"
+def fake_buffer_files(tmp_vault_dir: Path):
+    """Writes buffer-content.txt and manual-edits.txt in .second-brain/run/."""
+    run = tmp_vault_dir / ".second-brain" / "run"
     buf = run / "buffer-content.txt"
     edits = run / "manual-edits.txt"
     buf.write_text("Daily reflection content for testing.", encoding="utf-8")
@@ -62,9 +74,9 @@ def fake_extraction_output() -> dict:
 
 
 @pytest.fixture
-def fake_task_inbox(tmp_memory_dir: Path) -> Path:
-    """Writes task-inbox.json to run/ and returns its path."""
-    run = tmp_memory_dir / "run"
+def fake_task_inbox(tmp_vault_dir: Path) -> Path:
+    """Writes task-inbox.json to .second-brain/run/ and returns its path."""
+    run = tmp_vault_dir / ".second-brain" / "run"
     data = {
         "tasks": [{"title": "Write unit tests", "status": "open", "completed_date": None}],
         "completed": [],
@@ -76,9 +88,9 @@ def fake_task_inbox(tmp_memory_dir: Path) -> Path:
 
 
 @pytest.fixture
-def fake_extraction_file(tmp_memory_dir: Path, fake_extraction_output: dict) -> Path:
-    """Writes extraction-output.json to run/ and returns its path."""
-    run = tmp_memory_dir / "run"
+def fake_extraction_file(tmp_vault_dir: Path, fake_extraction_output: dict) -> Path:
+    """Writes extraction-output.json to .second-brain/run/ and returns its path."""
+    run = tmp_vault_dir / ".second-brain" / "run"
     f = run / "extraction-output.json"
     f.write_text(json.dumps(fake_extraction_output), encoding="utf-8")
     return f

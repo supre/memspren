@@ -1,9 +1,4 @@
-"""
-metrics_writer.py — Stage 5: write metrics.json, archive buffers, update system-state.md.
-
-Collects results from all prior stages, writes the metrics snapshot, archives sealed
-buffers, updates system-state.md, and appends to Logs/system-log.md.
-"""
+"""metrics_writer.py — Stage 5: write metrics, archive buffers, update system-state."""
 
 from __future__ import annotations
 
@@ -16,22 +11,23 @@ import sys
 from pathlib import Path
 
 from .. import state
+from ..log import Logger
+from ..paths import VaultPaths
 
-DEFAULT_MAX_LOG_BYTES = 2 * 1024 * 1024  # 2 MB
+DEFAULT_MAX_LOG_BYTES = 2 * 1024 * 1024
 DEFAULT_KEEP_LINES = 2000
 
 
-def archive_buffers(memory_path: Path, sealed_buffers) -> int:
-    """Move sealed buffers to sync-archive/. Returns count archived."""
+def archive_buffers(buffers_path: Path, sealed_buffers) -> int:
     if not isinstance(sealed_buffers, list):
         return 0
-    archive_dir = memory_path / "sync-archive"
+    archive_dir = buffers_path / "sync-archive"
     archive_dir.mkdir(exist_ok=True)
     ts = datetime.datetime.utcnow().strftime("%Y-%m-%d-%H%M%S")
     archived = 0
     for buf in sealed_buffers:
         filename = buf.get("filename") or f"sync-buffer-{buf.get('buffer_id','x')}.md"
-        src = memory_path / filename
+        src = buffers_path / filename
         if not src.exists():
             continue
         dst = archive_dir / f"{ts}-{buf.get('buffer_id','x')}.md"
@@ -46,47 +42,34 @@ def archive_buffers(memory_path: Path, sealed_buffers) -> int:
 
 def update_system_state(memory_path: Path, ts: str, summary: str) -> None:
     state_path = memory_path / "system-state.md"
-
     if not state_path.exists():
         memory_path.mkdir(parents=True, exist_ok=True)
-        state_path.write_text(
-            f"last_sync: {ts}\nlast_sync_summary: {summary}\n",
-            encoding="utf-8",
-        )
+        state_path.write_text(f"last_sync: {ts}\nlast_sync_summary: {summary}\n", encoding="utf-8")
         return
-
     content = state_path.read_text(encoding="utf-8")
-
     if re.search(r"^last_sync:", content, re.MULTILINE):
         content = re.sub(r"^last_sync:.*$", f"last_sync: {ts}", content, flags=re.MULTILINE)
     else:
         content = content.rstrip() + f"\nlast_sync: {ts}\n"
-
     if re.search(r"^last_sync_summary:", content, re.MULTILINE):
         content = re.sub(r"^last_sync_summary:.*$", f"last_sync_summary: {summary}", content, flags=re.MULTILINE)
     else:
         content = content.rstrip() + f"\nlast_sync_summary: {summary}\n"
-
     state_path.write_text(content, encoding="utf-8")
 
 
-def append_system_log(
-    vault_path: Path, log_entry: str, write_mode: str = "filesystem", vault_name: str = ""
-) -> None:
+def append_system_log(vault_path: Path, log_entry: str, write_mode: str = "filesystem", vault_name: str = "") -> None:
     log_rel = "Logs/system-log.md"
     log_path = vault_path / log_rel
-
     if write_mode == "obsidian" and vault_name:
         try:
             subprocess.run(
-                ["obsidian", f"vault={vault_name}", "append",
-                 f"path={log_rel}", f"content=\n\n{log_entry}"],
+                ["obsidian", f"vault={vault_name}", "append", f"path={log_rel}", f"content=\n\n{log_entry}"],
                 capture_output=True, text=True, timeout=30, check=True,
             )
         except Exception as e:
             print(json.dumps({"warn": f"obsidian system-log append failed: {e}"}), file=sys.stderr)
         return
-
     try:
         if log_path.exists():
             existing = log_path.read_text(encoding="utf-8")
@@ -98,8 +81,8 @@ def append_system_log(
         print(json.dumps({"warn": f"system-log write failed: {e}"}), file=sys.stderr)
 
 
-def rotate_telemetry_log(memory_path: Path, max_bytes: int, keep_lines: int) -> None:
-    log_path = memory_path / "sync-telemetry.log"
+def rotate_telemetry_log(logs_path: Path, max_bytes: int, keep_lines: int) -> None:
+    log_path = logs_path / "sync-telemetry.log"
     if not log_path.exists():
         return
     if log_path.stat().st_size <= max_bytes:
@@ -113,7 +96,6 @@ def rotate_telemetry_log(memory_path: Path, max_bytes: int, keep_lines: int) -> 
 
 def run(
     *,
-    memory_path: Path,
     vault_path: Path,
     write_mode: str = "filesystem",
     vault_name: str = "",
@@ -125,7 +107,11 @@ def run(
     entity_writes_ok: str = "false",
     max_log_bytes: int = DEFAULT_MAX_LOG_BYTES,
     keep_lines: int = DEFAULT_KEEP_LINES,
+    log: Logger,
 ) -> dict:
+    paths = VaultPaths(vault_path)
+    paths.ensure()
+
     def parse(s: str) -> dict | list:
         try:
             return json.loads(s)
@@ -139,15 +125,14 @@ def run(
 
     sealed_bufs = parse(sealed_buffers) if sealed_buffers and sealed_buffers != "[]" else []
     if not sealed_bufs:
-        sealed_bufs = state.get_field(str(memory_path), "rotate_buffer_sealed_buffers", [])
+        sealed_bufs = state.get_field(str(paths.run), "rotate_buffer_sealed_buffers", [])
 
     entity_writes_ok_flag = str(entity_writes_ok).lower() in ("true", "1", "yes")
-    entity_writes_ok_state = state.get_field(str(memory_path), "entity_writes_ok", False)
+    entity_writes_ok_state = state.get_field(str(paths.run), "entity_writes_ok", False)
     do_archive = entity_writes_ok_flag or entity_writes_ok_state
-    archive_count = archive_buffers(memory_path, sealed_bufs) if do_archive else 0
+    archive_count = archive_buffers(paths.buffers, sealed_bufs) if do_archive else 0
     if not do_archive:
-        print(json.dumps({"info": "buffer archival skipped — entity writes did not succeed"}),
-              file=sys.stderr)
+        log.info("buffer archival skipped — entity writes did not succeed")
 
     ts = datetime.datetime.utcnow().isoformat() + "Z"
 
@@ -171,13 +156,14 @@ def run(
         },
     }
 
-    metrics_path = memory_path / "metrics.json"
+    metrics_path = paths.run / "metrics.json"
     metrics_written = False
     try:
         metrics_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
         metrics_written = True
+        log.debug("wrote metrics.json")
     except Exception as e:
-        print(json.dumps({"warn": f"metrics write failed: {e}"}), file=sys.stderr)
+        log.warn(f"metrics write failed: {e}")
 
     summary = (
         f"{metrics['entities_created']} created, "
@@ -186,7 +172,7 @@ def run(
     )
 
     if do_archive:
-        update_system_state(memory_path, ts, summary)
+        update_system_state(paths.memory, ts, summary)
         log_entry = (
             f"[{ts}] SYNC COMPLETE\n"
             f"  buffers_processed: {metrics['buffers_processed']}\n"
@@ -202,12 +188,7 @@ def run(
             f"  note: last_sync NOT advanced; next run will re-diff from previous checkpoint"
         )
     append_system_log(vault_path, log_entry, write_mode=write_mode, vault_name=vault_name)
+    rotate_telemetry_log(paths.logs, max_log_bytes, keep_lines)
 
-    rotate_telemetry_log(memory_path, max_log_bytes, keep_lines)
-
-    return {
-        "ok": True,
-        "metrics_written": metrics_written,
-        "archive_count": archive_count,
-        "summary": summary,
-    }
+    log.info("metrics complete", summary=summary, archive_count=archive_count)
+    return {"ok": True, "metrics_written": metrics_written, "archive_count": archive_count, "summary": summary}

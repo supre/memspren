@@ -20,15 +20,16 @@ from memcli.buffer.rotate_buffer import (
 )
 
 
-def _memory_path(vault_path: Path) -> Path:
-    return vault_path / ".second-brain" / "Memory"
-
-
-def _make_vault(tmp_path: Path) -> Path:
+def _make_vault(tmp_path: Path) -> tuple[Path, str, str]:
+    """Create vault layout and return (vault, buffers_dir, run_path) strings."""
     vault = tmp_path / "vault"
     vault.mkdir()
-    _memory_path(vault).mkdir(parents=True)
-    return vault
+    sb = vault / ".second-brain"
+    buffers = sb / "buffers"
+    run = sb / "run"
+    buffers.mkdir(parents=True)
+    run.mkdir(parents=True)
+    return vault, str(buffers), str(run)
 
 
 # ── parse_frontmatter ──────────────────────────────────────────────────────
@@ -59,14 +60,14 @@ def test_count_words_no_frontmatter():
 # ── create_buffer / read_active_id ─────────────────────────────────────────
 
 def test_create_buffer_sets_active_id(tmp_path):
-    vault = _make_vault(tmp_path)
-    create_buffer(str(vault), "001")
-    assert read_active_id(str(vault)) == "001"
+    _, buffers_dir, _ = _make_vault(tmp_path)
+    create_buffer(buffers_dir, "001")
+    assert read_active_id(buffers_dir) == "001"
 
 
 def test_create_buffer_writes_correct_id(tmp_path):
-    vault = _make_vault(tmp_path)
-    path = create_buffer(str(vault), "003")
+    _, buffers_dir, _ = _make_vault(tmp_path)
+    path = create_buffer(buffers_dir, "003")
     content = Path(path).read_text()
     assert 'buffer_id: "003"' in content
     assert "state: active" in content
@@ -75,36 +76,36 @@ def test_create_buffer_writes_correct_id(tmp_path):
 # ── seal_buffer ────────────────────────────────────────────────────────────
 
 def test_seal_buffer_marks_state(tmp_path):
-    vault = _make_vault(tmp_path)
-    create_buffer(str(vault), "001")
-    result = seal_buffer(str(vault), "001")
+    _, buffers_dir, _ = _make_vault(tmp_path)
+    create_buffer(buffers_dir, "001")
+    result = seal_buffer(buffers_dir, "001")
     assert result["state"] == "sealed"
 
     # Confirm file updated
-    buf_path = _memory_path(vault) / "sync-buffer-001.md"
+    buf_path = Path(buffers_dir) / "sync-buffer-001.md"
     content = buf_path.read_text()
     assert "state: sealed" in content
 
 
 def test_seal_buffer_missing_returns_error(tmp_path):
-    vault = _make_vault(tmp_path)
-    result = seal_buffer(str(vault), "999")
+    _, buffers_dir, _ = _make_vault(tmp_path)
+    result = seal_buffer(buffers_dir, "999")
     assert "error" in result
 
 
 # ── rotate ─────────────────────────────────────────────────────────────────
 
 def test_rotate_initializes_when_no_active(tmp_path):
-    vault = _make_vault(tmp_path)
-    result = rotate(str(vault))
+    _, buffers_dir, _ = _make_vault(tmp_path)
+    result = rotate(buffers_dir)
     assert result["action"] == "initialized"
     assert result["new_active"] == "001"
 
 
 def test_rotate_seals_current_and_creates_new(tmp_path):
-    vault = _make_vault(tmp_path)
-    create_buffer(str(vault), "001")
-    result = rotate(str(vault))
+    _, buffers_dir, _ = _make_vault(tmp_path)
+    create_buffer(buffers_dir, "001")
+    result = rotate(buffers_dir)
     assert result["action"] == "rotated"
     assert result["sealed"] == "001"
     assert result["new_active"] == "002"
@@ -113,13 +114,13 @@ def test_rotate_seals_current_and_creates_new(tmp_path):
 # ── list_sealed ────────────────────────────────────────────────────────────
 
 def test_list_sealed_returns_only_sealed(tmp_path):
-    vault = _make_vault(tmp_path)
-    create_buffer(str(vault), "001")
+    _, buffers_dir, _ = _make_vault(tmp_path)
+    create_buffer(buffers_dir, "001")
     # No sealed buffers yet
-    assert list_sealed(str(vault)) == []
+    assert list_sealed(buffers_dir) == []
 
-    seal_buffer(str(vault), "001")
-    sealed = list_sealed(str(vault))
+    seal_buffer(buffers_dir, "001")
+    sealed = list_sealed(buffers_dir)
     assert len(sealed) == 1
     assert sealed[0]["buffer_id"] == "001"
     assert sealed[0]["state"] == "sealed"
@@ -128,28 +129,26 @@ def test_list_sealed_returns_only_sealed(tmp_path):
 # ── sync_check ─────────────────────────────────────────────────────────────
 
 def test_sync_check_empty_vault_returns_no_content(tmp_path):
-    vault = _make_vault(tmp_path)
-    result = sync_check(str(vault))
+    _, buffers_dir, run_path = _make_vault(tmp_path)
+    result = sync_check(buffers_dir, run_path)
     assert result["has_content"] is False
     assert result["should_exit"] is True
     assert result["sealed_buffers"] == []
 
 
 def test_sync_check_writes_buffer_content_file(tmp_path):
-    vault = _make_vault(tmp_path)
-    mem = tmp_path / "Memory"
-    mem.mkdir(parents=True, exist_ok=True)
+    _, buffers_dir, run_path = _make_vault(tmp_path)
 
     # Create and seal a buffer with content
-    buf_path = create_buffer(str(vault), "001")
+    buf_path = create_buffer(buffers_dir, "001")
     # Write some body content
     content = Path(buf_path).read_text()
     Path(buf_path).write_text(
         content.replace("entry_count: 0", "entry_count: 2") + "\nSome brain dump content here.\n"
     )
-    seal_buffer(str(vault), "001")
+    seal_buffer(buffers_dir, "001")
 
-    result = sync_check(str(vault), memory_path=str(mem))
+    result = sync_check(buffers_dir, run_path)
     assert result["has_content"] is True
     assert result["buffer_content_file"] != ""
     assert Path(result["buffer_content_file"]).exists()

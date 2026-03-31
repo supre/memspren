@@ -1,7 +1,4 @@
-"""
-run_extraction.py — Call LLM extraction step via OpenClaw Gateway.
-Reads buffer content and manual edits, calls llm-task, returns structured JSON.
-"""
+"""run_extraction.py — Call LLM extraction step via OpenClaw Gateway."""
 
 from __future__ import annotations
 
@@ -12,16 +9,22 @@ from pathlib import Path
 from .. import gateway_client
 from .. import PROMPTS_DIR, SCHEMAS_DIR
 from ..gateway import get_gateway_token, get_gateway_endpoint
+from ..log import Logger
+from ..paths import VaultPaths
 
 
 def run(
     *,
+    vault_path: Path,
     buffer_content_file: Path,
     manual_edits_file: Path,
     agent: str = "main",
-    memory_path: Path,
     timeout: int = 120,
+    log: Logger,
 ) -> dict:
+    paths = VaultPaths(vault_path)
+    paths.ensure()
+
     if not buffer_content_file.exists():
         raise RuntimeError(f"Buffer file not found: {buffer_content_file}")
 
@@ -39,10 +42,7 @@ def run(
     prompt = prompt_file.read_text(encoding="utf-8")
     schema = json.loads(schema_file.read_text(encoding="utf-8"))
 
-    input_data = {
-        "buffer_content": buffer_content,
-        "manual_edits": manual_edits,
-    }
+    input_data = {"buffer_content": buffer_content, "manual_edits": manual_edits}
 
     gateway_token = get_gateway_token()
     endpoint = get_gateway_endpoint()
@@ -58,26 +58,36 @@ def run(
         },
     }
 
+    log.debug("gateway request", endpoint=endpoint, agent=agent,
+              buffer_len=len(buffer_content), edits_len=len(manual_edits))
+
     result = gateway_client.post_json(endpoint, payload, token=gateway_token, timeout=timeout)
 
+    log.debug("gateway response received",
+              result_type=type(result).__name__,
+              result_keys=list(result.keys()) if isinstance(result, dict) else "n/a")
+
     if isinstance(result, dict) and result.get("ok") is False:
+        log.error("gateway returned ok=false", error=str(result.get("error")))
         raise RuntimeError(result.get("error", "Gateway returned ok=false"))
 
-    # Extract JSON from response
     try:
         content = result["result"]["content"]
         text_item = next(item for item in content if item.get("type") == "text")
         output_json = json.loads(text_item["text"])
     except (KeyError, StopIteration, json.JSONDecodeError) as e:
+        log.error("failed to extract JSON from response", error=str(e), raw=str(result)[:500])
         raise RuntimeError(f"Failed to extract JSON from response: {e}") from e
 
-    # Save to file so downstream steps can read it
-    run_dir = memory_path / "run"
     try:
-        run_dir.mkdir(parents=True, exist_ok=True)
-        (run_dir / "extraction-output.json").write_text(json.dumps(output_json), encoding="utf-8")
+        out_file = paths.run / "extraction-output.json"
+        out_file.write_text(json.dumps(output_json), encoding="utf-8")
+        log.debug("saved extraction output", path=str(out_file))
     except Exception as e:
-        print(json.dumps({"warn": f"could not save extraction output to file: {e}"}),
-              file=sys.stderr)
+        log.warn(f"could not save extraction output to file: {e}")
 
+    log.info("extraction complete",
+             insights=len(output_json.get("raw_insights", [])),
+             goals=len(output_json.get("raw_goals", [])),
+             tasks=len(output_json.get("raw_tasks", [])))
     return output_json

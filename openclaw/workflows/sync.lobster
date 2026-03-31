@@ -13,10 +13,14 @@
 #   memspren-light — action directives: goals, tasks, hot-memory, linking, frontmatter
 # If neither agent is configured, all directives fall back to default.
 #
-# Lock safety: Stage 0 acquires `.second-brain/Memory/sync.lock` via
-# `write_lock.py` and Stage 5 releases it. A stale lock (default 2h) is auto-
-# released on the next run, and manual release is available via
-# `uv run scripts/write_lock.py --memory-path <path> --release`.
+# Directory layout (under vault/.second-brain/):
+#   memory/   — insights.md, goals.md, tasks.md, hot-memory.md, system-state.md
+#   run/      — state.json, extraction-output.json, frontmatter.json, metrics.json
+#   buffers/  — sync-buffer-*.md, sync.lock, sync-archive/
+#   logs/     — memcli-YYYY-MM-DD.log (daily)
+#
+# Lock safety: Stage 0 acquires buffers/sync.lock via write_lock.py
+# and Stage 5 releases it. A stale lock (default 2h) is auto-released.
 
 name: memspren-sync
 
@@ -40,16 +44,12 @@ args:
 steps:
 
   # ─── STAGE 0: PRE-FLIGHT ──────────────────────────────────────────────────
-  # Serial, blocking. All checks must pass. Failure writes to telemetry and
-  # exits cleanly — no partial state is left behind.
 
   - id: lock
     run: >
       uv run scripts/memcli.py
       write-lock
-      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
-    # Output: { ok: bool, action: "locked"|"skipped", error: str|null }
-    # Exit 1 on lock exists → Lobster aborts with SYNC SKIPPED
+      --vault-path "$LOBSTER_ARG_VAULT_PATH"
 
   - id: check_cli
     run: >
@@ -57,122 +57,79 @@ steps:
       check-cli
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --vault "$LOBSTER_ARG_VAULT_NAME"
-      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
       --json
-    # Output: { write_mode: "obsidian"|"filesystem", vault_name: str, last_sync: ISO|null }
-    # Also writes to state: check_cli_vault_name, check_cli_write_mode, check_cli_last_sync
 
   - id: vault_diff
     run: >
       uv run scripts/memcli.py
       vault-diff
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
-      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
-    # Reads check_cli_last_sync from state file
-    # Output: { changed_files: [...], changed_files_content_file: str, changed_count: int }
-    # On no git repo: returns empty result, logs WARN to telemetry — non-fatal
 
   - id: task_inbox
     run: >
       uv run scripts/memcli.py
       task-inbox
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
-      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
-    # Output: { tasks: [...], completed: [...], open_count: int, task_inbox_file: str }
-    # Side-effect: saves full result to MEMORY_PATH/run/task-inbox.json
 
   - id: rotate_buffer
     run: >
       uv run scripts/memcli.py
       rotate-buffer
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
-      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
       --sync-check
-    # Output: { has_content: bool, should_exit: bool, sealed_buffers: [...], buffer_content_file: str, entry_count: int }
-
-  # Note: If rotate_buffer returns has_content=false, extraction and downstream
-  # steps will handle empty input gracefully. No early exit needed.
 
   # ─── STAGE 1: EXTRACTION ──────────────────────────────────────────────────
-  # Single llm-task call. Heavy agent. Reads raw buffer once.
-  # All downstream stages work from this structured output.
-  # Raw buffer text is NEVER read again after this step.
 
   - id: extraction
     run: >
       uv run scripts/memcli.py
       run-extraction
-      --buffer-content-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/buffer-content.txt"
-      --manual-edits-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/manual-edits.txt"
+      --vault-path "$LOBSTER_ARG_VAULT_PATH"
+      --buffer-content-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/buffer-content.txt"
+      --manual-edits-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/manual-edits.txt"
       --agent memspren-heavy
-      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
-    # Output: { raw_insights, raw_goals, raw_tasks, raw_patterns, classifiers }
-    # Prompt/schema are hardcoded in run_extraction.py; output also saved to
-    # MEMORY_PATH/run/extraction-output.json for the entity_plan step.
 
   # ─── STAGE 2: PARALLEL REFINEMENT ─────────────────────────────────────────
-  # Python dispatcher (ThreadPoolExecutor) runs 4 llm-task jobs simultaneously.
-  # Each job returns a complete drop-in replacement for its target memory file.
-  # Schema validation runs per-job immediately after each call.
-  # A failed job retains the existing file — it does not block the others.
 
   - id: parallel_refinement
     run: >
       uv run scripts/memcli.py
       parallel-memory
-      --extraction-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/extraction-output.json"
-      --task-inbox-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/task-inbox.json"
-      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
-    # Output: { insights: {ok, content}, goals: {ok, content}, tasks: {ok, content}, hot_memory: {ok, content} }
+      --vault-path "$LOBSTER_ARG_VAULT_PATH"
+      --extraction-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/extraction-output.json"
+      --task-inbox-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/task-inbox.json"
 
   # ─── STAGE 3: MERGE + WRITE LAYER 1 ───────────────────────────────────────
-  # Pure collection and validation. No LLM involved.
-  # Writes .second-brain/Memory/ files directly (not vault content).
-  # Failure: invalid schema → keep existing file. All four fail → abort.
 
   - id: merge_layer1
     run: >
       uv run scripts/memcli.py
       merge-layer1
-      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
+      --vault-path "$LOBSTER_ARG_VAULT_PATH"
     stdin: $parallel_refinement.stdout
-    # Output: { ok: bool, written: [...], fallback: [...], summary: str }
 
   # ─── STAGE 4a: FRONTMATTER BATCH READ ─────────────────────────────────────
-  # Reads only YAML frontmatter (not body) for classifier-scoped vault folders.
-  # Fast and low-token. Drives merge detection in entity plan step.
 
   - id: read_frontmatter
     run: >
       uv run scripts/memcli.py
       read-frontmatter
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
-      --classifiers "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/extraction-output.json"
-      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
-    # Output: { frontmatter_file: str, count: int }
-    # Side-effect: saves frontmatter array to MEMORY_PATH/run/frontmatter.json
-    # Note: --classifiers only interpolates classifier names (short safe strings, no quotes)
+      --classifiers "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/extraction-output.json"
 
   # ─── STAGE 4b: ENTITY PLAN ────────────────────────────────────────────────
-  # Single llm-task call. Heavy agent.
-  # Generates the full vault write plan using extraction + frontmatter.
-  # No links in content drafts — content and linking are separate directives.
 
   - id: entity_plan
     run: >
       uv run scripts/memcli.py
       entity-plan
-      --extraction-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/extraction-output.json"
-      --frontmatter-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/frontmatter.json"
-      --task-inbox-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/task-inbox.json"
+      --vault-path "$LOBSTER_ARG_VAULT_PATH"
+      --extraction-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/extraction-output.json"
+      --frontmatter-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/frontmatter.json"
+      --task-inbox-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/task-inbox.json"
       --agent memspren-heavy
-    # Output: { entities: [{path, action, content_draft, node_type}], summary: str }
-    # Prompt/schema hardcoded in run_entity_plan.py. All heavy inputs read from files.
 
   # ─── STAGE 4d: APPROVAL GATE ──────────────────────────────────────────────
-  # Pipeline pauses here. User reviews the full write plan before any vault writes.
-  # approved: true  → continue to entity writes
-  # approved: false → abort; buffer preserved; safe to re-trigger
 
   - id: approval
     approval: |
@@ -183,10 +140,6 @@ steps:
       Proceed with vault writes?
 
   # ─── STAGE 4c: ENTITY WRITES ──────────────────────────────────────────────
-  # Per-entity: content directive (light) → linking directive (light) → write.
-  # Entities run in parallel via Python dispatcher.
-  # git snapshot before every existing-file modification.
-  # Write via obsidian-cli or filesystem fallback (resolved in Stage 0).
 
   - id: entity_writes
     when: $approval.approved
@@ -197,18 +150,13 @@ steps:
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --vault-name "$LOBSTER_ARG_VAULT_NAME"
       --write-mode "filesystem"
-      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
-    # Output: { ok, written, created, updated, merged, links_added, failed: [...] }
 
   # ─── STAGE 5: METRICS + CLEANUP ───────────────────────────────────────────
-  # Write metrics.json, archive sealed buffers, update system-state.md,
-  # append to system-log, prune stale Lobster resume tokens, and release sync.lock.
 
   - id: metrics
     run: >
       uv run scripts/memcli.py
       metrics
-      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --write-mode "filesystem"
       --vault-name "$LOBSTER_ARG_VAULT_NAME"
@@ -216,12 +164,11 @@ steps:
       --layer1-result "$merge_layer1.json"
       --entity-result "$entity_writes.json"
       --vault-diff-result "$vault_diff.json"
-    # Reads sealed_buffers and entity_writes_ok from state
 
   - id: release_lock
     run: >
       uv run scripts/memcli.py
       write-lock
-      --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
+      --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --release
       --prune-tokens-older-than-hours 24

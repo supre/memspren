@@ -6,12 +6,15 @@ from pathlib import Path
 
 import pytest
 
+from memcli.log import make_logger
 from memcli.scanning.task_inbox_scanner import (
     deduplicate,
     levenshtein_ratio,
     parse_task_line,
     run,
 )
+
+_log = make_logger("test")
 
 
 # ── levenshtein_ratio ──────────────────────────────────────────────────────
@@ -102,21 +105,19 @@ def test_main_parses_tasks_and_writes_file(tmp_path):
         "- [ ] Task Alpha\n- [x] Task Beta | 2026-01-10\n",
         encoding="utf-8",
     )
-    mem = tmp_path / "Memory"
-    mem.mkdir()
 
-    result = run(vault_path=vault, memory_path=mem)
+    result = run(vault_path=vault, log=_log)
 
     assert result["open_count"] == 1
     assert len(result["tasks"]) == 2
-    assert (mem / "run" / "task-inbox.json").exists()
+    assert (vault / ".second-brain" / "run" / "task-inbox.json").exists()
 
 
 def test_main_returns_empty_when_no_inbox(tmp_path):
     vault = tmp_path / "vault"
     vault.mkdir()
 
-    result = run(vault_path=vault)
+    result = run(vault_path=vault, log=_log)
 
     assert result["open_count"] == 0
     assert result["tasks"] == []

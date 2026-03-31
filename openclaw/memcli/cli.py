@@ -1,45 +1,40 @@
 """
 cli.py — memcli Click command dispatcher.
 
-Each pipeline step module exports a `run()` function with typed keyword
-parameters. This CLI layer handles argument parsing (Click), JSON
-serialization, and error formatting. No module is executed as a standalone
-process — all logic flows through `run()`.
+Each command creates a Logger and VaultPaths, then calls the module's run().
 """
 
 from __future__ import annotations
 
-import datetime
 import json
 import sys
-import tempfile
 from pathlib import Path
 
 import click
 
-_LOG_PATH = tempfile.gettempdir() + "/memcli.log"
+from .log import make_logger, Level
+from .paths import VaultPaths
+
+VERBOSITY_CHOICES = click.Choice(["debug", "info", "warn", "error"])
 
 
-def _log(cmd_name: str, kwargs: dict) -> None:
-    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    args_str = " ".join(f"--{k}={v}" for k, v in kwargs.items() if v is not None and v is not False and v != "")
-    line = f"[{ts}] {cmd_name} {args_str}\n"
+def _exec(cmd_name: str, fn, log_dir: Path | None, verbosity: str, **kwargs):
+    """Call a step's run() function with a Logger, print JSON result, handle errors."""
+    log = make_logger(cmd_name, verbosity=verbosity, log_dir=log_dir)
+    log.debug(f"starting {cmd_name}", **{k: str(v) for k, v in kwargs.items() if v is not None and v is not False and v != ""})
     try:
-        with open(_LOG_PATH, "a") as f:
-            f.write(line)
-    except OSError:
-        pass
-
-
-def _exec(cmd_name: str, fn, **kwargs):
-    """Call a step's run() function, print JSON result, handle errors."""
-    _log(cmd_name, kwargs)
-    try:
-        result = fn(**kwargs)
+        result = fn(**kwargs, log=log)
     except RuntimeError as exc:
+        log.error(f"{cmd_name} failed", error=str(exc))
         print(json.dumps({"ok": False, "error": str(exc)}))
         sys.exit(1)
     print(json.dumps(result))
+
+
+def _log_dir(vault_path: str | None) -> Path | None:
+    if vault_path:
+        return VaultPaths(vault_path).logs
+    return None
 
 
 @click.group()
@@ -50,16 +45,16 @@ def cli() -> None:
 # ── Stage 0: Pre-flight ─────────────────────────────────────────────────────
 
 @cli.command("write-lock")
-@click.option("--memory-path", required=True, type=click.Path())
+@click.option("--vault-path", required=True, type=click.Path())
 @click.option("--release", is_flag=True, default=False)
 @click.option("--prune-tokens-older-than-hours", type=float, default=None)
 @click.option("--stale-lock-hours", type=float, default=2.0)
-def write_lock_cmd(memory_path, release, prune_tokens_older_than_hours, stale_lock_hours):
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def write_lock_cmd(vault_path, release, prune_tokens_older_than_hours, stale_lock_hours, verbosity):
     """Acquire or release the sync lock file."""
     from .preflight.write_lock import run
-    _exec("write-lock", run,
-          memory_path=Path(memory_path),
-          release=release,
+    _exec("write-lock", run, _log_dir(vault_path), verbosity,
+          vault_path=Path(vault_path), release=release,
           prune_tokens_older_than_hours=prune_tokens_older_than_hours,
           stale_lock_hours=stale_lock_hours)
 
@@ -67,36 +62,31 @@ def write_lock_cmd(memory_path, release, prune_tokens_older_than_hours, stale_lo
 @cli.command("check-cli")
 @click.option("--vault-path", required=True, type=click.Path())
 @click.option("--vault", "vault_name", default="")
-@click.option("--memory-path", default=None, type=click.Path())
 @click.option("--json", "json_mode", is_flag=True, default=False)
-def check_cli_cmd(vault_path, vault_name, memory_path, json_mode):
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def check_cli_cmd(vault_path, vault_name, json_mode, verbosity):
     """Verify obsidian-cli availability and resolve write mode."""
     from .preflight.check_cli import run
-    _exec("check-cli", run,
-          vault_path=Path(vault_path),
-          vault_name=vault_name,
-          memory_path=Path(memory_path) if memory_path else None,
-          json_mode=json_mode)
+    _exec("check-cli", run, _log_dir(vault_path), verbosity,
+          vault_path=Path(vault_path), vault_name=vault_name, json_mode=json_mode)
 
 
 @cli.command("clean-exit")
+@click.option("--vault-path", required=True, type=click.Path())
 @click.option("--message", default="Nothing to sync.")
 @click.option("--release-lock", is_flag=True, default=False)
-@click.option("--memory-path", default=None, type=click.Path())
-def clean_exit_cmd(message, release_lock, memory_path):
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def clean_exit_cmd(vault_path, message, release_lock, verbosity):
     """Emit a clean exit signal when there is nothing to sync."""
     from .preflight.clean_exit import run
-    _exec("clean-exit", run,
-          message=message,
-          release_lock=release_lock,
-          memory_path=Path(memory_path) if memory_path else None)
+    _exec("clean-exit", run, _log_dir(vault_path), verbosity,
+          vault_path=Path(vault_path), message=message, release_lock=release_lock)
 
 
 # ── Stage 1: Buffer management ─────────────────────────────────────────────
 
 @cli.command("rotate-buffer")
 @click.option("--vault-path", required=True, type=click.Path())
-@click.option("--memory-path", default=None, type=click.Path())
 @click.option("--sync-check", "sync_check_mode", is_flag=True, default=False)
 @click.option("--check", is_flag=True, default=False)
 @click.option("--rotate", "rotate_mode", is_flag=True, default=False)
@@ -107,103 +97,93 @@ def clean_exit_cmd(message, release_lock, memory_path):
 @click.option("--buffer-id", default="")
 @click.option("--archive", is_flag=True, default=True)
 @click.option("--max-words", type=int, default=1500)
-def rotate_buffer_cmd(vault_path, memory_path, sync_check_mode, check, rotate_mode,
-                      list_sealed_mode, list_all, active_path, cleanup, buffer_id, archive, max_words):
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def rotate_buffer_cmd(vault_path, sync_check_mode, check, rotate_mode,
+                      list_sealed_mode, list_all, active_path, cleanup,
+                      buffer_id, archive, max_words, verbosity):
     """Manage rotating sync buffers."""
     from .buffer.rotate_buffer import run
-    _exec("rotate-buffer", run,
+    _exec("rotate-buffer", run, _log_dir(vault_path), verbosity,
           vault_path=vault_path,
-          memory_path=memory_path,
-          sync_check_mode=sync_check_mode,
-          check=check,
-          rotate_mode=rotate_mode,
-          list_sealed_mode=list_sealed_mode,
-          list_all=list_all,
-          active_path=active_path,
-          cleanup=cleanup,
-          buffer_id=buffer_id,
-          archive=archive,
-          max_words=max_words)
+          sync_check_mode=sync_check_mode, check=check, rotate_mode=rotate_mode,
+          list_sealed_mode=list_sealed_mode, list_all=list_all, active_path=active_path,
+          cleanup=cleanup, buffer_id=buffer_id, archive=archive, max_words=max_words)
 
 
 # ── Stage 2: Scanning ──────────────────────────────────────────────────────
 
 @cli.command("vault-diff")
 @click.option("--vault-path", required=True, type=click.Path())
-@click.option("--memory-path", required=True, type=click.Path())
 @click.option("--since", default=None)
-def vault_diff_cmd(vault_path, memory_path, since):
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def vault_diff_cmd(vault_path, since, verbosity):
     """Scan vault for manually changed files since last sync."""
     from .scanning.vault_diff_scanner import run
-    _exec("vault-diff", run,
-          vault_path=Path(vault_path),
-          memory_path=Path(memory_path),
-          since=since)
+    _exec("vault-diff", run, _log_dir(vault_path), verbosity,
+          vault_path=Path(vault_path), since=since)
 
 
 @cli.command("task-inbox")
 @click.option("--vault-path", required=True, type=click.Path())
-@click.option("--memory-path", default=None, type=click.Path())
 @click.option("--dedup-threshold", type=float, default=0.85)
-def task_inbox_cmd(vault_path, memory_path, dedup_threshold):
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def task_inbox_cmd(vault_path, dedup_threshold, verbosity):
     """Parse tasks-inbox.md and extract open/completed tasks."""
     from .scanning.task_inbox_scanner import run
-    _exec("task-inbox", run,
-          vault_path=Path(vault_path),
-          memory_path=Path(memory_path) if memory_path else None,
-          dedup_threshold=dedup_threshold)
+    _exec("task-inbox", run, _log_dir(vault_path), verbosity,
+          vault_path=Path(vault_path), dedup_threshold=dedup_threshold)
 
 
 @cli.command("read-frontmatter")
 @click.option("--vault-path", required=True, type=click.Path())
 @click.option("--classifiers", required=True)
-@click.option("--memory-path", default=None, type=click.Path())
-def read_frontmatter_cmd(vault_path, classifiers, memory_path):
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def read_frontmatter_cmd(vault_path, classifiers, verbosity):
     """Batch-read YAML frontmatter from classifier-scoped vault folders."""
     from .scanning.read_frontmatter import run
-    _exec("read-frontmatter", run,
-          vault_path=Path(vault_path),
-          classifiers=classifiers,
-          memory_path=Path(memory_path) if memory_path else None)
+    _exec("read-frontmatter", run, _log_dir(vault_path), verbosity,
+          vault_path=Path(vault_path), classifiers=classifiers)
 
 
 # ── Stage 3: Extraction ────────────────────────────────────────────────────
 
 @cli.command("run-extraction")
+@click.option("--vault-path", required=True, type=click.Path())
 @click.option("--buffer-content-file", required=True, type=click.Path())
 @click.option("--manual-edits-file", required=True, type=click.Path())
 @click.option("--agent", default="main")
-@click.option("--memory-path", required=True, type=click.Path())
 @click.option("--timeout", type=int, default=120)
-def run_extraction_cmd(buffer_content_file, manual_edits_file, agent, memory_path, timeout):
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def run_extraction_cmd(vault_path, buffer_content_file, manual_edits_file, agent, timeout, verbosity):
     """Call LLM extraction via OpenClaw Gateway."""
     from .extraction.run_extraction import run
-    _exec("run-extraction", run,
+    _exec("run-extraction", run, _log_dir(vault_path), verbosity,
+          vault_path=Path(vault_path),
           buffer_content_file=Path(buffer_content_file),
           manual_edits_file=Path(manual_edits_file),
-          agent=agent,
-          memory_path=Path(memory_path),
-          timeout=timeout)
+          agent=agent, timeout=timeout)
 
 
-# ── Stage 4: Memory refinement ─────────────────────────────────────────────
+# ── Stage 4: memory refinement ─────────────────────────────────────────────
 
 @cli.command("parallel-memory")
+@click.option("--vault-path", required=True, type=click.Path())
 @click.option("--extraction-file", required=True, type=click.Path())
 @click.option("--task-inbox-file", required=True, type=click.Path())
-@click.option("--memory-path", required=True, type=click.Path())
-def parallel_memory_cmd(extraction_file, task_inbox_file, memory_path):
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def parallel_memory_cmd(vault_path, extraction_file, task_inbox_file, verbosity):
     """Dispatch 4 parallel memory refinement jobs via Gateway."""
     from .memory.parallel_memory import run
-    _exec("parallel-memory", run,
+    _exec("parallel-memory", run, _log_dir(vault_path), verbosity,
+          vault_path=Path(vault_path),
           extraction_file=Path(extraction_file),
-          task_inbox_file=Path(task_inbox_file),
-          memory_path=Path(memory_path))
+          task_inbox_file=Path(task_inbox_file))
 
 
 @cli.command("merge-layer1")
-@click.option("--memory-path", required=True, type=click.Path())
-def merge_layer1_cmd(memory_path):
+@click.option("--vault-path", required=True, type=click.Path())
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def merge_layer1_cmd(vault_path, verbosity):
     """Collect parallel refinement results and write memory files (reads stdin)."""
     from .memory.merge import run
 
@@ -224,51 +204,47 @@ def merge_layer1_cmd(memory_path):
         }))
         sys.exit(1)
 
-    _exec("merge-layer1", run,
-          memory_path=Path(memory_path),
-          parallel_results=parallel_results)
+    _exec("merge-layer1", run, _log_dir(vault_path), verbosity,
+          vault_path=Path(vault_path), parallel_results=parallel_results)
 
 
 # ── Stage 5: Entity planning & writes ─────────────────────────────────────
 
 @cli.command("entity-plan")
+@click.option("--vault-path", required=True, type=click.Path())
 @click.option("--extraction-file", required=True, type=click.Path())
 @click.option("--frontmatter-file", default="")
 @click.option("--task-inbox-file", default="")
 @click.option("--agent", default="memspren-heavy")
 @click.option("--timeout", type=int, default=120)
-def entity_plan_cmd(extraction_file, frontmatter_file, task_inbox_file, agent, timeout):
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def entity_plan_cmd(vault_path, extraction_file, frontmatter_file, task_inbox_file, agent, timeout, verbosity):
     """Generate entity write plan via LLM."""
     from .entities.run_entity_plan import run
-    _exec("entity-plan", run,
+    _exec("entity-plan", run, _log_dir(vault_path), verbosity,
           extraction_file=Path(extraction_file),
           frontmatter_file=frontmatter_file,
           task_inbox_file=task_inbox_file,
-          agent=agent,
-          timeout=timeout)
+          agent=agent, timeout=timeout)
 
 
 @cli.command("entity-pipeline")
-@click.option("--plan", required=True)
 @click.option("--vault-path", required=True, type=click.Path())
+@click.option("--plan", required=True)
 @click.option("--vault-name", default="")
 @click.option("--write-mode", default="filesystem", type=click.Choice(["obsidian", "filesystem"]))
-@click.option("--memory-path", required=True, type=click.Path())
-def entity_pipeline_cmd(plan, vault_path, vault_name, write_mode, memory_path):
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def entity_pipeline_cmd(vault_path, plan, vault_name, write_mode, verbosity):
     """Run per-entity content generation, linking, and vault writes."""
     from .entities.entity_pipeline import run
-    _exec("entity-pipeline", run,
-          plan=plan,
-          vault_path=Path(vault_path),
-          vault_name=vault_name,
-          write_mode=write_mode,
-          memory_path=Path(memory_path))
+    _exec("entity-pipeline", run, _log_dir(vault_path), verbosity,
+          plan=plan, vault_path=Path(vault_path),
+          vault_name=vault_name, write_mode=write_mode)
 
 
 # ── Stage 6: Metrics & finalization ────────────────────────────────────────
 
 @cli.command("metrics")
-@click.option("--memory-path", required=True, type=click.Path())
 @click.option("--vault-path", required=True, type=click.Path())
 @click.option("--write-mode", default="filesystem")
 @click.option("--vault-name", default="")
@@ -280,24 +256,18 @@ def entity_pipeline_cmd(plan, vault_path, vault_name, write_mode, memory_path):
 @click.option("--entity-writes-ok", default="false")
 @click.option("--max-log-bytes", type=int, default=2097152)
 @click.option("--keep-lines", type=int, default=2000)
-def metrics_cmd(memory_path, vault_path, write_mode, vault_name,
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def metrics_cmd(vault_path, write_mode, vault_name,
                 extraction_result, layer1_result, entity_result, vault_diff_result,
-                sealed_buffers, entity_writes_ok, max_log_bytes, keep_lines):
+                sealed_buffers, entity_writes_ok, max_log_bytes, keep_lines, verbosity):
     """Write metrics.json, archive buffers, update system-state.md."""
     from .finalize.metrics_writer import run
-    _exec("metrics", run,
-          memory_path=Path(memory_path),
-          vault_path=Path(vault_path),
-          write_mode=write_mode,
-          vault_name=vault_name,
-          extraction_result=extraction_result,
-          layer1_result=layer1_result,
-          entity_result=entity_result,
-          vault_diff_result=vault_diff_result,
-          sealed_buffers=sealed_buffers,
-          entity_writes_ok=entity_writes_ok,
-          max_log_bytes=max_log_bytes,
-          keep_lines=keep_lines)
+    _exec("metrics", run, _log_dir(vault_path), verbosity,
+          vault_path=Path(vault_path), write_mode=write_mode, vault_name=vault_name,
+          extraction_result=extraction_result, layer1_result=layer1_result,
+          entity_result=entity_result, vault_diff_result=vault_diff_result,
+          sealed_buffers=sealed_buffers, entity_writes_ok=entity_writes_ok,
+          max_log_bytes=max_log_bytes, keep_lines=keep_lines)
 
 
 def main() -> None:

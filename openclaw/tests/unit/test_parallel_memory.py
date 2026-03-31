@@ -7,7 +7,10 @@ from unittest import mock
 
 import pytest
 
+from memcli.log import make_logger
 from memcli.memory.parallel_memory import JOBS, load_existing, run_job, run
+
+_log = make_logger("test")
 
 
 # ── load_existing ──────────────────────────────────────────────────────────
@@ -66,7 +69,7 @@ def test_run_job_succeeds(tmp_path, monkeypatch):
 
     with mock.patch("memcli.gateway_client.post_json",
                     return_value=make_parallel_job_response("insights-content")):
-        name, result = run_job(job, extraction, tmp_path, {})
+        name, result = run_job(job, extraction, tmp_path, {}, _log)
 
     assert name == "insights"
     assert result["ok"] is True
@@ -83,7 +86,7 @@ def test_run_job_returns_ok_false_on_gateway_error(tmp_path, monkeypatch):
 
     with mock.patch("memcli.gateway_client.post_json",
                     side_effect=RuntimeError("Gateway HTTP 503")):
-        name, result = run_job(job, extraction, tmp_path, {})
+        name, result = run_job(job, extraction, tmp_path, {}, _log)
 
     assert name == "goals"
     assert result["ok"] is False
@@ -108,7 +111,7 @@ def test_run_job_includes_task_inbox_for_goals(tmp_path, monkeypatch):
     task_inbox = {"tasks": [{"title": "test task"}], "open_count": 1}
 
     with mock.patch("memcli.gateway_client.post_json", side_effect=fake_post):
-        run_job(job, extraction, tmp_path, task_inbox)
+        run_job(job, extraction, tmp_path, task_inbox, _log)
 
     assert len(captured) == 1
     assert "task_inbox" in captured[0]["args"]["input"]
@@ -117,7 +120,7 @@ def test_run_job_includes_task_inbox_for_goals(tmp_path, monkeypatch):
 # ── run() integration ─────────────────────────────────────────────────────
 
 def test_main_all_jobs_succeed(
-    tmp_path, monkeypatch, fake_extraction_file, fake_task_inbox, tmp_memory_dir
+    tmp_path, monkeypatch, fake_extraction_file, fake_task_inbox, tmp_vault_dir
 ):
     from tests.conftest import make_parallel_job_response
 
@@ -138,7 +141,8 @@ def test_main_all_jobs_succeed(
         result = run(
             extraction_file=fake_extraction_file,
             task_inbox_file=fake_task_inbox,
-            memory_path=tmp_memory_dir,
+            vault_path=tmp_vault_dir,
+            log=_log,
         )
 
     for job_name in ("insights", "goals", "tasks", "hot_memory"):
@@ -146,7 +150,7 @@ def test_main_all_jobs_succeed(
 
 
 def test_main_failed_job_does_not_block_others(
-    tmp_path, monkeypatch, fake_extraction_file, fake_task_inbox, tmp_memory_dir
+    tmp_path, monkeypatch, fake_extraction_file, fake_task_inbox, tmp_vault_dir
 ):
     from tests.conftest import make_parallel_job_response
 
@@ -163,7 +167,8 @@ def test_main_failed_job_does_not_block_others(
         result = run(
             extraction_file=fake_extraction_file,
             task_inbox_file=fake_task_inbox,
-            memory_path=tmp_memory_dir,
+            vault_path=tmp_vault_dir,
+            log=_log,
         )
 
     assert result["insights"]["ok"] is False

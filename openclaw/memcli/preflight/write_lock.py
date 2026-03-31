@@ -1,11 +1,4 @@
-"""
-write_lock.py — Manage the sync lock file and prune stale Lobster resume tokens.
-
-Without release: writes sync.lock. Raises RuntimeError if lock already exists
-(signals a concurrent sync run — Lobster will emit SYNC SKIPPED).
-
-With release: removes sync.lock and optionally prunes stale resume tokens.
-"""
+"""write_lock.py — Manage the sync lock file and prune stale Lobster resume tokens."""
 
 from __future__ import annotations
 
@@ -14,10 +7,12 @@ import json
 import sys
 from pathlib import Path
 
+from ..log import Logger
+from ..paths import VaultPaths
 
-def prune_stale_tokens(memory_path: Path, ttl_hours: float) -> int:
-    """Remove Lobster resume token files older than ttl_hours. Returns count pruned."""
-    token_dir = memory_path / ".lobster-tokens"
+
+def prune_stale_tokens(buffers_path: Path, ttl_hours: float) -> int:
+    token_dir = buffers_path / ".lobster-tokens"
     if not token_dir.exists():
         return 0
     cutoff = datetime.datetime.now(datetime.UTC).timestamp() - (ttl_hours * 3600)
@@ -34,25 +29,31 @@ def prune_stale_tokens(memory_path: Path, ttl_hours: float) -> int:
 
 def run(
     *,
-    memory_path: Path,
+    vault_path: Path,
     release: bool = False,
     prune_tokens_older_than_hours: float | None = None,
     stale_lock_hours: float = 2.0,
+    log: Logger,
 ) -> dict:
-    lock_path = memory_path / "sync.lock"
+    paths = VaultPaths(vault_path)
+    paths.ensure()
+    lock_path = paths.buffers / "sync.lock"
 
     if release:
+        log.info("releasing lock", lock_path=str(lock_path))
         try:
             if lock_path.exists():
                 lock_path.unlink()
             pruned = 0
             if prune_tokens_older_than_hours:
-                pruned = prune_stale_tokens(memory_path, prune_tokens_older_than_hours)
+                pruned = prune_stale_tokens(paths.buffers, prune_tokens_older_than_hours)
+                log.debug("pruned stale tokens", count=pruned)
             result: dict = {"ok": True, "action": "released"}
             if pruned:
                 result["tokens_pruned"] = pruned
             return result
         except Exception as e:
+            log.error("release failed", error=str(e))
             raise RuntimeError(str(e)) from e
 
     # Write lock
@@ -73,23 +74,21 @@ def run(
             pass
 
         if not stale:
-            raise RuntimeError(
-                "sync.lock exists — concurrent run in progress. SYNC SKIPPED."
-            )
+            log.warn("lock exists, skipping", lock_path=str(lock_path))
+            raise RuntimeError("sync.lock exists — concurrent run in progress. SYNC SKIPPED.")
 
-        print(
-            json.dumps({"warn": f"stale sync.lock detected (>{hours}h old) — auto-releasing"}),
-            file=sys.stderr,
-        )
+        log.warn(f"stale sync.lock detected (>{hours}h old) — auto-releasing")
         try:
             lock_path.unlink()
         except Exception:
             pass
 
     try:
-        memory_path.mkdir(parents=True, exist_ok=True)
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
         ts = datetime.datetime.now(datetime.UTC).isoformat()
         lock_path.write_text(f"locked_at: {ts}\n", encoding="utf-8")
+        log.info("lock acquired", lock_path=str(lock_path))
         return {"ok": True, "action": "locked"}
     except Exception as e:
+        log.error("lock write failed", error=str(e))
         raise RuntimeError(str(e)) from e

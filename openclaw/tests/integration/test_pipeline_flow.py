@@ -17,9 +17,18 @@ class MemcliCommandFlowTests(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         self.base = Path(self._tmp.name)
-        self.memory_path = self.base / "Memory"
-        self.run_dir = self.memory_path / "run"
+        self.vault_path = self.base / "vault"
+        self.vault_path.mkdir()
+        sb = self.vault_path / ".second-brain"
+        self.memory_dir = sb / "memory"
+        self.run_dir = sb / "run"
+        self.buffers_dir = sb / "buffers"
+        self.logs_dir = sb / "logs"
+        self.memory_dir.mkdir(parents=True)
         self.run_dir.mkdir(parents=True)
+        self.buffers_dir.mkdir(parents=True)
+        self.logs_dir.mkdir(parents=True)
+
         # Seed buffer + manual edit files that upstream pipeline steps would produce
         self.buffer_file = self.run_dir / "buffer-content.txt"
         self.manual_file = self.run_dir / "manual-edits.txt"
@@ -27,7 +36,7 @@ class MemcliCommandFlowTests(unittest.TestCase):
         self.manual_file.write_text("Manual edit", encoding="utf-8")
 
         for filename in ["insights.md", "goals.md", "tasks.md", "hot-memory.md"]:
-            (self.memory_path / filename).write_text(f"Existing {filename}", encoding="utf-8")
+            (self.memory_dir / filename).write_text(f"Existing {filename}", encoding="utf-8")
 
         self.task_inbox_file = self.run_dir / "task-inbox.json"
         task_inbox = {"tasks": [{"title": "Task"}], "completed": [], "open_count": 1}
@@ -105,8 +114,8 @@ class MemcliCommandFlowTests(unittest.TestCase):
                 str(self.manual_file),
                 "--agent",
                 "memspren-heavy",
-                "--memory-path",
-                str(self.memory_path),
+                "--vault-path",
+                str(self.vault_path),
             ]
         )
         self.assertEqual(json.loads(extraction_stdout), extraction_output)
@@ -121,8 +130,8 @@ class MemcliCommandFlowTests(unittest.TestCase):
                 str(extraction_file),
                 "--task-inbox-file",
                 str(self.task_inbox_file),
-                "--memory-path",
-                str(self.memory_path),
+                "--vault-path",
+                str(self.vault_path),
             ]
         )
         parallel_result = json.loads(parallel_stdout)

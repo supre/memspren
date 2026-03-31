@@ -1,8 +1,4 @@
-"""
-task_inbox_scanner.py — Parse tasks-inbox.md and extract open/completed tasks.
-
-Deduplicates near-identical tasks by title similarity (Levenshtein ratio).
-"""
+"""task_inbox_scanner.py — Parse tasks-inbox.md and extract open/completed tasks."""
 
 from __future__ import annotations
 
@@ -12,10 +8,11 @@ import sys
 from pathlib import Path
 
 from .. import state
+from ..log import Logger
+from ..paths import VaultPaths
 
 
 def levenshtein_ratio(s1: str, s2: str) -> float:
-    """Return similarity ratio [0.0, 1.0] between two strings."""
     if not s1 and not s2:
         return 1.0
     if not s1 or not s2:
@@ -37,7 +34,6 @@ def levenshtein_ratio(s1: str, s2: str) -> float:
 
 
 def parse_task_line(line: str) -> dict | None:
-    """Parse a markdown task line. Returns task dict or None if not a task."""
     match = re.match(
         r"^-\s+\[([ xX])\]\s+(.+?)(?:\s+\|\s+(\d{4}-\d{2}-\d{2}))?$",
         line.strip(),
@@ -50,7 +46,6 @@ def parse_task_line(line: str) -> dict | None:
 
 
 def deduplicate(tasks: list[dict], threshold: float) -> list[dict]:
-    """Remove near-duplicate tasks keeping the first occurrence."""
     seen: list[dict] = []
     for task in tasks:
         if not any(levenshtein_ratio(task["title"], s["title"]) >= threshold for s in seen):
@@ -61,13 +56,16 @@ def deduplicate(tasks: list[dict], threshold: float) -> list[dict]:
 def run(
     *,
     vault_path: Path,
-    memory_path: Path | None = None,
     dedup_threshold: float = 0.85,
+    log: Logger,
 ) -> dict:
+    paths = VaultPaths(vault_path)
+    paths.ensure()
     inbox_path = vault_path / "Tasks" / "tasks-inbox.md"
     empty = {"tasks": [], "completed": [], "open_count": 0, "task_inbox_file": ""}
 
     if not inbox_path.exists():
+        log.debug("no tasks-inbox.md found")
         return empty
 
     raw_tasks: list[dict] = []
@@ -77,34 +75,28 @@ def run(
             if task:
                 raw_tasks.append(task)
     except Exception as e:
-        print(json.dumps({"warn": str(e)}), file=sys.stderr)
+        log.warn(f"error reading tasks-inbox: {e}")
         return empty
 
     tasks = deduplicate(raw_tasks, dedup_threshold)
     completed = [t for t in tasks if t["status"] == "completed"]
     open_tasks = [t for t in tasks if t["status"] == "open"]
 
-    result: dict = {
-        "tasks": tasks,
-        "completed": completed,
-        "open_count": len(open_tasks),
-    }
+    result: dict = {"tasks": tasks, "completed": completed, "open_count": len(open_tasks)}
 
     task_inbox_file = ""
-    if memory_path:
-        run_dir = Path(memory_path) / "run"
-        try:
-            run_dir.mkdir(parents=True, exist_ok=True)
-            out_path = run_dir / "task-inbox.json"
-            out_path.write_text(json.dumps(result), encoding="utf-8")
-            task_inbox_file = str(out_path)
-        except Exception as e:
-            print(json.dumps({"warn": f"could not write task-inbox file: {e}"}), file=sys.stderr)
+    try:
+        out_path = paths.run / "task-inbox.json"
+        out_path.write_text(json.dumps(result), encoding="utf-8")
+        task_inbox_file = str(out_path)
+    except Exception as e:
+        log.warn(f"could not write task-inbox file: {e}")
 
-        state.write_state(str(memory_path), {
-            "task_inbox_file": task_inbox_file,
-            "task_inbox_open_count": len(open_tasks),
-        })
+    state.write_state(str(paths.run), {
+        "task_inbox_file": task_inbox_file,
+        "task_inbox_open_count": len(open_tasks),
+    })
 
     result["task_inbox_file"] = task_inbox_file
+    log.info("task inbox parsed", open_count=len(open_tasks), total=len(tasks))
     return result
