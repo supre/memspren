@@ -5,12 +5,12 @@ Reads buffer content and manual edits, calls llm-task, outputs JSON.
 """
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
 from .. import gateway_client
 from .. import PROMPTS_DIR, SCHEMAS_DIR
+from ..gateway import get_gateway_token, get_gateway_endpoint
 
 
 def main():
@@ -51,9 +51,8 @@ def main():
         "manual_edits":   manual_edits,
     }
 
-    gateway_url = os.environ.get("OPENCLAW_URL", "http://127.0.0.1:18789")
-    gateway_token = os.environ.get("OPENCLAW_TOKEN", "")
-    endpoint = gateway_url.rstrip("/") + "/tools/invoke"
+    gateway_token = get_gateway_token()
+    endpoint = get_gateway_endpoint()
 
     # Match Lobster's exact payload format
     payload = {

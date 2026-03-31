@@ -26,7 +26,6 @@ Returns JSON to stdout:
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
@@ -35,6 +34,7 @@ from pathlib import Path
 
 from .. import gateway_client
 from .. import PROMPTS_DIR, SCHEMAS_DIR
+from ..gateway import get_gateway_token, get_gateway_endpoint
 from ..vault.git_commit import commit_file as _git_commit_file
 
 MAX_WORKERS  = 4
@@ -58,9 +58,8 @@ def run_llm_task(
     except Exception:
         return None
 
-    gateway_url   = os.environ.get("OPENCLAW_URL", "http://127.0.0.1:18789")
-    gateway_token = os.environ.get("OPENCLAW_TOKEN", "")
-    endpoint      = gateway_url.rstrip("/") + "/tools/invoke"
+    gateway_token = get_gateway_token()
+    endpoint      = get_gateway_endpoint()
 
     payload = {
         "tool": "llm-task",

@@ -14,12 +14,13 @@ This wrapper:
   - On failure: emits a structured JSON error object to stdout (never crashes)
 
 Usage from Lobster workflow:
-    python -m scripts.runner scripts/memcli.py <command> --arg value
+    uv run -m scripts.runner scripts/memcli.py <command> --arg value
 
 The runner is invoked as a module so it resolves from the skill root directory.
 """
 
 import json
+import shutil
 import subprocess
 import sys
 import os
@@ -59,7 +60,11 @@ def main() -> None:
     script_args = sys.argv[1:]
     script_name = script_args[0]
 
-    cmd = [sys.executable] + script_args
+    uv_bin = shutil.which("uv")
+    if uv_bin:
+        cmd = [uv_bin, "run"] + script_args
+    else:
+        cmd = [sys.executable] + script_args
 
     try:
         proc = subprocess.run(

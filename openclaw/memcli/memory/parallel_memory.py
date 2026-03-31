@@ -25,13 +25,13 @@ Returns JSON to stdout:
 
 import argparse
 import json
-import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from .. import gateway_client
 from .. import PROMPTS_DIR, SCHEMAS_DIR
+from ..gateway import get_gateway_token, get_gateway_endpoint
 
 try:
     import jsonschema
@@ -116,8 +116,7 @@ def run_job(
 ) -> tuple[str, dict]:
     name = job["name"]
 
-    gateway_url = os.environ.get("OPENCLAW_URL", "http://127.0.0.1:18789")
-    gateway_token = os.environ.get("OPENCLAW_TOKEN", "")
+    gateway_token = get_gateway_token()
 
     job_input: dict = {k: extraction.get(k, []) for k in job["extraction_keys"]}
     job_input["existing_content"] = load_existing(memory_path, job["memory_file"])
@@ -147,7 +146,7 @@ def run_job(
         }
     }
 
-    endpoint = gateway_url.rstrip("/") + "/tools/invoke"
+    endpoint = get_gateway_endpoint()
 
     try:
         result = gateway_client.post_json(endpoint, payload, token=gateway_token, timeout=130)

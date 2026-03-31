@@ -2,7 +2,7 @@
 #
 # CRITICAL: Every script step must emit valid JSON to stdout only.
 # All debug/logging output must go to stderr. The runner wrapper
-# (python -m scripts.runner) enforces this contract and routes stderr
+# (uv run -m scripts.runner) enforces this contract and routes stderr
 # to the telemetry log. Any stray stdout breaks Lobster's envelope parsing.
 #
 # Model routing: llm-task directives pass --agent <name> to `openclaw.invoke` directly.
@@ -16,7 +16,7 @@
 # Lock safety: Stage 0 acquires `.second-brain/Memory/sync.lock` via
 # `write_lock.py` and Stage 5 releases it. A stale lock (default 2h) is auto-
 # released on the next run, and manual release is available via
-# `python scripts/write_lock.py --memory-path <path> --release`.
+# `uv run scripts/write_lock.py --memory-path <path> --release`.
 
 name: memspren-sync
 
@@ -45,7 +45,7 @@ steps:
 
   - id: lock
     run: >
-      python scripts/memcli.py
+      uv run scripts/memcli.py
       write-lock
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
     # Output: { ok: bool, action: "locked"|"skipped", error: str|null }
@@ -53,7 +53,7 @@ steps:
 
   - id: check_cli
     run: >
-      python scripts/memcli.py
+      uv run scripts/memcli.py
       check-cli
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --vault "$LOBSTER_ARG_VAULT_NAME"
@@ -64,7 +64,7 @@ steps:
 
   - id: vault_diff
     run: >
-      python scripts/memcli.py
+      uv run scripts/memcli.py
       vault-diff
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
@@ -74,7 +74,7 @@ steps:
 
   - id: task_inbox
     run: >
-      python scripts/memcli.py
+      uv run scripts/memcli.py
       task-inbox
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
@@ -83,7 +83,7 @@ steps:
 
   - id: rotate_buffer
     run: >
-      python scripts/memcli.py
+      uv run scripts/memcli.py
       rotate-buffer
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
@@ -100,7 +100,7 @@ steps:
 
   - id: extraction
     run: >
-      python scripts/memcli.py
+      uv run scripts/memcli.py
       run-extraction
       --buffer-content-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/buffer-content.txt"
       --manual-edits-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/manual-edits.txt"
@@ -118,7 +118,7 @@ steps:
 
   - id: parallel_refinement
     run: >
-      python scripts/memcli.py
+      uv run scripts/memcli.py
       parallel-memory
       --extraction-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/extraction-output.json"
       --task-inbox-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/task-inbox.json"
@@ -132,7 +132,7 @@ steps:
 
   - id: merge_layer1
     run: >
-      python scripts/memcli.py
+      uv run scripts/memcli.py
       merge-layer1
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
     stdin: $parallel_refinement.stdout
@@ -144,7 +144,7 @@ steps:
 
   - id: read_frontmatter
     run: >
-      python scripts/memcli.py
+      uv run scripts/memcli.py
       read-frontmatter
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --classifiers "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/extraction-output.json"
@@ -160,7 +160,7 @@ steps:
 
   - id: entity_plan
     run: >
-      python scripts/memcli.py
+      uv run scripts/memcli.py
       entity-plan
       --extraction-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/extraction-output.json"
       --frontmatter-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory/run/frontmatter.json"
@@ -191,7 +191,7 @@ steps:
   - id: entity_writes
     when: $approval.approved
     run: >
-      python scripts/memcli.py
+      uv run scripts/memcli.py
       entity-pipeline
       --plan "$entity_plan.json"
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
@@ -206,7 +206,7 @@ steps:
 
   - id: metrics
     run: >
-      python scripts/memcli.py
+      uv run scripts/memcli.py
       metrics
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
@@ -220,7 +220,7 @@ steps:
 
   - id: release_lock
     run: >
-      python scripts/memcli.py
+      uv run scripts/memcli.py
       write-lock
       --memory-path "$LOBSTER_ARG_VAULT_PATH/.second-brain/Memory"
       --release

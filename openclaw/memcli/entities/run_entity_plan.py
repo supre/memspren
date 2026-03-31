@@ -12,12 +12,12 @@ Returns JSON to stdout (runner-compatible — no other stdout output).
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
 from .. import gateway_client
 from .. import PROMPTS_DIR, SCHEMAS_DIR
+from ..gateway import get_gateway_token, get_gateway_endpoint
 
 # Prompt and schema are fixed for Stage 4b entity plan — not exposed as CLI flags
 PROMPT_FILE = PROMPTS_DIR / "entity_plan_prompt.txt"
@@ -70,9 +70,8 @@ def main() -> None:
         print(json.dumps({"ok": False, "error": f"could not read schema file: {e}"}))
         sys.exit(1)
 
-    gateway_url   = os.environ.get("OPENCLAW_URL", "http://127.0.0.1:18789")
-    gateway_token = os.environ.get("OPENCLAW_TOKEN", "")
-    endpoint      = gateway_url.rstrip("/") + "/tools/invoke"
+    gateway_token = get_gateway_token()
+    endpoint      = get_gateway_endpoint()
 
     payload = {
         "tool": "llm-task",
