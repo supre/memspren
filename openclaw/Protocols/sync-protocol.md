@@ -27,17 +27,17 @@ It returns a `resumeToken`.
 
 ## Pipeline stages (summary)
 
-| Stage | Name | What happens |
-|---|---|---|
-| 0 | Pre-flight | Lock file, obsidian-cli check, vault git diff, task inbox scan, buffer rotation |
-| 1 | Extraction | Single heavy llm-task reads the buffer once, returns structured raw material |
-| 2 | Parallel refinement | 4 llm-task jobs run simultaneously: insights, goals, tasks, hot-memory |
-| 3 | Merge + write Layer 1 | Validates and writes `.second-brain/Memory/` files (no vault writes yet) |
-| 4a | Frontmatter scan | Batch reads YAML frontmatter from classifier-scoped vault folders |
-| 4b | Entity plan | Single heavy llm-task generates the full vault write plan |
-| 4d | **Approval gate** | Pipeline pauses — agent presents write plan to user, waits for approval |
-| 4c | Entity writes | Per-entity: content directive → linking directive → write (parallel) |
-| 5 | Metrics + cleanup | metrics.json, buffer archive, system-state.md, system-log, lock release |
+| Stage | Name                  | What happens                                                                    |
+| ----- | --------------------- | ------------------------------------------------------------------------------- |
+| 0     | Pre-flight            | Lock file, obsidian-cli check, vault git diff, task inbox scan, buffer rotation |
+| 1     | Extraction            | Single heavy llm-task reads the buffer once, returns structured raw material    |
+| 2     | Parallel refinement   | 4 llm-task jobs run simultaneously: insights, goals, tasks, hot-memory          |
+| 3     | Merge + write Layer 1 | Validates and writes `.second-brain/memory/` files (no vault writes yet)        |
+| 4a    | Frontmatter scan      | Batch reads YAML frontmatter from classifier-scoped vault folders               |
+| 4b    | Entity plan           | Single heavy llm-task generates the full vault write plan                       |
+| 4d    | **Approval gate**     | Pipeline pauses — agent presents write plan to user, waits for approval         |
+| 4c    | Entity writes         | Per-entity: content directive → linking directive → write (parallel)            |
+| 5     | Metrics + cleanup     | metrics.json, buffer archive, system-state.md, system-log, lock release         |
 
 Full step-by-step spec is in `workflows/sync.lobster`.
 
@@ -50,7 +50,7 @@ When Lobster returns a `resumeToken`, present the approval message to the user:
 ```
 Sync ready to write.
 
-Memory: <Layer 1 summary — e.g. "insights OK, goals OK, tasks OK, hot-memory FALLBACK">
+memory: <Layer 1 summary — e.g. "insights OK, goals OK, tasks OK, hot-memory FALLBACK">
 Vault:  <entity plan summary — e.g. "2 create, 1 append, 1 merge">
 Manual edits absorbed: <N>
 
@@ -104,9 +104,9 @@ If `agents.heavy` or `agents.light` are absent, all directives fall back to `age
 
 Two named agents must exist in OpenClaw before the pipeline can run:
 
-| Agent ID | Role | Suggested model |
-|---|---|---|
-| `memspren-heavy` | Extraction, insights, entity plan | Sonnet or Opus |
+| Agent ID         | Role                                       | Suggested model |
+| ---------------- | ------------------------------------------ | --------------- |
+| `memspren-heavy` | Extraction, insights, entity plan          | Sonnet or Opus  |
 | `memspren-light` | Goals, tasks, hot-memory, content, linking | Haiku or Sonnet |
 
 ```bash
@@ -127,13 +127,13 @@ the heavy/light routing benefit.
 
 ## Pre-flight failure modes
 
-| Failure | Pipeline behaviour |
-|---|---|
-| `sync.lock` exists | Exit with SYNC SKIPPED (concurrent run) — buffer safe |
-| obsidian-cli unavailable | Switch to filesystem write mode — pipeline continues |
-| vault not a git repo | Skip bidirectional edit ingestion — pipeline continues |
-| no sealed buffers + active buffer empty | Exit with "Nothing to sync." |
-| rotate_buffer fails | Log ERROR, abort — buffer intact |
+| Failure                                 | Pipeline behaviour                                     |
+| --------------------------------------- | ------------------------------------------------------ |
+| `sync.lock` exists                      | Exit with SYNC SKIPPED (concurrent run) — buffer safe  |
+| obsidian-cli unavailable                | Switch to filesystem write mode — pipeline continues   |
+| vault not a git repo                    | Skip bidirectional edit ingestion — pipeline continues |
+| no sealed buffers + active buffer empty | Exit with "Nothing to sync."                           |
+| rotate_buffer fails                     | Log ERROR, abort — buffer intact                       |
 
 ---
 
@@ -141,18 +141,18 @@ the heavy/light routing benefit.
 
 Each of the 4 parallel refinement jobs is independent:
 
-| Job result | What happens |
-|---|---|
-| OK + schema valid | File written to `.second-brain/Memory/` |
-| llm-task failed / timed out | Existing file kept, logged as WARN |
-| Schema validation failed | Existing file kept, logged as WARN |
-| All 4 fail | Pipeline aborts before vault writes |
+| Job result                  | What happens                            |
+| --------------------------- | --------------------------------------- |
+| OK + schema valid           | File written to `.second-brain/memory/` |
+| llm-task failed / timed out | Existing file kept, logged as WARN      |
+| Schema validation failed    | Existing file kept, logged as WARN      |
+| All 4 fail                  | Pipeline aborts before vault writes     |
 
 ---
 
 ## Telemetry
 
-Every step writes to `.second-brain/Memory/sync-telemetry.log`. Log format:
+Every step writes to `.second-brain/memory/sync-telemetry.log`. Log format:
 
 ```
 [ISO ts] [LEVEL] [runner] action=<step> result=OK|FAIL|TIMEOUT detail=<...>
@@ -167,7 +167,7 @@ Set `logging.verbosity: DEBUG` in config.md to capture full prompt/response pair
 
 After Lobster returns final results, send a natural confirmation:
 
-> "Synced. Created [X], updated [Y]. Memory files updated: insights, goals, tasks, hot-memory."
+> "Synced. Created [X], updated [Y]. memory files updated: insights, goals, tasks, hot-memory."
 
 If any entity writes failed, name them:
 > "Synced. 3 of 4 entities written. Failed: Work/Projects/foo.md (write error — check telemetry log)."

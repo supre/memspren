@@ -3,7 +3,7 @@
 Runs ONCE on first launch when `setup_complete: false` in config.md.
 Never runs again unless manually reset.
 
-All vault operations use obsidian-cli. Skill files (config, Memory) are written directly.
+All vault operations use obsidian-cli. Skill files (config, memory) are written directly.
 
 > **MMVP note:** Steps 5 and 6 (journaling, lifestyle tracking) are Phase 2
 > features. Skip them for a minimal first working version — the system works
@@ -68,11 +68,11 @@ Ask:
 > "What's the full path to your Obsidian vault on your computer?
 > (e.g. `/Users/yourname/Documents/My Second Brain`)"
 
-| Answer | Action |
-|---|---|
-| Provides path | Verify it exists and contains `.obsidian/`. Store as `vault_path` in config.md |
-| Doesn't know | Ask: *"Is this folder your vault?"* — check for a `.obsidian/` subfolder to confirm. Use the current folder if confirmed. |
-| No vault yet | Tell them: *"No problem — I'll create the vault structure in the folder you've selected."* Use the current mounted folder as vault_path. |
+| Answer        | Action                                                                                                                                   |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Provides path | Verify it exists and contains `.obsidian/`. Store as `vault_path` in config.md                                                           |
+| Doesn't know  | Ask: *"Is this folder your vault?"* — check for a `.obsidian/` subfolder to confirm. Use the current folder if confirmed.                |
+| No vault yet  | Tell them: *"No problem — I'll create the vault structure in the folder you've selected."* Use the current mounted folder as vault_path. |
 
 **Verify obsidian-cli access:**
 ```bash
@@ -101,10 +101,10 @@ Ask:
 > about from the start? Even rough notes are fine — or skip
 > and add later."
 
-| Answer | Action |
-|---|---|
+| Answer           | Action                                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | Provides content | **Create** `Vision/long-term-vision.md` using obsidian-cli with YAML frontmatter + `[[link]]` to `Vision/core-values.md` |
-| Skips | **Create** empty `Vision/long-term-vision.md` with placeholder |
+| Skips            | **Create** empty `Vision/long-term-vision.md` with placeholder                                                           |
 
 **Create using obsidian-cli:**
 ```bash
@@ -125,11 +125,11 @@ Say:
 > throughout the day. How many times per day would you like your vault synced?
 > (e.g. '3 times — noon, 5pm, 9pm' or 'just once at night')"
 
-| Answer | Action |
-|---|---|
+| Answer                  | Action                                                |
+| ----------------------- | ----------------------------------------------------- |
 | Provides specific times | Create a cron job for each time using the `cron` tool |
-| Says "default" or skips | Create one default cron job at 21:00 (9 PM) |
-| Doesn't want auto-sync | Skip — user will trigger manually with "sync now" |
+| Says "default" or skips | Create one default cron job at 21:00 (9 PM)           |
+| Doesn't want auto-sync  | Skip — user will trigger manually with "sync now"     |
 
 **Creating cron jobs:**
 
@@ -140,7 +140,7 @@ For each sync time, create a cron job with:
 - **Delivery:** `announce` (so user sees sync results)
 - **Payload:** `agentTurn` with message:
   ```
-  Trigger a MemSpren sync now. Read the sync-buffer at {vault_path}/.second-brain/Memory/sync-buffer.md
+  Trigger a MemSpren sync now. Read the sync-buffer at {vault_path}/.second-brain/memory/sync-buffer.md
   — if pending_sync is true, execute the full sync protocol: read Protocols/sync-protocol.md from
   the memspren skill, follow all 11 steps (validate obsidian-cli, load state, process buffer, batch
   create/update Obsidian entities, recalculate insights.md + goals.md + hot-memory.md, archive buffer,
@@ -176,11 +176,11 @@ Say:
 Ask:
 > "Do you want a daily journaling prompt during check-ins?"
 
-| Answer | Action |
-|---|---|
-| No | Skip — do not create journaling protocol |
-| Yes (default) | Create `Protocols/journaling-context.md` with default questions |
-| Yes (custom) | Ask: *"What would you like to reflect on each day?"* → capture response → create `Protocols/journaling-context.md` from their input |
+| Answer        | Action                                                                                                                              |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| No            | Skip — do not create journaling protocol                                                                                            |
+| Yes (default) | Create `Protocols/journaling-context.md` with default questions                                                                     |
+| Yes (custom)  | Ask: *"What would you like to reflect on each day?"* → capture response → create `Protocols/journaling-context.md` from their input |
 
 Default journaling questions:
 - What were today's wins?
@@ -197,10 +197,10 @@ Ask:
 > "Do you want to track anything daily — health, habits,
 > energy, sleep, anything like that?"
 
-| Answer | Action |
-|---|---|
-| No | Skip — do not create any lifestyle protocol |
-| Yes | Ask follow-up questions one at a time (see below) |
+| Answer | Action                                            |
+| ------ | ------------------------------------------------- |
+| No     | Skip — do not create any lifestyle protocol       |
+| Yes    | Ask follow-up questions one at a time (see below) |
 
 For each area they mention, ask ONE AT A TIME:
 > "For [area] — what would you like to check in on?
@@ -299,7 +299,7 @@ auto_archive_enabled: true
 setup_complete: false
 ```
 
-### Create .second-brain/Memory/hot-memory.md
+### Create .second-brain/memory/hot-memory.md
 
 Write using the Write tool:
 
@@ -317,7 +317,7 @@ KEY_INSIGHTS
 IDEAS_PARKED
 ```
 
-### Create .second-brain/Memory/insights.md
+### Create .second-brain/memory/insights.md
 
 Write using the Write tool:
 
@@ -342,7 +342,7 @@ MINDSET_STATE
 VISION_ALIGNMENT
 ```
 
-### Create .second-brain/Memory/goals.md
+### Create .second-brain/memory/goals.md
 
 Write using the Write tool:
 
@@ -365,7 +365,7 @@ WEEKLY_MICRO_GOALS
 QUARTERLY_GOALS
 ```
 
-### Create .second-brain/Memory/sync-buffer.md
+### Create .second-brain/memory/sync-buffer.md
 
 Write using the Write tool:
 
@@ -378,7 +378,7 @@ entry_count: 0
 ---
 ```
 
-### Create .second-brain/Memory/sync-archive/ directory
+### Create .second-brain/memory/sync-archive/ directory
 
 Create the directory for archived sync buffers.
 
@@ -392,7 +392,7 @@ Tell user:
 > "I've initialized git in your vault for version control. Every time I modify
 > a file, I'll commit the previous version first so nothing is ever lost."
 
-### Create .second-brain/Memory/system-state.md
+### Create .second-brain/memory/system-state.md
 
 Write using the Write tool:
 
@@ -426,18 +426,18 @@ Say:
 
 Walk through each area naturally:
 
-| Folder | What it's for |
-|---|---|
-| `Vision/` | Your why — values, vision, principles |
-| `Strategy/` | Quarterly goals and active strategies |
-| `Work/Projects/` | Deadline-driven work with tasks |
-| `Work/Ideas/` | Lightweight captures, no pressure |
-| `People/` | Everyone you interact with, linked to your work |
-| `Tasks/` | One unified inbox for all tasks |
-| `Log/` | Daily notes, weekly reviews, analysis |
-| `Notes/` | Learnings, resources, reference material |
-| `Inbox/` | Catch-all for anything unsorted |
-| `Archive/` | Nothing ever deleted — everything lives here |
+| Folder           | What it's for                                   |
+| ---------------- | ----------------------------------------------- |
+| `Vision/`        | Your why — values, vision, principles           |
+| `Strategy/`      | Quarterly goals and active strategies           |
+| `Work/Projects/` | Deadline-driven work with tasks                 |
+| `Work/Ideas/`    | Lightweight captures, no pressure               |
+| `People/`        | Everyone you interact with, linked to your work |
+| `Tasks/`         | One unified inbox for all tasks                 |
+| `Log/`           | Daily notes, weekly reviews, analysis           |
+| `Notes/`         | Learnings, resources, reference material        |
+| `Inbox/`         | Catch-all for anything unsorted                 |
+| `Archive/`       | Nothing ever deleted — everything lives here    |
 
 If journaling enabled:
 > "I'll ask your journaling questions during check-ins.
@@ -459,7 +459,7 @@ Close with:
 
 Change `setup_complete: false` → `setup_complete: true` and write back using Write tool.
 
-**Update .second-brain/Memory/system-state.md:**
+**Update .second-brain/memory/system-state.md:**
 
 Change `setup_complete: false` → `setup_complete: true` in frontmatter and write back.
 
@@ -477,9 +477,9 @@ obsidian vault="[vault_name]" create \
 
 ## Error handling
 
-| Problem | Action |
-|---|---|
-| obsidian-cli not responding | Check if Obsidian is running. Tell user: "Please open Obsidian and ensure the CLI is enabled in Settings → General." |
-| Vault path can't be accessed | Tell user, ask for different path — do not proceed |
-| User skips all optional steps | Fine — create structure only, no protocol files |
-| User wants to restart setup | Set `setup_complete: false` in both `.second-brain/config.md` and `.second-brain/Memory/system-state.md`, then reload |
+| Problem                       | Action                                                                                                                |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| obsidian-cli not responding   | Check if Obsidian is running. Tell user: "Please open Obsidian and ensure the CLI is enabled in Settings → General."  |
+| Vault path can't be accessed  | Tell user, ask for different path — do not proceed                                                                    |
+| User skips all optional steps | Fine — create structure only, no protocol files                                                                       |
+| User wants to restart setup   | Set `setup_complete: false` in both `.second-brain/config.md` and `.second-brain/memory/system-state.md`, then reload |

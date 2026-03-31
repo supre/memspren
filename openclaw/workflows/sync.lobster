@@ -137,20 +137,21 @@ steps:
     run: >
       uv run scripts/memcli.py
       entity-write
-      --plan "$entity_plan.json"
+      --plan "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/entity-plan.json"
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --vault-name "$LOBSTER_ARG_VAULT_NAME"
       --write-mode "filesystem"
 
   # ─── STAGE 4d: ENTITY LINKING ─────────────────────────────────────────────
   # Separate step: determine wikilinks, create stubs for missing targets.
+  # Reads written entities from the entity-write output saved to run/.
 
   - id: entity_links
     run: >
       uv run scripts/memcli.py
       entity-link
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
-      --written-entities "$entity_writes.json"
+      --written-entities "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/entity-write-result.json"
 
   # ─── STAGE 5: METRICS + CLEANUP ───────────────────────────────────────────
 

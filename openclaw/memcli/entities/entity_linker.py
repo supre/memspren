@@ -209,8 +209,16 @@ def run(
     written_entities: str = "[]",
     log: Logger,
 ) -> dict:
+    # written_entities can be a file path or inline JSON
+    we_path = Path(written_entities)
+    if we_path.is_file():
+        we_text = we_path.read_text(encoding="utf-8")
+        log.debug("read written entities from file", path=written_entities)
+    else:
+        we_text = written_entities
+
     try:
-        entities_list = json.loads(written_entities)
+        entities_list = json.loads(we_text)
         if isinstance(entities_list, dict):
             entities_list = entities_list.get("entities", [])
         if not isinstance(entities_list, list):

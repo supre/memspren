@@ -190,8 +190,16 @@ def run(
     write_mode: str = "filesystem",
     log: Logger,
 ) -> dict:
+    # plan can be a file path or inline JSON
+    plan_path = Path(plan)
+    if plan_path.is_file():
+        plan_text = plan_path.read_text(encoding="utf-8")
+        log.debug("read plan from file", path=plan)
+    else:
+        plan_text = plan
+
     try:
-        plan_data = json.loads(plan)
+        plan_data = json.loads(plan_text)
         entities = plan_data.get("entities", plan_data) if isinstance(plan_data, dict) else plan_data
         if not isinstance(entities, list):
             entities = []
@@ -215,6 +223,17 @@ def run(
     written = len(entity_results) - len(failed)
 
     log.info("entity writer complete", written=written, created=created, updated=updated, failed=len(failed))
+
+    # Save result to run/ for the linking step
+    from ..paths import VaultPaths
+    paths = VaultPaths(vault_path)
+    result_file = paths.run / "entity-write-result.json"
+    entity_list = [{"path": r["path"], "action": r["action"]} for r in entity_results if r.get("ok")]
+    try:
+        result_file.write_text(json.dumps({"entities": entity_list}), encoding="utf-8")
+        log.debug("saved entity-write result", path=str(result_file))
+    except Exception as e:
+        log.warn(f"could not save entity-write result: {e}")
 
     return {
         "ok": written > 0 or len(entities) == 0,

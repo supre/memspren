@@ -1,0 +1,2 @@
+[console_scripts]
+memcli = memcli.cli:main

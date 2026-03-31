@@ -24,7 +24,7 @@ def run(
     manual_edits_file: Path,
     frontmatter_file: str = "",
     agent: str = "memspren-heavy",
-    timeout: int = 120,
+    timeout: int = 180,
     log: Logger,
 ) -> dict:
     # Read raw buffer content
@@ -33,10 +33,16 @@ def run(
     buffer_content = buffer_content_file.read_text(encoding="utf-8")
     log.debug("read buffer content", length=len(buffer_content))
 
-    # Read manual edits
+    # Read manual edits (cap at 20KB to stay within LLM context limits)
+    MAX_EDITS_CHARS = 20000
     manual_edits = ""
     if manual_edits_file.exists():
-        manual_edits = manual_edits_file.read_text(encoding="utf-8")
+        raw_edits = manual_edits_file.read_text(encoding="utf-8")
+        if len(raw_edits) > MAX_EDITS_CHARS:
+            manual_edits = raw_edits[:MAX_EDITS_CHARS] + f"\n\n[... truncated — {len(raw_edits) - MAX_EDITS_CHARS} chars omitted ...]"
+            log.warn("manual edits truncated", original_len=len(raw_edits), truncated_to=MAX_EDITS_CHARS)
+        else:
+            manual_edits = raw_edits
     log.debug("read manual edits", length=len(manual_edits))
 
     # Read existing frontmatter
@@ -114,4 +120,19 @@ def run(
     entity_count = len(output.get("entities", [])) if isinstance(output, dict) else 0
     log.info("entity plan complete", entity_count=entity_count,
              summary=output.get("summary", "") if isinstance(output, dict) else "")
+
+    # Save plan to run/ so downstream steps can read from file (avoids shell quoting issues)
+    from ..paths import VaultPaths
+    if buffer_content_file.parent.name == "run":
+        run_dir = buffer_content_file.parent
+    else:
+        # Derive from any available vault path info
+        run_dir = buffer_content_file.parent
+    try:
+        plan_file = run_dir / "entity-plan.json"
+        plan_file.write_text(json.dumps(output), encoding="utf-8")
+        log.debug("saved entity plan", path=str(plan_file))
+    except Exception as e:
+        log.warn(f"could not save entity plan to file: {e}")
+
     return output

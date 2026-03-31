@@ -51,15 +51,15 @@ Triggered by saying "sync now", on a cron interval, or at the end of a check-in:
 
 ### Entity types
 
-| Entity | Vault path | Description |
-|---|---|---|
-| Project | `Work/Projects/[name].md` | Deadline-driven work with goals and progress notes |
-| Idea | `Work/Ideas/[name].md` | Atomic thoughts, seeds for future projects |
-| Person | `People/[name].md` | Interaction logs, connections to projects |
-| Task | `Tasks/tasks-inbox.md` | Unified inbox, appended not created |
-| Learning | `Notes/Learnings/[topic].md` | Things learned, connected to active work |
-| Daily log | `Log/Daily/YYYY-MM-DD.md` | One note per day, hub of all entities |
-| KT | `Work/KT/[topic].md` | Knowledge transfer structured summaries |
+| Entity    | Vault path                   | Description                                        |
+| --------- | ---------------------------- | -------------------------------------------------- |
+| Project   | `Work/Projects/[name].md`    | Deadline-driven work with goals and progress notes |
+| Idea      | `Work/Ideas/[name].md`       | Atomic thoughts, seeds for future projects         |
+| Person    | `People/[name].md`           | Interaction logs, connections to projects          |
+| Task      | `Tasks/tasks-inbox.md`       | Unified inbox, appended not created                |
+| Learning  | `Notes/Learnings/[topic].md` | Things learned, connected to active work           |
+| Daily log | `Log/Daily/YYYY-MM-DD.md`    | One note per day, hub of all entities              |
+| KT        | `Work/KT/[topic].md`         | Knowledge transfer structured summaries            |
 
 ## File structure
 
@@ -86,7 +86,7 @@ openclaw/
 [vault]/
 ├── .second-brain/                    # Skill state (not vault content)
 │   ├── config.md                     # Settings, sync config, custom protocols
-│   └── Memory/
+│   └── memory/
 │       ├── insights.md               # User patterns, energy, mindset (~700 tokens)
 │       ├── goals.md                  # Priorities, weekly/quarterly goals (~500 tokens)
 │       ├── hot-memory.md             # Active project/task state (~500 tokens)

@@ -52,11 +52,11 @@ The LLM only runs inside explicit `llm-task` directive steps. Lobster handles ex
 
 The memory model from v0.01 is preserved:
 
-| Layer | What | When |
-|---|---|---|
-| Layer 1 | `insights.md`, `goals.md`, `hot-memory.md`, `system-state.md` | Read every session (~2000 tokens) |
-| Layer 2 | Rotating sync buffers | Write-only during conversation; read during sync |
-| Layer 3 | Obsidian vault entities | Written during sync only |
+| Layer   | What                                                          | When                                             |
+| ------- | ------------------------------------------------------------- | ------------------------------------------------ |
+| Layer 1 | `insights.md`, `goals.md`, `hot-memory.md`, `system-state.md` | Read every session (~2000 tokens)                |
+| Layer 2 | Rotating sync buffers                                         | Write-only during conversation; read during sync |
+| Layer 3 | Obsidian vault entities                                       | Written during sync only                         |
 
 ### The pipeline (new)
 
@@ -78,13 +78,13 @@ Stage 5: Metrics/cleanup (scripts, no LLM)
 
 All large or user-authored data (buffer content, manual edits, extraction output, task titles, frontmatter descriptions) is passed between pipeline stages via files in `MEMORY_PATH/run/`, never as inline CLI arguments. Lobster interpolation (`$stepId.json.field`) is only used for short, safe values: file paths, booleans, counts, and classifier names. This prevents any user-typed text containing quotes, braces, or newlines from breaking the command line.
 
-| File written by | File | Read by |
-|---|---|---|
-| `rotate_buffer.py` | `run/buffer-content.txt` | `run_extraction.py` |
-| `vault_diff_scanner.py` | `run/manual-edits.txt` | `run_extraction.py` |
-| `run_extraction.py` | `run/extraction-output.json` | `parallel_memory.py`, `run_entity_plan.py` |
-| `task_inbox_scanner.py` | `run/task-inbox.json` | `parallel_memory.py`, `run_entity_plan.py` |
-| `read_frontmatter.py` | `run/frontmatter.json` | `run_entity_plan.py` |
+| File written by         | File                         | Read by                                    |
+| ----------------------- | ---------------------------- | ------------------------------------------ |
+| `rotate_buffer.py`      | `run/buffer-content.txt`     | `run_extraction.py`                        |
+| `vault_diff_scanner.py` | `run/manual-edits.txt`       | `run_extraction.py`                        |
+| `run_extraction.py`     | `run/extraction-output.json` | `parallel_memory.py`, `run_entity_plan.py` |
+| `task_inbox_scanner.py` | `run/task-inbox.json`        | `parallel_memory.py`, `run_entity_plan.py` |
+| `read_frontmatter.py`   | `run/frontmatter.json`       | `run_entity_plan.py`                       |
 
 ---
 
@@ -96,11 +96,11 @@ The pipeline definition. A YAML workflow file that Lobster executes as a single 
 
 **Required args at invocation:**
 
-| Arg | Description |
-|---|---|
-| `vault_path` | Absolute path to the Obsidian vault root |
-| `vault_name` | Exact vault name as shown in Obsidian → Manage vaults (used for all CLI calls) |
-| `config_path` | Path to `.second-brain/config.md` |
+| Arg           | Description                                                                    |
+| ------------- | ------------------------------------------------------------------------------ |
+| `vault_path`  | Absolute path to the Obsidian vault root                                       |
+| `vault_name`  | Exact vault name as shown in Obsidian → Manage vaults (used for all CLI calls) |
+| `config_path` | Path to `.second-brain/config.md`                                              |
 
 `vault_name` must match exactly — it is passed directly to `obsidian vault=<name>` CLI calls. A mismatch forces the pipeline into filesystem mode even when obsidian-cli is available.
 
@@ -109,7 +109,7 @@ The pipeline definition. A YAML workflow file that Lobster executes as a single 
 - All `llm-task` invocations use `openclaw.invoke --tool llm-task --action invoke --agent <name>` with args passed as `{"args": {...}}` in the request body
 - The approval gate (`id: approval`) pauses execution; resume with `lobster resume <token> --approve`
 - All script steps are invoked via `python -m scripts.runner scripts/memcli.py <command>` — memcli centralizes argument handling (locking is handled globally)
-- Lobster does not support `on_error:`/`finally:` handlers. Lock safety relies on `scripts/write_lock.py` acquiring `.second-brain/Memory/sync.lock` at Stage 0 and releasing it in Stage 5 (stale-lock auto-detection defaults to 2h).
+- Lobster does not support `on_error:`/`finally:` handlers. Lock safety relies on `scripts/write_lock.py` acquiring `.second-brain/memory/sync.lock` at Stage 0 and releasing it in Stage 5 (stale-lock auto-detection defaults to 2h).
 
 **Lobster limitations discovered during v0.4 implementation:**
 1. **No JSON path access**: `$step.json.field` syntax not supported (only `$step.json`, `$step.stdout`, `$step.approved`, `$step.skipped`)
@@ -154,7 +154,7 @@ step acquires the global pipeline lock (`sync.lock`); no other step runs until
 it succeeds.
 
 **`write_lock.py`**
-Writes `sync.lock` to `.second-brain/Memory/`. If the lock already exists it
+Writes `sync.lock` to `.second-brain/memory/`. If the lock already exists it
 inspects the `locked_at` timestamp — locks older than the configured threshold
 (default 2 hours) are treated as stale and auto-released rather than aborting.
 This handles the case where a previous pipeline crashed without releasing. Live
@@ -217,19 +217,19 @@ Validated against `schemas/extraction_schema.json`. **Note:** The classifier enu
 **`parallel_memory.py`** (new)
 Dispatches four `llm-task` jobs simultaneously via `ThreadPoolExecutor(max_workers=4)`. Reads extraction output from `MEMORY_PATH/run/extraction-output.json` and task inbox from the file path passed via `--task-inbox-file`. Each job reads its prompt and schema from disk, builds the payload as `{"tool": "llm-task", "action": "invoke", "args": {...}}`, and calls the OpenClaw Gateway `/tools/invoke` endpoint through `gateway_client.post_json` (same pattern as run_extraction.py).
 
-| Job | Agent | Input | Output |
-|---|---|---|---|
-| insights | heavy | raw_insights, raw_patterns, existing insights.md | complete replacement insights.md |
-| goals | light | raw_goals, task_inbox, existing goals.md | complete replacement goals.md |
-| tasks | light | raw_tasks, task_inbox, existing tasks.md | complete replacement tasks.md |
-| hot_memory | light | raw_goals, raw_tasks, existing hot-memory.md | complete replacement hot-memory.md |
+| Job        | Agent | Input                                            | Output                             |
+| ---------- | ----- | ------------------------------------------------ | ---------------------------------- |
+| insights   | heavy | raw_insights, raw_patterns, existing insights.md | complete replacement insights.md   |
+| goals      | light | raw_goals, task_inbox, existing goals.md         | complete replacement goals.md      |
+| tasks      | light | raw_tasks, task_inbox, existing tasks.md         | complete replacement tasks.md      |
+| hot_memory | light | raw_goals, raw_tasks, existing hot-memory.md     | complete replacement hot-memory.md |
 
 Each job validates its output against its schema immediately using `jsonschema`. A failed or invalid job does not block the others — its slot returns `ok: false` and the existing file is preserved by the merge step.
 
 ### Stage 3 — Merge
 
 **`merge.py`** (new)
-Pure collection and validation. No LLM. Reads the four parallel refinement results, validates each, and writes the files to `.second-brain/Memory/`. If all four fail, aborts before vault writes. If some fail, continues with the successful ones and logs the fallbacks in the approval gate summary.
+Pure collection and validation. No LLM. Reads the four parallel refinement results, validates each, and writes the files to `.second-brain/memory/`. If all four fail, aborts before vault writes. If some fail, continues with the successful ones and logs the fallbacks in the approval gate summary.
 
 ### Stage 4a — Frontmatter scan
 
@@ -238,17 +238,17 @@ Reads only YAML frontmatter (not body) for all files in classifier-scoped vault 
 
 Classifier → folder mapping:
 
-| Classifier | Folder |
-|---|---|
-| project:personal / project:work | Work/Projects/ |
-| idea | Work/Ideas/ |
-| people / relationship | People/ |
-| learning | Notes/Learnings/ |
-| log | Log/Daily/ |
-| pattern | Notes/Patterns/ |
-| vision | Vision/ |
-| strategy | Strategy/ |
-| kt | Work/KT/ |
+| Classifier                      | Folder           |
+| ------------------------------- | ---------------- |
+| project:personal / project:work | Work/Projects/   |
+| idea                            | Work/Ideas/      |
+| people / relationship           | People/          |
+| learning                        | Notes/Learnings/ |
+| log                             | Log/Daily/       |
+| pattern                         | Notes/Patterns/  |
+| vision                          | Vision/          |
+| strategy                        | Strategy/        |
+| kt                              | Work/KT/         |
 
 ### Stage 4b — Entity plan
 
@@ -276,7 +276,7 @@ The pipeline pauses and returns a `resumeToken`. The agent presents the write pl
 ```
 Sync ready to write.
 
-Memory: insights OK, goals OK, tasks OK, hot-memory FALLBACK
+memory: insights OK, goals OK, tasks OK, hot-memory FALLBACK
 Vault:  2 create (daily log, person), 1 append (project), 1 merge (pattern)
 Manual edits absorbed: 3
 
@@ -303,7 +303,7 @@ Validated against `schemas/entity_content_schema.json` and `schemas/entity_linki
 ### Stage 5 — Metrics and cleanup
 
 **`metrics_writer.py`** (new)
-Collects results from all prior stages and writes `metrics.json` to `.second-brain/Memory/`. Routes `Logs/system-log.md` writes through obsidian-cli when `write_mode == "obsidian"` (so Obsidian's watchers are triggered), falls back to direct filesystem write otherwise.
+Collects results from all prior stages and writes `metrics.json` to `.second-brain/memory/`. Routes `Logs/system-log.md` writes through obsidian-cli when `write_mode == "obsidian"` (so Obsidian's watchers are triggered), falls back to direct filesystem write otherwise.
 
 **`last_sync` is only advanced when `entity_writes_ok` is true.** If the user declined the approval gate or Stage 4c failed, `last_sync` is not updated and the log entry reads "SYNC INCOMPLETE" instead of "SYNC COMPLETE". This ensures the next run's `vault_diff_scanner` still sees the un-synced manual edits — the diff checkpoint stays at the last successful write.
 
@@ -340,29 +340,29 @@ Runs at the end of Stage 5 to release `sync.lock` and prune stale Lobster
 
 Eight JSON Schema files. Every `llm-task` output is validated immediately after the call. Invalid output → existing file kept, logged as WARN. Pipeline never writes malformed data.
 
-| Schema | Validates |
-|---|---|
-| `extraction_schema.json` | Stage 1 extraction output |
-| `insights_schema.json` | insights.md replacement (enforces 3500 char ceiling ≈ 700 tokens) |
-| `goals_schema.json` | goals.md replacement (2500 char ceiling ≈ 500 tokens) |
-| `tasks_schema.json` | tasks.md replacement |
-| `hot_memory_schema.json` | hot-memory.md replacement (2500 char ceiling ≈ 500 tokens) |
-| `entity_plan_schema.json` | Stage 4b entity plan (path, action, content_draft per entity) |
-| `entity_content_schema.json` | Stage 4c content directive output (frontmatter + body) |
+| Schema                       | Validates                                                          |
+| ---------------------------- | ------------------------------------------------------------------ |
+| `extraction_schema.json`     | Stage 1 extraction output                                          |
+| `insights_schema.json`       | insights.md replacement (enforces 3500 char ceiling ≈ 700 tokens)  |
+| `goals_schema.json`          | goals.md replacement (2500 char ceiling ≈ 500 tokens)              |
+| `tasks_schema.json`          | tasks.md replacement                                               |
+| `hot_memory_schema.json`     | hot-memory.md replacement (2500 char ceiling ≈ 500 tokens)         |
+| `entity_plan_schema.json`    | Stage 4b entity plan (path, action, content_draft per entity)      |
+| `entity_content_schema.json` | Stage 4c content directive output (frontmatter + body)             |
 | `entity_linking_schema.json` | Stage 4c linking directive output (wikilinks, connected_additions) |
 
 ### Prompts (`prompts/`)
 
 Eight prompt files — one per `llm-task` directive. Separated from scripts and the workflow file so they can be edited independently without touching pipeline logic.
 
-| Prompt | Used by |
-|---|---|
-| `extraction_prompt.txt` | Stage 1 extraction |
-| `insights_prompt.txt` | Stage 2 insights job |
-| `goals_prompt.txt` | Stage 2 goals job |
-| `tasks_prompt.txt` | Stage 2 tasks job |
-| `hot_memory_prompt.txt` | Stage 2 hot-memory job |
-| `entity_plan_prompt.txt` | Stage 4b entity plan |
+| Prompt                      | Used by                    |
+| --------------------------- | -------------------------- |
+| `extraction_prompt.txt`     | Stage 1 extraction         |
+| `insights_prompt.txt`       | Stage 2 insights job       |
+| `goals_prompt.txt`          | Stage 2 goals job          |
+| `tasks_prompt.txt`          | Stage 2 tasks job          |
+| `hot_memory_prompt.txt`     | Stage 2 hot-memory job     |
+| `entity_plan_prompt.txt`    | Stage 4b entity plan       |
 | `entity_content_prompt.txt` | Stage 4c content directive |
 | `entity_linking_prompt.txt` | Stage 4c linking directive |
 
@@ -387,7 +387,7 @@ The agent name is passed via `--agent <name>` to `openclaw.invoke` at each call 
 
 ## Telemetry
 
-Every step writes to `.second-brain/Memory/sync-telemetry.log`:
+Every step writes to `.second-brain/memory/sync-telemetry.log`:
 
 ```
 [ISO ts] [LEVEL] [runner] action=run:check_cli.py result=OK
@@ -399,12 +399,12 @@ To diagnose a failed sync: read the telemetry log. Missing entries prove exactly
 
 Verbosity is configurable in `config.md`:
 
-| Level | What is logged |
-|---|---|
-| `ERROR` | Failures, aborts, schema rejections |
-| `WARN` | Fallbacks, retries, partial failures |
-| `INFO` | Step completed, entity written, memory file updated (default) |
-| `DEBUG` | Full prompt/response text, token counts, diffs |
+| Level   | What is logged                                                |
+| ------- | ------------------------------------------------------------- |
+| `ERROR` | Failures, aborts, schema rejections                           |
+| `WARN`  | Fallbacks, retries, partial failures                          |
+| `INFO`  | Step completed, entity written, memory file updated (default) |
+| `DEBUG` | Full prompt/response text, token counts, diffs                |
 
 ---
 
@@ -506,10 +506,10 @@ Run the pre-flight checks manually before the first sync:
 
 ```bash
 # Check obsidian-cli with your exact vault name
-python -m scripts.runner scripts/memcli.py check-cli --vault "Your Vault Name" --vault-path "/path/to/vault" --memory-path "/path/to/vault/.second-brain/Memory" --json
+python -m scripts.runner scripts/memcli.py check-cli --vault "Your Vault Name" --vault-path "/path/to/vault" --memory-path "/path/to/vault/.second-brain/memory" --json
 
 # Check buffer state
-python -m scripts.runner scripts/memcli.py rotate-buffer --vault-path "/path/to/vault" --memory-path "/path/to/vault/.second-brain/Memory" --check
+python -m scripts.runner scripts/memcli.py rotate-buffer --vault-path "/path/to/vault" --memory-path "/path/to/vault/.second-brain/memory" --check
 
 # Test runner wrapper
 python -m scripts.runner scripts/memcli.py write-lock --memory-path "/tmp/test-memspren" && \
@@ -555,18 +555,18 @@ lobster run workflows/sync.lobster \
 
 ### What changes in behaviour
 
-| Behaviour | Before | After |
-|---|---|---|
-| Memory updates | Sequential, steps 5-7 of 11 | Parallel, schema-validated, in Stage 2 |
-| Vault writes | Immediate, no approval | Gated — user reviews write plan first |
-| Failures | Silent skip | Explicit telemetry log entry per step |
-| obsidian-cli unavailable | Sync aborts | Filesystem fallback, sync continues |
-| obsidian-cli linking | N/A | Filesystem fallback for `connected:` updates too |
-| Manual Obsidian edits | Invisible to sync | Ingested via git diff (committed + working tree) |
-| Buffer rotation | Word-count threshold only | Seals on any entries at sync time |
-| last_sync on failed write | Always updated | Only updated when entity writes succeed |
-| Command-level locking | Single `sync.lock` gate | Global `sync.lock` managed by `write_lock.py`; manual release: `python scripts/write_lock.py --release` |
-| Vault name for CLI calls | Derived from folder name | Explicitly provided via vault_name arg |
+| Behaviour                 | Before                      | After                                                                                                   |
+| ------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------- |
+| memory updates            | Sequential, steps 5-7 of 11 | Parallel, schema-validated, in Stage 2                                                                  |
+| Vault writes              | Immediate, no approval      | Gated — user reviews write plan first                                                                   |
+| Failures                  | Silent skip                 | Explicit telemetry log entry per step                                                                   |
+| obsidian-cli unavailable  | Sync aborts                 | Filesystem fallback, sync continues                                                                     |
+| obsidian-cli linking      | N/A                         | Filesystem fallback for `connected:` updates too                                                        |
+| Manual Obsidian edits     | Invisible to sync           | Ingested via git diff (committed + working tree)                                                        |
+| Buffer rotation           | Word-count threshold only   | Seals on any entries at sync time                                                                       |
+| last_sync on failed write | Always updated              | Only updated when entity writes succeed                                                                 |
+| Command-level locking     | Single `sync.lock` gate     | Global `sync.lock` managed by `write_lock.py`; manual release: `python scripts/write_lock.py --release` |
+| Vault name for CLI calls  | Derived from folder name    | Explicitly provided via vault_name arg                                                                  |
 
 ---
 

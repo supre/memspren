@@ -3,8 +3,8 @@
 Triggered when user says "check in", "let's do my daily check-in",
 "end of day", or anything signaling they want to log their day.
 
-Read `.second-brain/Memory/insights.md`, `.second-brain/Memory/goals.md`,
-and `.second-brain/Memory/hot-memory.md` before starting.
+Read `.second-brain/memory/insights.md`, `.second-brain/memory/goals.md`,
+and `.second-brain/memory/hot-memory.md` before starting.
 These are your ONLY context sources during conversation — do NOT read vault files.
 
 Read `Protocols/entity-protocol.md` only during sync (not during conversation).
@@ -46,7 +46,7 @@ Do not ask structured questions yet. Let the user set the tone.
 
 ## Step 2: Check for missed days
 
-**Read** `.second-brain/Memory/system-state.md` to get `last_checkin_date`.
+**Read** `.second-brain/memory/system-state.md` to get `last_checkin_date`.
 
 Compare today's date against `last_checkin_date`.
 
@@ -132,7 +132,7 @@ This is where the old protocol wrote directly to Obsidian.
 **NEW: Write to sync-buffer.md instead.**
 
 For everything the user shared, append a DETAILED entry to
-`.second-brain/Memory/sync-buffer.md` using the Write/Edit tool.
+`.second-brain/memory/sync-buffer.md` using the Write/Edit tool.
 
 **Entry format:**
 ```markdown
@@ -183,7 +183,7 @@ For minor updates, let the sync recalculation handle it.
 
 ## Step 7: Journaling (if enabled)
 
-**Read** `.second-brain/Memory/system-state.md` → check `journaling: true/false`
+**Read** `.second-brain/memory/system-state.md` → check `journaling: true/false`
 
 If false → skip this step entirely.
 
@@ -197,7 +197,7 @@ Capture answers in the sync-buffer entry (append to the current entry's Full Con
 
 ## Step 8: Lifestyle check-in (if enabled)
 
-**Read** `.second-brain/Memory/system-state.md` → check `lifestyle_tracking: true/false`
+**Read** `.second-brain/memory/system-state.md` → check `lifestyle_tracking: true/false`
 
 If false → skip this step entirely.
 
@@ -264,10 +264,10 @@ last_checkin_summary: [one line summary]
 
 ## Error handling
 
-| Problem                                  | Action                                                                             |
-| ---------------------------------------- | ---------------------------------------------------------------------------------- |
-| User is very brief, gives minimal info   | Ask one open follow-up: *"Anything else on your mind today?"* — don't push further |
-| User wants to skip check-in              | Respect it. Note in buffer: `CHECK-IN SKIPPED` with date.                          |
-| User contradicts something in insights   | Trust the user. Update insights.md immediately.                                    |
-| User seems stressed or overwhelmed       | Acknowledge it first before any capture. Don't push through the checklist.         |
-| Buffer write fails                       | Fall back to updating insights.md and goals.md directly. Log the failure.          |
+| Problem                                | Action                                                                             |
+| -------------------------------------- | ---------------------------------------------------------------------------------- |
+| User is very brief, gives minimal info | Ask one open follow-up: *"Anything else on your mind today?"* — don't push further |
+| User wants to skip check-in            | Respect it. Note in buffer: `CHECK-IN SKIPPED` with date.                          |
+| User contradicts something in insights | Trust the user. Update insights.md immediately.                                    |
+| User seems stressed or overwhelmed     | Acknowledge it first before any capture. Don't push through the checklist.         |
+| Buffer write fails                     | Fall back to updating insights.md and goals.md directly. Log the failure.          |
