@@ -1,95 +1,76 @@
-#!/usr/bin/env python3
 """
 run_entity_plan.py — Stage 4b entity plan wrapper.
 
-Reads extraction, frontmatter, and task_inbox all from temp files to avoid
-shell interpolation of user-authored strings (descriptions, task titles) in
-Lobster YAML. All three inputs are written to MEMORY_PATH/run/ by their
-respective pipeline steps before this script is called.
-
-Returns JSON to stdout (runner-compatible — no other stdout output).
+Reads extraction, frontmatter, and task_inbox from temp files to avoid
+shell interpolation of user-authored strings in Lobster YAML.
 """
 
-import argparse
+from __future__ import annotations
+
 import json
-import sys
 from pathlib import Path
 
 from .. import gateway_client
 from .. import PROMPTS_DIR, SCHEMAS_DIR
 from ..gateway import get_gateway_token, get_gateway_endpoint
 
-# Prompt and schema are fixed for Stage 4b entity plan — not exposed as CLI flags
 PROMPT_FILE = PROMPTS_DIR / "entity_plan_prompt.txt"
 SCHEMA_FILE = SCHEMAS_DIR / "entity_plan_schema.json"
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--extraction-file", required=True,
-                        help="Path to extraction-output.json saved by run_extraction.py")
-    parser.add_argument("--frontmatter-file", default="",
-                        help="Path to frontmatter.json saved by read_frontmatter.py")
-    parser.add_argument("--task-inbox-file", default="",
-                        help="Path to task-inbox.json saved by task_inbox_scanner.py")
-    parser.add_argument("--agent", default="memspren-heavy")
-    parser.add_argument("--timeout", type=int, default=120)
-    args = parser.parse_args()
-
-    # Read extraction output from file (avoids shell-interpolating large JSON)
+def run(
+    *,
+    extraction_file: Path,
+    frontmatter_file: str = "",
+    task_inbox_file: str = "",
+    agent: str = "memspren-heavy",
+    timeout: int = 120,
+) -> dict:
     try:
-        extraction = json.loads(Path(args.extraction_file).read_text(encoding="utf-8"))
+        extraction = json.loads(Path(extraction_file).read_text(encoding="utf-8"))
     except Exception as e:
-        print(json.dumps({"ok": False, "error": f"could not read extraction file: {e}"}))
-        sys.exit(1)
+        raise RuntimeError(f"could not read extraction file: {e}") from e
 
     frontmatter: list = []
-    if args.frontmatter_file:
+    if frontmatter_file:
         try:
-            frontmatter = json.loads(Path(args.frontmatter_file).read_text(encoding="utf-8"))
+            frontmatter = json.loads(Path(frontmatter_file).read_text(encoding="utf-8"))
         except Exception:
             frontmatter = []
 
     task_inbox: dict = {}
-    if args.task_inbox_file:
+    if task_inbox_file:
         try:
-            task_inbox = json.loads(Path(args.task_inbox_file).read_text(encoding="utf-8"))
+            task_inbox = json.loads(Path(task_inbox_file).read_text(encoding="utf-8"))
         except Exception:
             task_inbox = {}
 
-    # Load prompt and schema
     try:
         prompt = PROMPT_FILE.read_text(encoding="utf-8").strip()
     except Exception as e:
-        print(json.dumps({"ok": False, "error": f"could not read prompt file: {e}"}))
-        sys.exit(1)
+        raise RuntimeError(f"could not read prompt file: {e}") from e
 
     try:
         schema = json.loads(SCHEMA_FILE.read_text(encoding="utf-8"))
     except Exception as e:
-        print(json.dumps({"ok": False, "error": f"could not read schema file: {e}"}))
-        sys.exit(1)
+        raise RuntimeError(f"could not read schema file: {e}") from e
 
     gateway_token = get_gateway_token()
-    endpoint      = get_gateway_endpoint()
+    endpoint = get_gateway_endpoint()
 
     payload = {
         "tool": "llm-task",
         "action": "invoke",
         "args": {
-            "prompt":    prompt,
-            "input":     {"extraction": extraction, "frontmatter": frontmatter, "task_inbox": task_inbox},
-            "schema":    schema,
-            "agent":     args.agent,
-            "timeoutMs": args.timeout * 1000,
+            "prompt": prompt,
+            "input": {"extraction": extraction, "frontmatter": frontmatter, "task_inbox": task_inbox},
+            "schema": schema,
+            "agent": agent,
+            "timeoutMs": timeout * 1000,
         },
     }
 
-    try:
-        result = gateway_client.post_json(endpoint, payload, token=gateway_token, timeout=args.timeout)
-    except RuntimeError as exc:
-        print(json.dumps({"ok": False, "error": str(exc)}))
-        sys.exit(1)
+    result = gateway_client.post_json(endpoint, payload, token=gateway_token, timeout=timeout)
 
     # Extract JSON from Gateway response
     try:
@@ -106,11 +87,6 @@ def main() -> None:
         else:
             output = result
     except Exception as exc:
-        print(json.dumps({"ok": False, "error": f"could not parse gateway response: {exc}", "raw": str(result)[:300]}))
-        sys.exit(1)
+        raise RuntimeError(f"could not parse gateway response: {exc}") from exc
 
-    print(json.dumps(output))
-
-
-if __name__ == "__main__":
-    main()
+    return output

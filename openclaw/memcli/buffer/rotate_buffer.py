@@ -24,13 +24,14 @@ Usage:
 Output: JSON to stdout
 """
 
-import argparse
+from __future__ import annotations
+
+import glob
 import json
 import os
 import re
-import glob
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 
 from .. import state
 
@@ -375,51 +376,40 @@ def sync_check(vault_path: str, memory_path: str = None) -> dict:
     }
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Manage rotating sync buffers")
-    parser.add_argument("--vault-path", required=True, help="Full path to Obsidian vault")
-    parser.add_argument("--check", action="store_true", help="Check current buffer status")
-    parser.add_argument("--sync-check", action="store_true",
-                        help="Pipeline pre-flight: seal active buffer if needed, return combined content")
-    parser.add_argument("--rotate", action="store_true", help="Seal current buffer, create new")
-    parser.add_argument("--list-sealed", action="store_true", help="List sealed buffers ready for sync")
-    parser.add_argument("--list-all", action="store_true", help="List all buffer files")
-    parser.add_argument("--active-path", action="store_true", help="Get path to active buffer")
-    parser.add_argument("--cleanup", action="store_true", help="Archive and delete a processed buffer")
-    parser.add_argument("--buffer-id", help="Buffer ID for cleanup")
-    parser.add_argument("--archive", action="store_true", default=True, help="Archive before cleanup")
-    parser.add_argument("--max-words", type=int, default=DEFAULT_MAX_WORDS, help="Max words per buffer")
-    parser.add_argument("--memory-path", default=None,
-                        help="Explicit MEMORY_PATH for writing temp files (sync-check mode)")
-    args = parser.parse_args()
-
-    if args.sync_check:
-        result = sync_check(args.vault_path, memory_path=args.memory_path)
-        # Write sealed_buffers to state for metrics step
-        if args.memory_path and result.get("sealed_buffers"):
-            state.write_state(args.memory_path, {
+def run(
+    *,
+    vault_path: str,
+    memory_path: str | None = None,
+    sync_check_mode: bool = False,
+    check: bool = False,
+    rotate_mode: bool = False,
+    list_sealed_mode: bool = False,
+    list_all: bool = False,
+    active_path: bool = False,
+    cleanup: bool = False,
+    buffer_id: str = "",
+    archive: bool = True,
+    max_words: int = DEFAULT_MAX_WORDS,
+) -> dict | list:
+    if sync_check_mode:
+        result = sync_check(vault_path, memory_path=memory_path)
+        if memory_path and result.get("sealed_buffers"):
+            state.write_state(memory_path, {
                 "rotate_buffer_sealed_buffers": result["sealed_buffers"],
             })
-    elif args.check:
-        result = check_status(args.vault_path, args.max_words)
-    elif args.rotate:
-        result = rotate(args.vault_path)
-    elif args.list_sealed:
-        result = list_sealed(args.vault_path)
-    elif args.list_all:
-        result = list_buffer_files(args.vault_path)
-    elif args.active_path:
-        result = get_active_path(args.vault_path)
-    elif args.cleanup:
-        if not args.buffer_id:
-            result = {"error": "provide --buffer-id for cleanup"}
-        else:
-            result = cleanup_buffer(args.vault_path, args.buffer_id, "archive" if args.archive else None)
-    else:
-        result = {"error": "provide one of: --check, --rotate, --list-sealed, --list-all, --active-path, --cleanup"}
-
-    print(json.dumps(result, indent=2))
-
-
-if __name__ == "__main__":
-    main()
+        return result
+    if check:
+        return check_status(vault_path, max_words)
+    if rotate_mode:
+        return rotate(vault_path)
+    if list_sealed_mode:
+        return list_sealed(vault_path)
+    if list_all:
+        return list_buffer_files(vault_path)
+    if active_path:
+        return get_active_path(vault_path)
+    if cleanup:
+        if not buffer_id:
+            raise RuntimeError("provide --buffer-id for cleanup")
+        return cleanup_buffer(vault_path, buffer_id, "archive" if archive else None)
+    raise RuntimeError("provide one of: --check, --rotate, --list-sealed, --list-all, --active-path, --cleanup")

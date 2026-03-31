@@ -1,12 +1,8 @@
 """Unit tests for memcli.finalize.metrics_writer."""
 from __future__ import annotations
 
-import contextlib
-import io
 import json
-import sys
 from pathlib import Path
-from unittest import mock
 
 import pytest
 
@@ -14,7 +10,7 @@ from memcli.finalize.metrics_writer import (
     archive_buffers,
     rotate_telemetry_log,
     update_system_state,
-    main,
+    run,
 )
 
 
@@ -77,15 +73,12 @@ def test_rotate_telemetry_log_trims_large_file(tmp_path):
     mem = tmp_path / "Memory"
     mem.mkdir()
     log = mem / "sync-telemetry.log"
-    # Write 5000 lines
     log.write_text("\n".join(f"line {i}" for i in range(5000)), encoding="utf-8")
 
-    # 1 byte limit to force rotation; keep 100 lines
     rotate_telemetry_log(mem, max_bytes=1, keep_lines=100)
 
     lines = log.read_text().splitlines()
     assert len(lines) == 100
-    # Should be the LAST 100 lines
     assert lines[-1] == "line 4999"
 
 
@@ -102,25 +95,10 @@ def test_rotate_telemetry_log_noop_when_small(tmp_path):
 def test_rotate_telemetry_log_noop_when_missing(tmp_path):
     mem = tmp_path / "Memory"
     mem.mkdir()
-    rotate_telemetry_log(mem, max_bytes=1, keep_lines=100)  # Should not raise
+    rotate_telemetry_log(mem, max_bytes=1, keep_lines=100)
 
 
-# ── main() ─────────────────────────────────────────────────────────────────
-
-def _run_metrics(memory_path: Path, vault_path: Path, extra_args: list[str] = None) -> dict:
-    buf = io.StringIO()
-    base_args = [
-        "metrics",
-        "--memory-path", str(memory_path),
-        "--vault-path",  str(vault_path),
-    ]
-    if extra_args:
-        base_args.extend(extra_args)
-    with mock.patch.object(sys, "argv", base_args):
-        with contextlib.redirect_stdout(buf):
-            main()
-    return json.loads(buf.getvalue().strip())
-
+# ── run() ──────────────────────────────────────────────────────────────────
 
 def test_main_writes_metrics_json(tmp_path):
     mem = tmp_path / "Memory"
@@ -128,7 +106,7 @@ def test_main_writes_metrics_json(tmp_path):
     vault = tmp_path / "vault"
     vault.mkdir()
 
-    result = _run_metrics(mem, vault)
+    result = run(memory_path=mem, vault_path=vault)
     assert result["ok"] is True
     assert result["metrics_written"] is True
     assert (mem / "metrics.json").exists()
@@ -145,13 +123,14 @@ def test_main_archives_buffers_only_when_entity_writes_ok(tmp_path):
 
     sealed = json.dumps([{"buffer_id": "001", "filename": "sync-buffer-001.md"}])
 
-    # entity_writes_ok=false → should NOT archive
-    result = _run_metrics(mem, vault, [
-        "--sealed-buffers", sealed,
-        "--entity-writes-ok", "false",
-    ])
+    result = run(
+        memory_path=mem,
+        vault_path=vault,
+        sealed_buffers=sealed,
+        entity_writes_ok="false",
+    )
     assert result["archive_count"] == 0
-    assert buf_file.exists()  # file untouched
+    assert buf_file.exists()
 
 
 def test_main_archives_buffers_when_entity_writes_ok(tmp_path):
@@ -165,9 +144,11 @@ def test_main_archives_buffers_when_entity_writes_ok(tmp_path):
 
     sealed = json.dumps([{"buffer_id": "001", "filename": "sync-buffer-001.md"}])
 
-    result = _run_metrics(mem, vault, [
-        "--sealed-buffers", sealed,
-        "--entity-writes-ok", "true",
-    ])
+    result = run(
+        memory_path=mem,
+        vault_path=vault,
+        sealed_buffers=sealed,
+        entity_writes_ok="true",
+    )
     assert result["archive_count"] == 1
     assert not buf_file.exists()

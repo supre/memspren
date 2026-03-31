@@ -10,6 +10,7 @@ from memcli.scanning.task_inbox_scanner import (
     deduplicate,
     levenshtein_ratio,
     parse_task_line,
+    run,
 )
 
 
@@ -91,13 +92,9 @@ def test_dedup_empty_list():
     assert deduplicate([], threshold=0.85) == []
 
 
-# ── main() integration ─────────────────────────────────────────────────────
+# ── run() integration ─────────────────────────────────────────────────────
 
 def test_main_parses_tasks_and_writes_file(tmp_path):
-    import io, contextlib, sys
-    from unittest import mock
-    from memcli.scanning.task_inbox_scanner import main
-
     vault = tmp_path / "vault"
     tasks_dir = vault / "Tasks"
     tasks_dir.mkdir(parents=True)
@@ -108,37 +105,18 @@ def test_main_parses_tasks_and_writes_file(tmp_path):
     mem = tmp_path / "Memory"
     mem.mkdir()
 
-    buf = io.StringIO()
-    with mock.patch.object(sys, "argv", [
-        "task-inbox",
-        "--vault-path", str(vault),
-        "--memory-path", str(mem),
-    ]):
-        with contextlib.redirect_stdout(buf):
-            main()
+    result = run(vault_path=vault, memory_path=mem)
 
-    result = json.loads(buf.getvalue().strip())
     assert result["open_count"] == 1
     assert len(result["tasks"]) == 2
     assert (mem / "run" / "task-inbox.json").exists()
 
 
 def test_main_returns_empty_when_no_inbox(tmp_path):
-    import io, contextlib, sys
-    from unittest import mock
-    from memcli.scanning.task_inbox_scanner import main
-
     vault = tmp_path / "vault"
     vault.mkdir()
 
-    buf = io.StringIO()
-    with mock.patch.object(sys, "argv", [
-        "task-inbox",
-        "--vault-path", str(vault),
-    ]):
-        with contextlib.redirect_stdout(buf):
-            main()
+    result = run(vault_path=vault)
 
-    result = json.loads(buf.getvalue().strip())
     assert result["open_count"] == 0
     assert result["tasks"] == []

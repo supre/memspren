@@ -1,19 +1,12 @@
-#!/usr/bin/env python3
 """
 metrics_writer.py — Stage 5: write metrics.json, archive buffers, update system-state.md.
 
 Collects results from all prior stages, writes the metrics snapshot, archives sealed
-buffers, updates system-state.md (last_sync, last_sync_summary), and appends to
-Logs/system-log.md.
-
-Log rotation: if sync-telemetry.log exceeds max_log_bytes (default 2 MB), trims
-to the newest keep_lines lines (default 2000).
-
-Returns JSON to stdout:
-{ "ok": bool, "metrics_written": bool, "archive_count": int, "summary": str }
+buffers, updates system-state.md, and appends to Logs/system-log.md.
 """
 
-import argparse
+from __future__ import annotations
+
 import datetime
 import json
 import re
@@ -25,7 +18,7 @@ from pathlib import Path
 from .. import state
 
 DEFAULT_MAX_LOG_BYTES = 2 * 1024 * 1024  # 2 MB
-DEFAULT_KEEP_LINES    = 2000
+DEFAULT_KEEP_LINES = 2000
 
 
 def archive_buffers(memory_path: Path, sealed_buffers) -> int:
@@ -55,7 +48,6 @@ def update_system_state(memory_path: Path, ts: str, summary: str) -> None:
     state_path = memory_path / "system-state.md"
 
     if not state_path.exists():
-        # Create minimal file so vault_diff_scanner can find last_sync on next run
         memory_path.mkdir(parents=True, exist_ok=True)
         state_path.write_text(
             f"last_sync: {ts}\nlast_sync_summary: {summary}\n",
@@ -65,7 +57,6 @@ def update_system_state(memory_path: Path, ts: str, summary: str) -> None:
 
     content = state_path.read_text(encoding="utf-8")
 
-    # Update existing key, or append it if absent
     if re.search(r"^last_sync:", content, re.MULTILINE):
         content = re.sub(r"^last_sync:.*$", f"last_sync: {ts}", content, flags=re.MULTILINE)
     else:
@@ -86,7 +77,6 @@ def append_system_log(
     log_path = vault_path / log_rel
 
     if write_mode == "obsidian" and vault_name:
-        # Route through obsidian-cli so Obsidian watchers are triggered
         try:
             subprocess.run(
                 ["obsidian", f"vault={vault_name}", "append",
@@ -97,7 +87,6 @@ def append_system_log(
             print(json.dumps({"warn": f"obsidian system-log append failed: {e}"}), file=sys.stderr)
         return
 
-    # Filesystem path
     try:
         if log_path.exists():
             existing = log_path.read_text(encoding="utf-8")
@@ -122,50 +111,41 @@ def rotate_telemetry_log(memory_path: Path, max_bytes: int, keep_lines: int) -> 
         pass
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--memory-path", required=True)
-    parser.add_argument("--vault-path", required=True)
-    parser.add_argument("--write-mode", default="filesystem")
-    parser.add_argument("--vault-name", default="",
-                        help="Obsidian vault name (required for obsidian write mode)")
-    parser.add_argument("--extraction-result",  default="{}")
-    parser.add_argument("--layer1-result",       default="{}")
-    parser.add_argument("--entity-result",       default="{}")
-    parser.add_argument("--vault-diff-result",   default="{}")
-    parser.add_argument("--sealed-buffers",      default="[]")
-    parser.add_argument("--entity-writes-ok",    default="false",
-                        help="Pass 'true' only when entity_writes step returned ok=true. "
-                             "Buffers are NOT archived unless this flag is true.")
-    parser.add_argument("--max-log-bytes",       type=int, default=DEFAULT_MAX_LOG_BYTES)
-    parser.add_argument("--keep-lines",          type=int, default=DEFAULT_KEEP_LINES)
-    args = parser.parse_args()
-
-    memory_path = Path(args.memory_path)
-    vault_path  = Path(args.vault_path)
-
+def run(
+    *,
+    memory_path: Path,
+    vault_path: Path,
+    write_mode: str = "filesystem",
+    vault_name: str = "",
+    extraction_result: str = "{}",
+    layer1_result: str = "{}",
+    entity_result: str = "{}",
+    vault_diff_result: str = "{}",
+    sealed_buffers: str = "[]",
+    entity_writes_ok: str = "false",
+    max_log_bytes: int = DEFAULT_MAX_LOG_BYTES,
+    keep_lines: int = DEFAULT_KEEP_LINES,
+) -> dict:
     def parse(s: str) -> dict | list:
         try:
             return json.loads(s)
         except json.JSONDecodeError:
             return {}
 
-    extraction   = parse(args.extraction_result)
-    layer1       = parse(args.layer1_result)
-    entity       = parse(args.entity_result)
-    vault_diff   = parse(args.vault_diff_result)
-    # Read from state if not provided as args
-    sealed_bufs = parse(args.sealed_buffers) if args.sealed_buffers and args.sealed_buffers != "[]" else []
+    extraction = parse(extraction_result)
+    layer1 = parse(layer1_result)
+    entity = parse(entity_result)
+    vault_diff = parse(vault_diff_result)
+
+    sealed_bufs = parse(sealed_buffers) if sealed_buffers and sealed_buffers != "[]" else []
     if not sealed_bufs:
         sealed_bufs = state.get_field(str(memory_path), "rotate_buffer_sealed_buffers", [])
 
-    entity_writes_ok_arg = str(args.entity_writes_ok).lower() in ("true", "1", "yes")
+    entity_writes_ok_flag = str(entity_writes_ok).lower() in ("true", "1", "yes")
     entity_writes_ok_state = state.get_field(str(memory_path), "entity_writes_ok", False)
-    # Only archive buffers if entity writes actually succeeded.
-    # Skipped when: approval was denied, entity_pipeline errored, or step never ran.
-    entity_writes_ok = entity_writes_ok_arg or entity_writes_ok_state
-    archive_count = archive_buffers(memory_path, sealed_bufs) if entity_writes_ok else 0
-    if not entity_writes_ok:
+    do_archive = entity_writes_ok_flag or entity_writes_ok_state
+    archive_count = archive_buffers(memory_path, sealed_bufs) if do_archive else 0
+    if not do_archive:
         print(json.dumps({"info": "buffer archival skipped — entity writes did not succeed"}),
               file=sys.stderr)
 
@@ -173,20 +153,20 @@ def main() -> None:
 
     written_keys = layer1.get("written", []) if isinstance(layer1, dict) else []
     metrics = {
-        "last_sync":                ts,
-        "buffers_processed":        archive_count,
-        "entities_created":         entity.get("created", 0) if isinstance(entity, dict) else 0,
-        "entities_updated":         entity.get("updated", 0) if isinstance(entity, dict) else 0,
-        "entities_merged":          entity.get("merged", 0) if isinstance(entity, dict) else 0,
-        "links_added":              entity.get("links_added", 0) if isinstance(entity, dict) else 0,
-        "manual_edits_absorbed":    vault_diff.get("changed_count", 0) if isinstance(vault_diff, dict) else 0,
-        "memory_files_updated":     written_keys,
+        "last_sync": ts,
+        "buffers_processed": archive_count,
+        "entities_created": entity.get("created", 0) if isinstance(entity, dict) else 0,
+        "entities_updated": entity.get("updated", 0) if isinstance(entity, dict) else 0,
+        "entities_merged": entity.get("merged", 0) if isinstance(entity, dict) else 0,
+        "links_added": entity.get("links_added", 0) if isinstance(entity, dict) else 0,
+        "manual_edits_absorbed": vault_diff.get("changed_count", 0) if isinstance(vault_diff, dict) else 0,
+        "memory_files_updated": written_keys,
         "inference_results": {
-            "extraction":  "ok" if extraction else "fail",
-            "insights":    "ok" if "insights"   in written_keys else "fail",
-            "goals":       "ok" if "goals"       in written_keys else "fail",
-            "tasks":       "ok" if "tasks"       in written_keys else "fail",
-            "hot_memory":  "ok" if "hot_memory"  in written_keys else "fail",
+            "extraction": "ok" if extraction else "fail",
+            "insights": "ok" if "insights" in written_keys else "fail",
+            "goals": "ok" if "goals" in written_keys else "fail",
+            "tasks": "ok" if "tasks" in written_keys else "fail",
+            "hot_memory": "ok" if "hot_memory" in written_keys else "fail",
             "entity_plan": "ok" if (isinstance(entity, dict) and entity.get("ok")) else "fail",
         },
     }
@@ -205,10 +185,7 @@ def main() -> None:
         f"{len(written_keys)} memory files updated"
     )
 
-    if entity_writes_ok:
-        # Only advance last_sync when vault writes actually completed.
-        # If entity writes were skipped (approval denied) or failed, keeping the
-        # old last_sync means the next vault_diff_scanner still sees un-synced edits.
+    if do_archive:
         update_system_state(memory_path, ts, summary)
         log_entry = (
             f"[{ts}] SYNC COMPLETE\n"
@@ -219,23 +196,18 @@ def main() -> None:
             f"  manual_edits_absorbed: {metrics['manual_edits_absorbed']}"
         )
     else:
-        # Vault writes did not complete — record the attempt but do not advance last_sync.
         log_entry = (
             f"[{ts}] SYNC INCOMPLETE — vault writes skipped or failed\n"
             f"  memory_files_updated: {', '.join(written_keys) or 'none'}\n"
             f"  note: last_sync NOT advanced; next run will re-diff from previous checkpoint"
         )
-    append_system_log(vault_path, log_entry, write_mode=args.write_mode, vault_name=args.vault_name)
+    append_system_log(vault_path, log_entry, write_mode=write_mode, vault_name=vault_name)
 
-    rotate_telemetry_log(memory_path, args.max_log_bytes, args.keep_lines)
+    rotate_telemetry_log(memory_path, max_log_bytes, keep_lines)
 
-    print(json.dumps({
-        "ok":              True,
+    return {
+        "ok": True,
         "metrics_written": metrics_written,
-        "archive_count":   archive_count,
-        "summary":         summary,
-    }))
-
-
-if __name__ == "__main__":
-    main()
+        "archive_count": archive_count,
+        "summary": summary,
+    }

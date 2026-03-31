@@ -1,22 +1,13 @@
-#!/usr/bin/env python3
 """
 check_cli.py — Verify obsidian-cli availability and resolve the write mode.
 
-Used in two ways:
-
-1. Human/diagnostic mode (default):
-   python scripts/check_cli.py [--vault "My Vault"]
-   Prints human-readable check results. Exit 0 = all passed, 1 = failed.
-
-2. Lobster pipeline mode (--json):
-   python scripts/check_cli.py --vault-path /path/to/vault --json
-   Emits a single JSON object to stdout. Never prints other text to stdout.
-   Output: { "write_mode": "obsidian"|"filesystem", "vault_name": str, "last_sync": str|null }
-   write_mode is "obsidian" if CLI is available and Obsidian is running,
-   "filesystem" otherwise (non-fatal fallback for the pipeline).
+Two modes:
+  json_mode=True  (pipeline): returns {write_mode, vault_name, last_sync}
+  json_mode=False (diagnostic): prints human-readable checks, raises on failure
 """
 
-import argparse
+from __future__ import annotations
+
 import json
 import platform
 import re
@@ -50,7 +41,6 @@ def print_path_fix():
 
 
 def check_in_path() -> bool:
-    """Check 1: Is `obsidian` available in PATH?"""
     if shutil.which("obsidian") is None:
         print("✗ ERROR: `obsidian` command not found in PATH.", file=sys.stderr)
         print_path_fix()
@@ -60,13 +50,10 @@ def check_in_path() -> bool:
 
 
 def check_running() -> bool:
-    """Check 2: Is Obsidian running and the CLI reachable?"""
     try:
         result = subprocess.run(
             ["obsidian", "version"],
-            capture_output=True,
-            text=True,
-            timeout=5,
+            capture_output=True, text=True, timeout=5,
         )
         if result.returncode == 0:
             version = result.stdout.strip() or result.stderr.strip()
@@ -81,19 +68,15 @@ def check_running() -> bool:
         print("  Please open Obsidian and try again.", file=sys.stderr)
         return False
     except FileNotFoundError:
-        # Should have been caught by check_in_path, but handle gracefully.
         print("✗ ERROR: `obsidian` not found when running version check.", file=sys.stderr)
         return False
 
 
 def check_vault(vault_name: str) -> bool:
-    """Check 3: Does the named vault exist and respond to CLI queries?"""
     try:
         result = subprocess.run(
             ["obsidian", f"vault={vault_name}", "files"],
-            capture_output=True,
-            text=True,
-            timeout=10,
+            capture_output=True, text=True, timeout=10,
         )
         if result.returncode == 0:
             print(f"✓ Vault \"{vault_name}\" is accessible.")
@@ -117,7 +100,6 @@ def check_vault(vault_name: str) -> bool:
 
 
 def read_last_sync(vault_path: str | None) -> str | None:
-    """Read last_sync timestamp from system-state.md, or None if not found."""
     if not vault_path:
         return None
     state_path = Path(vault_path) / ".second-brain" / "Memory" / "system-state.md"
@@ -133,7 +115,6 @@ def read_last_sync(vault_path: str | None) -> str | None:
 
 
 def cli_is_available(vault_name: str | None = None) -> bool:
-    """Return True if obsidian-cli is reachable and (optionally) the vault is accessible."""
     if shutil.which("obsidian") is None:
         return False
     try:
@@ -156,77 +137,46 @@ def cli_is_available(vault_name: str | None = None) -> bool:
     return True
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Verify Obsidian CLI availability and vault accessibility."
-    )
-    parser.add_argument(
-        "--vault",
-        metavar="NAME",
-        help='Vault name to validate (e.g. --vault "My Second Brain")',
-    )
-    parser.add_argument(
-        "--vault-path",
-        metavar="PATH",
-        help="Vault filesystem path (used in pipeline mode to read last_sync)",
-    )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        dest="json_mode",
-        help="Emit JSON output for Lobster pipeline. Never prints to stdout except JSON.",
-    )
-    parser.add_argument(
-        "--memory-path",
-        help="Path to .second-brain/Memory (for writing shared state)",
-    )
-    args = parser.parse_args()
-
-    # ── Pipeline / JSON mode ──────────────────────────────────────────────────
-    if args.json_mode:
-        vault_name = args.vault   # must be supplied via --vault; no folder-name fallback
-        vault_path = args.vault_path
-
+def run(
+    *,
+    vault_path: Path,
+    vault_name: str = "",
+    memory_path: Path | None = None,
+    json_mode: bool = True,
+) -> dict:
+    if json_mode:
         if not vault_name:
-            # No vault name supplied — cannot use obsidian-cli, force filesystem mode.
-            # The workflow requires --vault to be passed; this path means misconfiguration.
-            print(json.dumps({"warn": "no --vault supplied in pipeline mode; forcing filesystem write mode"}),
-                  file=sys.stderr)
+            print(
+                json.dumps({"warn": "no vault_name supplied in pipeline mode; forcing filesystem write mode"}),
+                file=sys.stderr,
+            )
 
         cli_ok = cli_is_available(vault_name) if vault_name else False
         write_mode = "obsidian" if cli_ok else "filesystem"
-        last_sync = read_last_sync(vault_path)
+        last_sync = read_last_sync(str(vault_path))
 
         result = {
             "write_mode": write_mode,
             "vault_name": vault_name or "",
-            "last_sync":  last_sync,
+            "last_sync": last_sync,
         }
-        print(json.dumps(result))
 
-        # Write to shared state for subsequent steps
-        if args.memory_path:
-            state.write_state(args.memory_path, {
+        if memory_path:
+            state.write_state(str(memory_path), {
                 "check_cli_vault_name": vault_name or "",
                 "check_cli_write_mode": write_mode,
                 "check_cli_last_sync": last_sync,
             })
-        return
+        return result
 
-    # ── Human / diagnostic mode ───────────────────────────────────────────────
+    # Diagnostic mode
     print("--- Obsidian CLI Check ---")
-
     if not check_in_path():
-        sys.exit(1)
+        raise RuntimeError("obsidian command not found in PATH")
     if not check_running():
-        sys.exit(1)
-    if args.vault:
-        if not check_vault(args.vault):
-            sys.exit(1)
-
+        raise RuntimeError("obsidian CLI not reachable")
+    if vault_name:
+        if not check_vault(vault_name):
+            raise RuntimeError(f"vault '{vault_name}' not accessible")
     print("--- All checks passed ---")
-    sys.exit(0)
-
-
-if __name__ == "__main__":
-    main()
+    return {"ok": True, "write_mode": "obsidian", "vault_name": vault_name}

@@ -2,13 +2,11 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
-from unittest import mock
 
 import pytest
 
-from memcli.scanning.read_frontmatter import CLASSIFIER_FOLDER_MAP, main, read_frontmatter
+from memcli.scanning.read_frontmatter import CLASSIFIER_FOLDER_MAP, run, read_frontmatter
 
 
 def _write_md(path: Path, frontmatter: dict, body: str = "") -> None:
@@ -54,11 +52,9 @@ def test_classifier_folder_map_has_key_classifiers():
     assert "learning" in CLASSIFIER_FOLDER_MAP
 
 
-# ── main() ─────────────────────────────────────────────────────────────────
+# ── run() ──────────────────────────────────────────────────────────────────
 
 def test_main_scans_classifier_folder(tmp_path):
-    import io, contextlib
-
     vault = tmp_path / "vault"
     projects_dir = vault / "Work" / "Projects"
     projects_dir.mkdir(parents=True)
@@ -71,17 +67,12 @@ def test_main_scans_classifier_folder(tmp_path):
     mem = tmp_path / "Memory"
     mem.mkdir()
 
-    buf = io.StringIO()
-    with mock.patch.object(sys, "argv", [
-        "read-frontmatter",
-        "--vault-path", str(vault),
-        "--classifiers", '["project:personal"]',
-        "--memory-path", str(mem),
-    ]):
-        with contextlib.redirect_stdout(buf):
-            main()
+    result = run(
+        vault_path=vault,
+        classifiers='["project:personal"]',
+        memory_path=mem,
+    )
 
-    result = json.loads(buf.getvalue().strip())
     assert result["count"] == 1
     assert (mem / "run" / "frontmatter.json").exists()
 
@@ -90,22 +81,15 @@ def test_main_scans_classifier_folder(tmp_path):
 
 
 def test_main_empty_folder_returns_zero_count(tmp_path):
-    import io, contextlib
-
     vault = tmp_path / "vault"
     vault.mkdir()
     mem = tmp_path / "Memory"
     mem.mkdir()
 
-    buf = io.StringIO()
-    with mock.patch.object(sys, "argv", [
-        "read-frontmatter",
-        "--vault-path", str(vault),
-        "--classifiers", '["idea"]',
-        "--memory-path", str(mem),
-    ]):
-        with contextlib.redirect_stdout(buf):
-            main()
+    result = run(
+        vault_path=vault,
+        classifiers='["idea"]',
+        memory_path=mem,
+    )
 
-    result = json.loads(buf.getvalue().strip())
     assert result["count"] == 0

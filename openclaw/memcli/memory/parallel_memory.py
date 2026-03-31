@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 parallel_memory.py — Parallel dispatcher for Stage 2 memory refinement.
 
@@ -7,23 +6,10 @@ Dispatches 4 llm-task jobs simultaneously via ThreadPoolExecutor:
   - goals      (light agent) — uses raw_goals + task_inbox
   - tasks      (light agent) — uses raw_tasks + task_inbox
   - hot_memory (light agent) — uses raw_goals + raw_tasks
-
-Each job:
-  1. Builds input from extraction output + existing memory file content
-  2. Calls OpenClaw Gateway /tools/invoke via the urllib-based gateway client
-  3. Validates output immediately against its schema (jsonschema if available)
-  4. On failure: slot returns ok=false, existing file retained by merge.py
-
-Returns JSON to stdout:
-{
-  "insights":   { "ok": bool, "content": str, "error": str|null },
-  "goals":      { "ok": bool, "content": str, "error": str|null },
-  "tasks":      { "ok": bool, "content": str, "error": str|null },
-  "hot_memory": { "ok": bool, "content": str, "error": str|null }
-}
 """
 
-import argparse
+from __future__ import annotations
+
 import json
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -124,7 +110,6 @@ def run_job(
         if key == "task_inbox":
             job_input["task_inbox"] = task_inbox
 
-    # Read prompt and schema files
     try:
         prompt = (PROMPTS_DIR / job["prompt_file"]).read_text(encoding="utf-8").strip()
     except Exception as e:
@@ -134,7 +119,6 @@ def run_job(
     if schema_obj is None:
         return name, {"ok": False, "content": "", "error": f"could not load schema: {job['schema_file']}"}
 
-    # Build Gateway API payload
     payload = {
         "tool": "llm-task",
         "action": "invoke",
@@ -142,8 +126,8 @@ def run_job(
             "prompt": prompt,
             "input": job_input,
             "schema": schema_obj,
-            "timeoutMs": 120000
-        }
+            "timeoutMs": 120000,
+        },
     }
 
     endpoint = get_gateway_endpoint()
@@ -153,7 +137,6 @@ def run_job(
     except RuntimeError as exc:
         return name, {"ok": False, "content": "", "error": str(exc)}
 
-    # Check for error response
     if isinstance(result, dict) and result.get("ok") == False:
         error_msg = result.get("error", {}).get("message", "Unknown error")
         return name, {"ok": False, "content": "", "error": f"Gateway error: {error_msg}"}
@@ -167,11 +150,9 @@ def run_job(
     else:
         output = result
 
-    # Validate against schema
     if not validate(output, schema_obj):
         return name, {"ok": False, "content": "", "error": "output failed schema validation"}
 
-    # Extract content string from output
     if isinstance(output, dict) and "content" in output:
         content = output["content"]
     elif isinstance(output, str):
@@ -182,33 +163,23 @@ def run_job(
     return name, {"ok": True, "content": content, "error": None}
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Parallel memory refinement dispatcher")
-    parser.add_argument("--extraction-file", required=True, help="Path to extraction output JSON")
-    parser.add_argument("--task-inbox-file", required=True, help="Path to task inbox JSON")
-    parser.add_argument("--memory-path", required=True, help="Memory directory path")
-    args = parser.parse_args()
-
-    extraction_path = Path(args.extraction_file)
-    task_inbox_path = Path(args.task_inbox_file)
-    memory_path = Path(args.memory_path)
-
-    if not extraction_path.exists():
-        print(json.dumps({"error": f"Extraction file not found: {extraction_path}"}))
-        sys.exit(1)
-
-    if not task_inbox_path.exists():
-        print(json.dumps({"error": f"Task inbox file not found: {task_inbox_path}"}))
-        sys.exit(1)
+def run(
+    *,
+    extraction_file: Path,
+    task_inbox_file: Path,
+    memory_path: Path,
+) -> dict:
+    if not extraction_file.exists():
+        raise RuntimeError(f"Extraction file not found: {extraction_file}")
+    if not task_inbox_file.exists():
+        raise RuntimeError(f"Task inbox file not found: {task_inbox_file}")
 
     try:
-        extraction = json.loads(extraction_path.read_text(encoding="utf-8"))
-        task_inbox = json.loads(task_inbox_path.read_text(encoding="utf-8"))
+        extraction = json.loads(extraction_file.read_text(encoding="utf-8"))
+        task_inbox = json.loads(task_inbox_file.read_text(encoding="utf-8"))
     except Exception as e:
-        print(json.dumps({"error": f"Failed to load input files: {e}"}))
-        sys.exit(1)
+        raise RuntimeError(f"Failed to load input files: {e}") from e
 
-    # Run jobs in parallel
     results = {}
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {
@@ -219,8 +190,4 @@ def main():
             name, result = future.result()
             results[name] = result
 
-    print(json.dumps(results))
-
-
-if __name__ == "__main__":
-    main()
+    return results

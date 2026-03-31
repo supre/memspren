@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 vault_diff_scanner.py — Scan vault for manually changed files since last sync.
 
@@ -6,22 +5,11 @@ Detects both committed history (git log --after) AND uncommitted working-tree
 changes (git status --porcelain + git diff --name-only), so Obsidian edits that
 have not been committed are included.
 
-Writes the concatenated file contents to MEMORY_PATH/run/manual-edits.txt and
-returns the file path as changed_files_content_file — the downstream
-run_entity_plan.py reads from that file to avoid shell interpolation of raw text
-in Lobster YAML.
-
-If the vault is not a git repo, logs a warning and returns an empty result (non-fatal).
-
-Returns JSON to stdout:
-{
-  "changed_files": ["Work/Projects/foo.md", ...],
-  "changed_files_content_file": "/abs/path/to/manual-edits.txt",
-  "changed_count": int
-}
+Writes the concatenated file contents to MEMORY_PATH/run/manual-edits.txt.
 """
 
-import argparse
+from __future__ import annotations
+
 import json
 import subprocess
 import sys
@@ -41,40 +29,30 @@ def run_git(cmd: list, cwd: str, timeout: int = 30) -> tuple[int, str]:
         return 1, ""
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--vault-path", required=True)
-    parser.add_argument("--memory-path", required=True,
-                        help="MEMORY_PATH — manual-edits.txt written here")
-    parser.add_argument("--since", default=None,
-                        help="ISO timestamp of last sync (from system-state.md)")
-    args = parser.parse_args()
-
-    vault_path  = Path(args.vault_path)
-    memory_path = Path(args.memory_path)
+def run(
+    *,
+    vault_path: Path,
+    memory_path: Path,
+    since: str | None = None,
+) -> dict:
     empty = {"changed_files": [], "changed_files_content_file": "", "changed_count": 0}
 
-    # Read since timestamp from state if not provided
-    since = args.since
     if not since:
         since = state.get_field(str(memory_path), "check_cli_last_sync")
 
     if not vault_path.exists():
         print(json.dumps({**empty, "warn": "vault path not found"}), file=sys.stderr)
-        print(json.dumps(empty))
-        return
+        return empty
 
-    # Confirm vault is a git repo
     rc, _ = run_git(["git", "rev-parse", "--git-dir"], str(vault_path))
     if rc != 0:
         print(json.dumps({"warn": "vault is not a git repo — skipping manual edit ingestion"}),
               file=sys.stderr)
-        print(json.dumps(empty))
-        return
+        return empty
 
     changed_files: list[str] = []
 
-    # ── Committed history since last_sync ──────────────────────────────────
+    # Committed history since last_sync
     if since and since not in ("null", "None", ""):
         rc, out = run_git(
             ["git", "log", "--name-only", "--pretty=format:", f"--after={since}"],
@@ -86,34 +64,21 @@ def main() -> None:
                 if f.endswith(".md"):
                     changed_files.append(f)
 
-    # ── Uncommitted working-tree changes (staged + unstaged + untracked) ───
-    # git status --porcelain emits lines like:
-    #   M  path.md   (modified/staged)
-    #   ?? path.md   (untracked)
-    #    M path.md   (modified unstaged)
-    #    D path.md   (deleted — skip, file gone)
-    #   R  old -> new.md  (renamed)
+    # Uncommitted working-tree changes
     rc, out = run_git(["git", "status", "--porcelain"], str(vault_path))
     if rc == 0 and out.strip():
         for line in out.strip().splitlines():
             if len(line) < 3:
                 continue
-            xy   = line[:2]
+            xy = line[:2]
             path = line[3:].strip()
-
-            # Renamed: "R  old -> new" — take the new path after " -> "
             if " -> " in path:
                 path = path.split(" -> ")[-1].strip()
-
-            # Skip deleted files (nothing to read)
             if xy.strip() in ("D", "DD", "AD"):
                 continue
-
             if path.endswith(".md"):
                 changed_files.append(path)
 
-    # Also catch unstaged modifications not shown by --porcelain for tracked files
-    # (belt-and-suspenders: git diff --name-only covers modified-but-unstaged)
     rc, out = run_git(["git", "diff", "--name-only"], str(vault_path))
     if rc == 0 and out.strip():
         for f in out.strip().splitlines():
@@ -130,9 +95,9 @@ def main() -> None:
             deduped.append(f)
     changed_files = deduped
 
-    # ── Read content of changed files (exclude .second-brain/) ────────────
+    # Read content of changed files (exclude .second-brain/)
     content_parts: list[str] = []
-    valid_files:   list[str] = []
+    valid_files: list[str] = []
     for rel_path in changed_files:
         if ".second-brain/" in rel_path or rel_path.startswith(".second-brain"):
             continue
@@ -146,8 +111,8 @@ def main() -> None:
 
     combined = "\n".join(content_parts)
 
-    # ── Write content to file (avoids shell interpolation of raw text) ─────
-    run_dir      = memory_path / "run"
+    # Write content to file
+    run_dir = memory_path / "run"
     content_file = str(run_dir / "manual-edits.txt")
     try:
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -158,17 +123,13 @@ def main() -> None:
         content_file = ""
 
     result = {
-        "changed_files":              valid_files,
+        "changed_files": valid_files,
         "changed_files_content_file": content_file,
-        "changed_count":              len(valid_files),
+        "changed_count": len(valid_files),
     }
-    print(json.dumps(result))
 
-    # Write to shared state
     state.write_state(str(memory_path), {
         "vault_diff_changed_count": len(valid_files),
     })
 
-
-if __name__ == "__main__":
-    main()
+    return result

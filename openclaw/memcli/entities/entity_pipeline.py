@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 entity_pipeline.py — Per-entity content generation, linking, and vault writes.
 
@@ -7,24 +6,10 @@ across entities via ThreadPoolExecutor:
   1. Content directive  (light agent) — refine content_draft into final frontmatter + body
   2. Linking directive  (light agent) — determine wikilinks and connected entries
   3. Write             — git snapshot for existing files, then write to vault
-
-Write routing:
-  write_mode=obsidian   → use obsidian-cli for all vault operations
-  write_mode=filesystem → direct filesystem writes (fallback path)
-
-Returns JSON to stdout:
-{
-  "ok": bool,
-  "written": int,
-  "created": int,
-  "updated": int,
-  "merged": int,
-  "links_added": int,
-  "failed": [{ "path": str, "error": str }]
-}
 """
 
-import argparse
+from __future__ import annotations
+
 import json
 import re
 import subprocess
@@ -37,9 +22,9 @@ from .. import PROMPTS_DIR, SCHEMAS_DIR
 from ..gateway import get_gateway_token, get_gateway_endpoint
 from ..vault.git_commit import commit_file as _git_commit_file
 
-MAX_WORKERS  = 4
+MAX_WORKERS = 4
 CONTENT_TASK_TIMEOUT = 90
-LINK_TASK_TIMEOUT    = 60
+LINK_TASK_TIMEOUT = 60
 
 
 def run_llm_task(
@@ -49,9 +34,7 @@ def run_llm_task(
     agent: str,
     timeout: int = CONTENT_TASK_TIMEOUT,
 ) -> dict | None:
-    """Call the OpenClaw Gateway /tools/invoke for an llm-task.
-    Returns parsed JSON output, or None on any failure.
-    """
+    """Call the OpenClaw Gateway /tools/invoke for an llm-task."""
     try:
         prompt = (PROMPTS_DIR / prompt_file).read_text(encoding="utf-8").strip()
         schema = json.loads((SCHEMAS_DIR / schema_file).read_text(encoding="utf-8"))
@@ -59,16 +42,16 @@ def run_llm_task(
         return None
 
     gateway_token = get_gateway_token()
-    endpoint      = get_gateway_endpoint()
+    endpoint = get_gateway_endpoint()
 
     payload = {
         "tool": "llm-task",
         "action": "invoke",
         "args": {
-            "prompt":    prompt,
-            "input":     input_data,
-            "schema":    schema,
-            "agent":     agent,
+            "prompt": prompt,
+            "input": input_data,
+            "schema": schema,
+            "agent": agent,
             "timeoutMs": timeout * 1000,
         },
     }
@@ -94,7 +77,6 @@ def run_llm_task(
 
 
 def git_snapshot(vault_path: Path, rel_path: str) -> None:
-    """Best-effort git commit before modifying an existing vault file."""
     try:
         _git_commit_file(str(vault_path), rel_path, "pre-sync snapshot")
     except Exception:
@@ -102,11 +84,6 @@ def git_snapshot(vault_path: Path, rel_path: str) -> None:
 
 
 def obsidian_write(vault_name: str, rel_path: str, content: str, action: str) -> None:
-    """Write or append to a vault file via obsidian-cli.
-
-    action=create/merge/update → obsidian write (overwrites)
-    action=append              → obsidian append (adds to existing)
-    """
     cli_action = "append" if action == "append" else "write"
     subprocess.run(
         ["obsidian", f"vault={vault_name}", cli_action,
@@ -116,11 +93,6 @@ def obsidian_write(vault_name: str, rel_path: str, content: str, action: str) ->
 
 
 def filesystem_write(vault_path: Path, rel_path: str, full_content: str, body_only: str, action: str) -> None:
-    """Write entity content via direct filesystem I/O.
-
-    create/merge/update → write full_content (frontmatter + body)
-    append              → append body_only to existing file (no extra frontmatter)
-    """
     full_path = vault_path / rel_path
     full_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -143,9 +115,7 @@ def write_entity(
     action: str,
     write_mode: str,
 ) -> None:
-    """Route vault write through obsidian-cli or filesystem based on write_mode."""
     if write_mode == "obsidian" and vault_name:
-        # For append via obsidian-cli, send only the new body section
         content_to_send = body_only if action == "append" else full_content
         obsidian_write(vault_name, rel_path, content_to_send, action)
     else:
@@ -153,7 +123,6 @@ def write_entity(
 
 
 def _fs_add_connected(full_path: Path, source_path: str) -> None:
-    """Filesystem-only fallback: add source_path to `connected:` in a vault file."""
     try:
         content = full_path.read_text(encoding="utf-8")
         fm_match = re.match(r"^---\n(.*?)\n---\n?(.*)", content, re.DOTALL)
@@ -161,7 +130,6 @@ def _fs_add_connected(full_path: Path, source_path: str) -> None:
             return
         fm_inner, body = fm_match.group(1), fm_match.group(2)
 
-        # Parse existing connected list
         block = re.search(r"^connected:\s*\n((?:[ \t]+-[^\n]*\n?)*)", fm_inner, re.MULTILINE)
         if block:
             existing = [l.strip().lstrip("- ").strip() for l in block.group(1).splitlines() if l.strip().startswith("-")]
@@ -178,7 +146,6 @@ def _fs_add_connected(full_path: Path, source_path: str) -> None:
         if block:
             new_fm = re.sub(r"^connected:\s*\n(?:[ \t]+-[^\n]*\n?)*", new_connected + "\n", fm_inner, flags=re.MULTILINE)
         else:
-            # connected: absent — check for inline empty form
             new_fm = re.sub(r"^connected:\s*\[\s*\]", new_connected, fm_inner, flags=re.MULTILINE)
             if new_fm == fm_inner:
                 new_fm = fm_inner.rstrip() + f"\n{new_connected}"
@@ -191,19 +158,14 @@ def _fs_add_connected(full_path: Path, source_path: str) -> None:
 def update_connected_for(
     vault_path: Path, vault_name: str, target_path: str, source_path: str, write_mode: str
 ) -> None:
-    """Add source_path to target file's connected: array.
-
-    obsidian mode → delegates to vault/update_connected.py (uses obsidian-cli for both read/write)
-    filesystem mode → direct in-place edit via _fs_add_connected
-    """
     if write_mode == "obsidian" and vault_name:
-        update_connected_script = SCRIPT_DIR.parent / "vault" / "update_connected.py"
+        update_connected_script = Path(__file__).parent.parent / "vault" / "update_connected.py"
         try:
             subprocess.run(
                 [sys.executable, str(update_connected_script),
                  "--vault", vault_name,
-                 "--file",  target_path,   # vault-relative path
-                 "--add",   source_path],
+                 "--file", target_path,
+                 "--add", source_path],
                 capture_output=True, timeout=15,
             )
         except Exception:
@@ -213,7 +175,6 @@ def update_connected_for(
 
 
 def build_frontmatter_block(frontmatter: dict) -> str:
-    """Render frontmatter dict to a YAML block string (without trailing newline)."""
     lines = ["---"]
     for k, v in frontmatter.items():
         if isinstance(v, list):
@@ -232,12 +193,11 @@ def process_entity(
     vault_name: str,
     write_mode: str,
 ) -> dict:
-    """Run content → linking → write for a single entity."""
-    path   = entity.get("path", "")
+    path = entity.get("path", "")
     action = entity.get("action", "create")
-    draft  = entity.get("content_draft", "")
+    draft = entity.get("content_draft", "")
 
-    # ── Step 1: Content directive ──────────────────────────────────────────
+    # Step 1: Content directive
     content_result = run_llm_task(
         "entity_content_prompt.txt",
         {"content_draft": draft, "action": action, "path": path},
@@ -249,15 +209,12 @@ def process_entity(
     if not content_result:
         return {"path": path, "ok": False, "error": "content directive failed", "action": action}
 
-    body        = content_result.get("body", draft)
+    body = content_result.get("body", draft)
     frontmatter = content_result.get("frontmatter", {})
-
-    # full_content = frontmatter block + body (used for create/merge/update)
-    # body_only    = body section only     (used for append — no extra frontmatter)
     full_content = build_frontmatter_block(frontmatter) + "\n\n" + body
-    body_only    = body
+    body_only = body
 
-    # ── Step 2: Linking directive ──────────────────────────────────────────
+    # Step 2: Linking directive
     existing_snippet = ""
     full_path = vault_path / path
     if full_path.exists():
@@ -276,21 +233,20 @@ def process_entity(
 
     links_added = 0
     if linking_result:
-        wikilinks           = linking_result.get("wikilinks", [])
+        wikilinks = linking_result.get("wikilinks", [])
         connected_additions = linking_result.get("connected_additions", [])
 
         if wikilinks:
             link_text = "  ".join(f"[[{w}]]" for w in wikilinks)
-            # Append links footer to body — affects both full_content and body_only
             footer = f"\n\n---\n*Related: {link_text}*"
             full_content += footer
-            body_only    += footer
+            body_only += footer
             links_added = len(wikilinks)
 
         for target in connected_additions:
             update_connected_for(vault_path, vault_name, target, path, write_mode)
 
-    # ── Step 3: Write ──────────────────────────────────────────────────────
+    # Step 3: Write
     if action in ("append", "merge", "update") and full_path.exists():
         git_snapshot(vault_path, path)
 
@@ -302,54 +258,47 @@ def process_entity(
     return {"path": path, "ok": True, "action": action, "links_added": links_added}
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--plan",        required=True, help="JSON string of entity write plan")
-    parser.add_argument("--vault-path",  required=True)
-    parser.add_argument("--vault-name",  default="",   help="Obsidian vault name for CLI routing")
-    parser.add_argument("--write-mode",  default="filesystem", choices=["obsidian", "filesystem"])
-    parser.add_argument("--memory-path", required=True)
-    args = parser.parse_args()
-
+def run(
+    *,
+    plan: str,
+    vault_path: Path,
+    vault_name: str = "",
+    write_mode: str = "filesystem",
+    memory_path: Path,
+) -> dict:
     try:
-        plan = json.loads(args.plan)
-        entities = plan.get("entities", plan) if isinstance(plan, dict) else plan
+        plan_data = json.loads(plan)
+        entities = plan_data.get("entities", plan_data) if isinstance(plan_data, dict) else plan_data
         if not isinstance(entities, list):
             entities = []
     except json.JSONDecodeError as e:
-        print(json.dumps({"ok": False, "error": f"invalid plan JSON: {e}"}))
-        sys.exit(1)
+        raise RuntimeError(f"invalid plan JSON: {e}") from e
 
-    vault_path = Path(args.vault_path)
     entity_results: list[dict] = []
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {
             executor.submit(
-                process_entity, entity, vault_path, args.vault_name, args.write_mode
+                process_entity, entity, vault_path, vault_name, write_mode
             ): entity
             for entity in entities
         }
         for future in as_completed(futures):
             entity_results.append(future.result())
 
-    created     = sum(1 for r in entity_results if r.get("ok") and r.get("action") == "create")
-    updated     = sum(1 for r in entity_results if r.get("ok") and r.get("action") in ("append", "update"))
-    merged      = sum(1 for r in entity_results if r.get("ok") and r.get("action") == "merge")
+    created = sum(1 for r in entity_results if r.get("ok") and r.get("action") == "create")
+    updated = sum(1 for r in entity_results if r.get("ok") and r.get("action") in ("append", "update"))
+    merged = sum(1 for r in entity_results if r.get("ok") and r.get("action") == "merge")
     links_added = sum(r.get("links_added", 0) for r in entity_results)
-    failed      = [{"path": r["path"], "error": r["error"]} for r in entity_results if not r.get("ok")]
-    written     = len(entity_results) - len(failed)
+    failed = [{"path": r["path"], "error": r["error"]} for r in entity_results if not r.get("ok")]
+    written = len(entity_results) - len(failed)
 
-    print(json.dumps({
-        "ok":          written > 0 or len(entities) == 0,
-        "written":     written,
-        "created":     created,
-        "updated":     updated,
-        "merged":      merged,
+    return {
+        "ok": written > 0 or len(entities) == 0,
+        "written": written,
+        "created": created,
+        "updated": updated,
+        "merged": merged,
         "links_added": links_added,
-        "failed":      failed,
-    }))
-
-
-if __name__ == "__main__":
-    main()
+        "failed": failed,
+    }

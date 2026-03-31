@@ -1,19 +1,11 @@
-#!/usr/bin/env python3
 """
 task_inbox_scanner.py — Parse tasks-inbox.md and extract open/completed tasks.
 
 Deduplicates near-identical tasks by title similarity (Levenshtein ratio).
-Default threshold: 0.85 (configurable via --dedup-threshold).
-
-Returns JSON to stdout:
-{
-  "tasks": [{ "title": str, "status": "open"|"completed"|"blocked", "completed_date": str|null }],
-  "completed": [{ "title": str, "completed_date": str|null }],
-  "open_count": int
-}
 """
 
-import argparse
+from __future__ import annotations
+
 import json
 import re
 import sys
@@ -66,20 +58,17 @@ def deduplicate(tasks: list[dict], threshold: float) -> list[dict]:
     return seen
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--vault-path", required=True)
-    parser.add_argument("--memory-path", default="",
-                        help="MEMORY_PATH — task-inbox.json written here for downstream steps")
-    parser.add_argument("--dedup-threshold", type=float, default=0.85)
-    args = parser.parse_args()
-
-    inbox_path = Path(args.vault_path) / "Tasks" / "tasks-inbox.md"
+def run(
+    *,
+    vault_path: Path,
+    memory_path: Path | None = None,
+    dedup_threshold: float = 0.85,
+) -> dict:
+    inbox_path = vault_path / "Tasks" / "tasks-inbox.md"
     empty = {"tasks": [], "completed": [], "open_count": 0, "task_inbox_file": ""}
 
     if not inbox_path.exists():
-        print(json.dumps(empty))
-        return
+        return empty
 
     raw_tasks: list[dict] = []
     try:
@@ -89,23 +78,21 @@ def main() -> None:
                 raw_tasks.append(task)
     except Exception as e:
         print(json.dumps({"warn": str(e)}), file=sys.stderr)
-        print(json.dumps(empty))
-        return
+        return empty
 
-    tasks = deduplicate(raw_tasks, args.dedup_threshold)
+    tasks = deduplicate(raw_tasks, dedup_threshold)
     completed = [t for t in tasks if t["status"] == "completed"]
     open_tasks = [t for t in tasks if t["status"] == "open"]
 
-    result = {
-        "tasks":     tasks,
+    result: dict = {
+        "tasks": tasks,
         "completed": completed,
         "open_count": len(open_tasks),
     }
 
-    # Write full result to a file so downstream steps can read without shell interpolation
     task_inbox_file = ""
-    if args.memory_path:
-        run_dir = Path(args.memory_path) / "run"
+    if memory_path:
+        run_dir = Path(memory_path) / "run"
         try:
             run_dir.mkdir(parents=True, exist_ok=True)
             out_path = run_dir / "task-inbox.json"
@@ -114,16 +101,10 @@ def main() -> None:
         except Exception as e:
             print(json.dumps({"warn": f"could not write task-inbox file: {e}"}), file=sys.stderr)
 
-    result["task_inbox_file"] = task_inbox_file
-    print(json.dumps(result))
-
-    # Write to shared state
-    if args.memory_path:
-        state.write_state(args.memory_path, {
+        state.write_state(str(memory_path), {
             "task_inbox_file": task_inbox_file,
             "task_inbox_open_count": len(open_tasks),
         })
 
-
-if __name__ == "__main__":
-    main()
+    result["task_inbox_file"] = task_inbox_file
+    return result

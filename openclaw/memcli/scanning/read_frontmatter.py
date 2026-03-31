@@ -1,15 +1,12 @@
-#!/usr/bin/env python3
 """
 read_frontmatter.py — Batch-read YAML frontmatter from classifier-scoped vault folders.
 
 Reads only frontmatter (not body) for all files in the folders relevant to this sync's
 classifiers. Fast and low-token — drives merge detection in the entity plan step.
-
-Returns JSON to stdout:
-[{ "path": str, "description": str, "status": str, "node_type": str }, ...]
 """
 
-import argparse
+from __future__ import annotations
+
 import json
 import sys
 from pathlib import Path
@@ -53,27 +50,22 @@ def read_frontmatter(file_path: Path) -> dict:
     return result
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--vault-path", required=True)
-    parser.add_argument("--classifiers", required=True,
-                        help="JSON array or comma-separated list of classifier strings")
-    parser.add_argument("--memory-path", default="",
-                        help="MEMORY_PATH — frontmatter.json written here for downstream steps")
-    args = parser.parse_args()
-
-    vault_path = Path(args.vault_path)
-
+def run(
+    *,
+    vault_path: Path,
+    classifiers: str,
+    memory_path: Path | None = None,
+) -> dict:
     # Parse classifiers — Lobster may pass as JSON array string or plain list
     try:
-        classifiers: list[str] = json.loads(args.classifiers)
+        classifier_list: list[str] = json.loads(classifiers)
     except (json.JSONDecodeError, ValueError):
-        raw = args.classifiers.strip().strip("[]")
-        classifiers = [c.strip().strip('"').strip("'") for c in raw.split(",") if c.strip()]
+        raw = classifiers.strip().strip("[]")
+        classifier_list = [c.strip().strip('"').strip("'") for c in raw.split(",") if c.strip()]
 
     # Collect unique folders to scan
     folders_to_scan: set[str] = set()
-    for classifier in classifiers:
+    for classifier in classifier_list:
         folder = CLASSIFIER_FOLDER_MAP.get(classifier.lower())
         if folder:
             folders_to_scan.add(folder)
@@ -98,11 +90,9 @@ def main() -> None:
                 "node_type":   fm.get("node_type", ""),
             })
 
-    # Write the frontmatter array to a file so downstream steps can read without
-    # shell interpolation (descriptions may contain quotes or newlines).
     frontmatter_file = ""
-    if args.memory_path:
-        run_dir = Path(args.memory_path) / "run"
+    if memory_path:
+        run_dir = memory_path / "run"
         try:
             run_dir.mkdir(parents=True, exist_ok=True)
             out_path = run_dir / "frontmatter.json"
@@ -111,10 +101,4 @@ def main() -> None:
         except Exception as e:
             print(json.dumps({"warn": f"could not write frontmatter file: {e}"}), file=sys.stderr)
 
-    # Return a dict (not raw array) so Lobster can extract frontmatter_file via
-    # $read_frontmatter.json.frontmatter_file
-    print(json.dumps({"frontmatter_file": frontmatter_file, "count": len(results)}))
-
-
-if __name__ == "__main__":
-    main()
+    return {"frontmatter_file": frontmatter_file, "count": len(results)}
