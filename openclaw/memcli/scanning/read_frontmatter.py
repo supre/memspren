@@ -51,11 +51,23 @@ def run(
     paths = VaultPaths(vault_path)
     paths.ensure()
 
-    try:
-        classifier_list: list[str] = json.loads(classifiers)
-    except (json.JSONDecodeError, ValueError):
-        raw = classifiers.strip().strip("[]")
-        classifier_list = [c.strip().strip('"').strip("'") for c in raw.split(",") if c.strip()]
+    # classifiers may be a JSON array string, a comma-separated list,
+    # or a file path to an extraction output JSON (containing a "classifiers" key)
+    classifiers_str = classifiers.strip()
+    if Path(classifiers_str).is_file():
+        try:
+            data = json.loads(Path(classifiers_str).read_text(encoding="utf-8"))
+            classifier_list = data.get("classifiers", []) if isinstance(data, dict) else data
+            log.debug("read classifiers from file", file=classifiers_str, classifiers=classifier_list)
+        except Exception as e:
+            log.warn(f"could not read classifiers file: {e}")
+            classifier_list = []
+    else:
+        try:
+            classifier_list: list[str] = json.loads(classifiers_str)
+        except (json.JSONDecodeError, ValueError):
+            raw = classifiers_str.strip("[]")
+            classifier_list = [c.strip().strip('"').strip("'") for c in raw.split(",") if c.strip()]
 
     folders_to_scan: set[str] = set()
     for classifier in classifier_list:
