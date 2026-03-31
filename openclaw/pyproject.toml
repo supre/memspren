@@ -19,11 +19,11 @@ dev = [
 ]
 
 [project.scripts]
-memcli = "openclaw.scripts.cli:main"
+memcli = "memcli.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["openclaw*"]
+include = ["memcli*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

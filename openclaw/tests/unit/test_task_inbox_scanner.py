@@ -1,4 +1,4 @@
-"""Unit tests for openclaw.scripts.scanning.task_inbox_scanner."""
+"""Unit tests for memcli.scanning.task_inbox_scanner."""
 from __future__ import annotations
 
 import json
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from openclaw.scripts.scanning.task_inbox_scanner import (
+from memcli.scanning.task_inbox_scanner import (
     deduplicate,
     levenshtein_ratio,
     parse_task_line,
@@ -96,7 +96,7 @@ def test_dedup_empty_list():
 def test_main_parses_tasks_and_writes_file(tmp_path):
     import io, contextlib, sys
     from unittest import mock
-    from openclaw.scripts.scanning.task_inbox_scanner import main
+    from memcli.scanning.task_inbox_scanner import main
 
     vault = tmp_path / "vault"
     tasks_dir = vault / "Tasks"
@@ -126,7 +126,7 @@ def test_main_parses_tasks_and_writes_file(tmp_path):
 def test_main_returns_empty_when_no_inbox(tmp_path):
     import io, contextlib, sys
     from unittest import mock
-    from openclaw.scripts.scanning.task_inbox_scanner import main
+    from memcli.scanning.task_inbox_scanner import main
 
     vault = tmp_path / "vault"
     vault.mkdir()

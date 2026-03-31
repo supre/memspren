@@ -1,4 +1,4 @@
-"""Unit tests for openclaw.scripts.state."""
+"""Unit tests for memcli.state."""
 from __future__ import annotations
 
 import json
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from openclaw.scripts import state
+from memcli import state
 
 
 def test_read_state_missing_returns_empty(tmp_path):

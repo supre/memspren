@@ -1,4 +1,4 @@
-"""Unit tests for openclaw.scripts.gateway_client."""
+"""Unit tests for memcli.gateway_client."""
 from __future__ import annotations
 
 import json
@@ -7,7 +7,7 @@ from unittest import mock
 
 import pytest
 
-from openclaw.scripts import gateway_client
+from memcli import gateway_client
 
 
 def _make_response(body: dict | str, status: int = 200):

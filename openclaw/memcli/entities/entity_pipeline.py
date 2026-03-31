@@ -26,16 +26,17 @@ Returns JSON to stdout:
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from .. import gateway_client
 from .. import PROMPTS_DIR, SCHEMAS_DIR
 from ..vault.git_commit import commit_file as _git_commit_file
 
-SCRIPT_DIR   = Path(__file__).parent.resolve()
 MAX_WORKERS  = 4
 CONTENT_TASK_TIMEOUT = 90
 LINK_TASK_TIMEOUT    = 60
@@ -48,7 +49,7 @@ def run_llm_task(
     agent: str,
     timeout: int = CONTENT_TASK_TIMEOUT,
 ) -> dict | None:
-    """Invoke openclaw.invoke --tool llm-task with an --args-json payload.
+    """Call the OpenClaw Gateway /tools/invoke for an llm-task.
     Returns parsed JSON output, or None on any failure.
     """
     try:
@@ -57,19 +58,38 @@ def run_llm_task(
     except Exception:
         return None
 
-    payload = {"prompt": prompt, "input": input_data, "schema": schema}
-    cmd = [
-        "openclaw.invoke", "--tool", "llm-task", "--action", "json",
-        "--agent",    agent,
-        "--args-json", json.dumps(payload),
-    ]
+    gateway_url   = os.environ.get("OPENCLAW_URL", "http://127.0.0.1:18789")
+    gateway_token = os.environ.get("OPENCLAW_TOKEN", "")
+    endpoint      = gateway_url.rstrip("/") + "/tools/invoke"
+
+    payload = {
+        "tool": "llm-task",
+        "action": "invoke",
+        "args": {
+            "prompt":    prompt,
+            "input":     input_data,
+            "schema":    schema,
+            "agent":     agent,
+            "timeoutMs": timeout * 1000,
+        },
+    }
+
     try:
-        proc = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout + 10,
-        )
-        if proc.returncode != 0:
-            return None
-        return json.loads(proc.stdout.strip())
+        result = gateway_client.post_json(endpoint, payload, token=gateway_token, timeout=timeout)
+    except Exception:
+        return None
+
+    try:
+        if "result" in result:
+            inner = result["result"]
+            if "details" in inner and "json" in inner["details"]:
+                return inner["details"]["json"]
+            if "content" in inner:
+                items = inner["content"]
+                text = next(i["text"] for i in items if i.get("type") == "text")
+                return json.loads(text)
+            return inner
+        return result
     except Exception:
         return None
 

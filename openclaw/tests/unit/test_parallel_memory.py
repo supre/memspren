@@ -1,4 +1,4 @@
-"""Unit tests for openclaw.scripts.memory.parallel_memory."""
+"""Unit tests for memcli.memory.parallel_memory."""
 from __future__ import annotations
 
 import contextlib
@@ -10,7 +10,7 @@ from unittest import mock
 
 import pytest
 
-from openclaw.scripts.memory.parallel_memory import JOBS, load_existing, run_job
+from memcli.memory.parallel_memory import JOBS, load_existing, run_job
 
 
 # ── load_existing ──────────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ def test_run_job_succeeds(tmp_path, monkeypatch):
 
     job = next(j for j in JOBS if j["name"] == "insights")
 
-    with mock.patch("openclaw.scripts.gateway_client.post_json",
+    with mock.patch("memcli.gateway_client.post_json",
                     return_value=make_parallel_job_response("insights-content")):
         name, result = run_job(job, extraction, tmp_path, {})
 
@@ -84,7 +84,7 @@ def test_run_job_returns_ok_false_on_gateway_error(tmp_path, monkeypatch):
     job = next(j for j in JOBS if j["name"] == "goals")
     extraction = {"raw_goals": []}
 
-    with mock.patch("openclaw.scripts.gateway_client.post_json",
+    with mock.patch("memcli.gateway_client.post_json",
                     side_effect=RuntimeError("Gateway HTTP 503")):
         name, result = run_job(job, extraction, tmp_path, {})
 
@@ -110,7 +110,7 @@ def test_run_job_includes_task_inbox_for_goals(tmp_path, monkeypatch):
     extraction = {"raw_goals": [{"title": "Q3 goals"}]}
     task_inbox = {"tasks": [{"title": "test task"}], "open_count": 1}
 
-    with mock.patch("openclaw.scripts.gateway_client.post_json", side_effect=fake_post):
+    with mock.patch("memcli.gateway_client.post_json", side_effect=fake_post):
         run_job(job, extraction, tmp_path, task_inbox)
 
     assert len(captured) == 1
@@ -138,10 +138,10 @@ def test_main_all_jobs_succeed(
             return make_parallel_job_response("tasks-content")
         return make_parallel_job_response("hot-memory-content")
 
-    from openclaw.scripts.memory.parallel_memory import main
+    from memcli.memory.parallel_memory import main
 
     buf = io.StringIO()
-    with mock.patch("openclaw.scripts.gateway_client.post_json", side_effect=fake_gateway):
+    with mock.patch("memcli.gateway_client.post_json", side_effect=fake_gateway):
         with mock.patch.object(sys, "argv", [
             "parallel-memory",
             "--extraction-file", str(fake_extraction_file),
@@ -171,10 +171,10 @@ def test_main_failed_job_does_not_block_others(
             raise RuntimeError("insights gateway error")
         return make_parallel_job_response("ok-content")
 
-    from openclaw.scripts.memory.parallel_memory import main
+    from memcli.memory.parallel_memory import main
 
     buf = io.StringIO()
-    with mock.patch("openclaw.scripts.gateway_client.post_json", side_effect=fake_gateway):
+    with mock.patch("memcli.gateway_client.post_json", side_effect=fake_gateway):
         with mock.patch.object(sys, "argv", [
             "parallel-memory",
             "--extraction-file", str(fake_extraction_file),

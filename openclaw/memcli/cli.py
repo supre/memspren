@@ -155,4 +155,14 @@ def metrics_cmd(ctx: click.Context) -> None:
 
 
 def main() -> None:
-    cli(standalone_mode=False)
+    import json as _json
+    try:
+        cli(standalone_mode=False)
+    except SystemExit:
+        raise  # commands use sys.exit() to signal their own exit codes — let them through
+    except click.exceptions.UsageError as exc:
+        print(_json.dumps({"ok": False, "error": str(exc)}))
+        sys.exit(2)
+    except Exception as exc:
+        print(_json.dumps({"ok": False, "error": f"internal error: {exc}"}))
+        sys.exit(1)

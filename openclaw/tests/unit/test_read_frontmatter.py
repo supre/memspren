@@ -1,4 +1,4 @@
-"""Unit tests for openclaw.scripts.scanning.read_frontmatter."""
+"""Unit tests for memcli.scanning.read_frontmatter."""
 from __future__ import annotations
 
 import json
@@ -8,7 +8,7 @@ from unittest import mock
 
 import pytest
 
-from openclaw.scripts.scanning.read_frontmatter import CLASSIFIER_FOLDER_MAP, main, read_frontmatter
+from memcli.scanning.read_frontmatter import CLASSIFIER_FOLDER_MAP, main, read_frontmatter
 
 
 def _write_md(path: Path, frontmatter: dict, body: str = "") -> None:

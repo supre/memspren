@@ -1,4 +1,4 @@
-"""Unit tests for openclaw.scripts.preflight.write_lock."""
+"""Unit tests for memcli.preflight.write_lock."""
 from __future__ import annotations
 
 import datetime
@@ -9,7 +9,7 @@ from unittest import mock
 
 import pytest
 
-from openclaw.scripts.preflight.write_lock import main, prune_stale_tokens
+from memcli.preflight.write_lock import main, prune_stale_tokens
 
 
 def run_write_lock(args: list[str], memory_path: Path) -> dict:

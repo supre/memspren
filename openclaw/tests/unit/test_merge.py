@@ -1,4 +1,4 @@
-"""Unit tests for openclaw.scripts.memory.merge."""
+"""Unit tests for memcli.memory.merge."""
 from __future__ import annotations
 
 import contextlib
@@ -10,7 +10,7 @@ from unittest import mock
 
 import pytest
 
-from openclaw.scripts.memory.merge import main
+from memcli.memory.merge import main
 
 
 def _run_merge(memory_path: Path, stdin_data: dict) -> tuple[int, dict]:

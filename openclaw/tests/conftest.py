@@ -89,7 +89,7 @@ def fake_extraction_file(tmp_memory_dir: Path, fake_extraction_output: dict) -> 
 @pytest.fixture
 def mock_gateway():
     """Patches gateway_client.post_json for the duration of the test."""
-    with mock.patch("openclaw.scripts.gateway_client.post_json") as m:
+    with mock.patch("memcli.gateway_client.post_json") as m:
         yield m
 
 

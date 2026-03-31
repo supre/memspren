@@ -1,4 +1,4 @@
-"""Unit tests for openclaw.scripts.finalize.metrics_writer."""
+"""Unit tests for memcli.finalize.metrics_writer."""
 from __future__ import annotations
 
 import contextlib
@@ -10,7 +10,7 @@ from unittest import mock
 
 import pytest
 
-from openclaw.scripts.finalize.metrics_writer import (
+from memcli.finalize.metrics_writer import (
     archive_buffers,
     rotate_telemetry_log,
     update_system_state,

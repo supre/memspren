@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from openclaw.scripts import memcli
+from memcli import cli as memcli
 
 
 class MemcliCommandFlowTests(unittest.TestCase):
@@ -62,7 +62,7 @@ class MemcliCommandFlowTests(unittest.TestCase):
             return "tasks"
         return "hot_memory"
 
-    @mock.patch("openclaw.scripts.gateway_client.post_json")
+    @mock.patch("memcli.gateway_client.post_json")
     def test_run_extraction_then_parallel_memory(self, mock_post_json):
         extraction_output = {
             "raw_insights": [{"summary": "insight"}],

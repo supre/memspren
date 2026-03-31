@@ -1,15 +1,20 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "description": "Stage 4b entity plan — structured vault write plan",
+  "description": "Stage 4b entity plan \u2014 structured vault write plan",
   "type": "object",
-  "required": ["entities", "summary"],
-  "additionalProperties": false,
+  "required": [
+    "entities",
+    "summary"
+  ],
   "properties": {
     "entities": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["path", "action", "content_draft"],
+        "required": [
+          "path",
+          "action",
+          "content_draft"
+        ],
         "additionalProperties": false,
         "properties": {
           "path": {
@@ -18,11 +23,16 @@
           },
           "action": {
             "type": "string",
-            "enum": ["create", "append", "merge", "update"]
+            "enum": [
+              "create",
+              "append",
+              "merge",
+              "update"
+            ]
           },
           "content_draft": {
             "type": "string",
-            "description": "Draft content for this entity. No wikilinks — linking directive adds those."
+            "description": "Draft content for this entity. No wikilinks \u2014 linking directive adds those."
           },
           "node_type": {
             "type": "string"

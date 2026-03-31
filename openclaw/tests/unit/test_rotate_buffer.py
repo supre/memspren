@@ -1,4 +1,4 @@
-"""Unit tests for openclaw.scripts.buffer.rotate_buffer."""
+"""Unit tests for memcli.buffer.rotate_buffer."""
 from __future__ import annotations
 
 import json
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from openclaw.scripts.buffer.rotate_buffer import (
+from memcli.buffer.rotate_buffer import (
     count_words,
     create_buffer,
     list_sealed,

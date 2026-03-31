@@ -1,4 +1,4 @@
-"""Unit tests for openclaw.scripts.extraction.run_extraction."""
+"""Unit tests for memcli.extraction.run_extraction."""
 from __future__ import annotations
 
 import contextlib
@@ -10,7 +10,7 @@ from unittest import mock
 
 import pytest
 
-from openclaw.scripts.extraction import run_extraction
+from memcli.extraction import run_extraction
 
 
 def _run(args: list[str]) -> tuple[int, dict]:
@@ -38,7 +38,7 @@ def test_extraction_success(tmp_memory_dir, monkeypatch, fake_buffer_files, fake
     monkeypatch.setenv("OPENCLAW_URL", "http://gw.test")
     monkeypatch.setenv("OPENCLAW_TOKEN", "tok")
 
-    with mock.patch("openclaw.scripts.gateway_client.post_json",
+    with mock.patch("memcli.gateway_client.post_json",
                     return_value=make_extraction_response(fake_extraction_output)):
         exit_code, result = _run([
             "--buffer-content-file", str(buf_file),
@@ -68,7 +68,7 @@ def test_gateway_error_exits_1(tmp_memory_dir, monkeypatch, fake_buffer_files):
     monkeypatch.setenv("OPENCLAW_URL", "http://gw.test")
     monkeypatch.setenv("OPENCLAW_TOKEN", "tok")
 
-    with mock.patch("openclaw.scripts.gateway_client.post_json",
+    with mock.patch("memcli.gateway_client.post_json",
                     side_effect=RuntimeError("Gateway HTTP 500: server error")):
         exit_code, result = _run([
             "--buffer-content-file", str(buf_file),
@@ -90,7 +90,7 @@ def test_extraction_saves_to_run_dir(tmp_memory_dir, monkeypatch, fake_buffer_fi
     monkeypatch.setenv("OPENCLAW_URL", "http://gw.test")
     monkeypatch.setenv("OPENCLAW_TOKEN", "tok")
 
-    with mock.patch("openclaw.scripts.gateway_client.post_json",
+    with mock.patch("memcli.gateway_client.post_json",
                     return_value=make_extraction_response(fake_extraction_output)):
         _run([
             "--buffer-content-file", str(buf_file),
@@ -111,7 +111,7 @@ def test_missing_prompt_file_exits_1(tmp_memory_dir, monkeypatch, fake_buffer_fi
     monkeypatch.setenv("OPENCLAW_TOKEN", "tok")
 
     # Temporarily make PROMPTS_DIR point to an empty dir
-    with mock.patch("openclaw.scripts.extraction.run_extraction.PROMPTS_DIR", tmp_memory_dir / "noprompts"):
+    with mock.patch("memcli.extraction.run_extraction.PROMPTS_DIR", tmp_memory_dir / "noprompts"):
         exit_code, result = _run([
             "--buffer-content-file", str(buf_file),
             "--manual-edits-file",   str(edits_file),

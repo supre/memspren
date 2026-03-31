@@ -12,10 +12,11 @@ Returns JSON to stdout (runner-compatible — no other stdout output).
 
 import argparse
 import json
-import subprocess
+import os
 import sys
 from pathlib import Path
 
+from .. import gateway_client
 from .. import PROMPTS_DIR, SCHEMAS_DIR
 
 # Prompt and schema are fixed for Stage 4b entity plan — not exposed as CLI flags
@@ -56,7 +57,7 @@ def main() -> None:
         except Exception:
             task_inbox = {}
 
-    # Load prompt and schema to build --args-json payload for openclaw.invoke
+    # Load prompt and schema
     try:
         prompt = PROMPT_FILE.read_text(encoding="utf-8").strip()
     except Exception as e:
@@ -69,45 +70,47 @@ def main() -> None:
         print(json.dumps({"ok": False, "error": f"could not read schema file: {e}"}))
         sys.exit(1)
 
-    input_data = {
-        "extraction":  extraction,
-        "frontmatter": frontmatter,
-        "task_inbox":  task_inbox,
+    gateway_url   = os.environ.get("OPENCLAW_URL", "http://127.0.0.1:18789")
+    gateway_token = os.environ.get("OPENCLAW_TOKEN", "")
+    endpoint      = gateway_url.rstrip("/") + "/tools/invoke"
+
+    payload = {
+        "tool": "llm-task",
+        "action": "invoke",
+        "args": {
+            "prompt":    prompt,
+            "input":     {"extraction": extraction, "frontmatter": frontmatter, "task_inbox": task_inbox},
+            "schema":    schema,
+            "agent":     args.agent,
+            "timeoutMs": args.timeout * 1000,
+        },
     }
-    payload = {"prompt": prompt, "input": input_data, "schema": schema}
-
-    cmd = [
-        "openclaw.invoke", "--tool", "llm-task", "--action", "json",
-        "--agent", args.agent,
-        "--args-json", json.dumps(payload),
-    ]
 
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=args.timeout + 10)
-    except subprocess.TimeoutExpired:
-        print(json.dumps({"ok": False, "error": f"openclaw.invoke timed out after {args.timeout}s"}))
-        sys.exit(1)
-    except Exception as e:
-        print(json.dumps({"ok": False, "error": f"openclaw.invoke failed: {e}"}))
+        result = gateway_client.post_json(endpoint, payload, token=gateway_token, timeout=args.timeout)
+    except RuntimeError as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}))
         sys.exit(1)
 
-    if proc.returncode != 0:
-        stderr_snippet = proc.stderr[:300] if proc.stderr else ""
-        print(json.dumps({"ok": False, "error": f"openclaw.invoke exited {proc.returncode}: {stderr_snippet}"}))
-        sys.exit(1)
-
-    stdout = proc.stdout.strip()
-    if not stdout:
-        print(json.dumps({"ok": False, "error": "openclaw.invoke returned empty output"}))
-        sys.exit(1)
-
+    # Extract JSON from Gateway response
     try:
-        json.loads(stdout)
-    except json.JSONDecodeError as e:
-        print(json.dumps({"ok": False, "error": f"openclaw.invoke output is not valid JSON: {e}"}))
+        if "result" in result:
+            inner = result["result"]
+            if "details" in inner and "json" in inner["details"]:
+                output = inner["details"]["json"]
+            elif "content" in inner:
+                items = inner["content"]
+                text = next(i["text"] for i in items if i.get("type") == "text")
+                output = json.loads(text)
+            else:
+                output = inner
+        else:
+            output = result
+    except Exception as exc:
+        print(json.dumps({"ok": False, "error": f"could not parse gateway response: {exc}", "raw": str(result)[:300]}))
         sys.exit(1)
 
-    print(stdout)
+    print(json.dumps(output))
 
 
 if __name__ == "__main__":
