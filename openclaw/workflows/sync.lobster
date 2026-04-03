@@ -47,13 +47,13 @@ steps:
 
   - id: lock
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       write-lock
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
 
   - id: check_cli
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       check-cli
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --vault "$LOBSTER_ARG_VAULT_NAME"
@@ -61,19 +61,19 @@ steps:
 
   - id: vault_diff
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       vault-diff
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
 
   - id: task_inbox
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       task-inbox
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
 
   - id: rotate_buffer
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       rotate-buffer
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --sync-check
@@ -82,7 +82,7 @@ steps:
 
   - id: extraction
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       run-extraction
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --buffer-content-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/buffer-content.txt"
@@ -93,7 +93,7 @@ steps:
 
   - id: parallel_refinement
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       parallel-memory
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --extraction-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/extraction-output.json"
@@ -103,7 +103,7 @@ steps:
 
   - id: merge_layer1
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       merge-layer1
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
     stdin: $parallel_refinement.stdout
@@ -112,7 +112,7 @@ steps:
 
   - id: read_frontmatter
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       read-frontmatter
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --classifiers "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/extraction-output.json"
@@ -122,7 +122,7 @@ steps:
 
   - id: entity_plan
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       entity-plan
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --buffer-content-file "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/buffer-content.txt"
@@ -135,7 +135,7 @@ steps:
 
   - id: entity_writes
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       entity-write
       --plan "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/entity-plan.json"
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
@@ -148,7 +148,7 @@ steps:
 
   - id: entity_links
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       entity-link
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --written-entities "$LOBSTER_ARG_VAULT_PATH/.second-brain/run/entity-write-result.json"
@@ -157,7 +157,7 @@ steps:
 
   - id: metrics
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       metrics
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --write-mode "filesystem"
@@ -165,7 +165,7 @@ steps:
 
   - id: release_lock
     run: >
-      uv run scripts/memcli.py
+      uv run -m scripts.memcli
       write-lock
       --vault-path "$LOBSTER_ARG_VAULT_PATH"
       --release

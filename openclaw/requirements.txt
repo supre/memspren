@@ -1,2 +1,0 @@
-click>=8.1
-jsonschema>=4.0

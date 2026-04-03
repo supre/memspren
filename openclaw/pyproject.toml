@@ -22,8 +22,9 @@ dev = [
 memcli = "memcli.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["scripts"]
 include = ["memcli*"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["scripts/memcli/tests"]
+pythonpath = ["scripts"]

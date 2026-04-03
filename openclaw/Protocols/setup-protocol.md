@@ -33,20 +33,17 @@ Copy and track progress before starting:
 
 ## Step 1: Check prerequisites
 
-### Git
+### Git (required)
 Verify git is installed:
 ```bash
 git --version
 ```
 
-If git not found:
-> "MemSpren requires git for version control of your vault. Every time I modify a file,
-> I commit the previous version first so nothing is ever lost. Please install git:
+If git not found, do NOT proceed:
+> "MemSpren requires git for version-safe sync. Every vault write gets a safety
+> snapshot so nothing is ever lost. Please install git and try again:
 > - macOS: `brew install git` or `xcode-select --install`
-> - Linux: `sudo apt install git`
-> - Windows: https://git-scm.com/download/win"
-
-Do NOT proceed with setup until git is available.
+> - Windows/Linux: https://git-scm.com/downloads"
 
 ### Obsidian CLI
 (Already covered in Prerequisites section of SKILL.md)
@@ -74,13 +71,10 @@ Ask:
 | Doesn't know  | Ask: *"Is this folder your vault?"* — check for a `.obsidian/` subfolder to confirm. Use the current folder if confirmed.                |
 | No vault yet  | Tell them: *"No problem — I'll create the vault structure in the folder you've selected."* Use the current mounted folder as vault_path. |
 
-**Verify obsidian-cli access:**
-```bash
-obsidian version  # Check CLI is reachable
-python scripts/check_cli.py --vault "[vault_name]"  # Full verification
-```
+**Verify vault path is accessible** — check that `.second-brain/config.md` exists (or the vault folder exists). If not:
+> "I can't access your vault at that path. Please double-check it and try again."
 
-If Obsidian is not running, tell user: "Please open Obsidian and try again."
+Do NOT write to `.memspren-config` until the path is confirmed.
 
 ---
 
@@ -94,7 +88,7 @@ Default if skipped: `21:00`
 
 ---
 
-## Step 4: Vision and goals
+## Step 5: Vision and goals
 
 Ask:
 > "Do you have a long-term vision or goals you want me to know
@@ -117,57 +111,45 @@ obsidian vault="[vault_name]" create \
 
 ## Step 6: Sync schedule
 
-Explain to the user how vault synchronization works, then set up cron jobs.
+Explain sync, then set the schedule.
 
 Say:
-> "Your brain dumps are captured in real-time but synced to Obsidian in batches
-> — this keeps things fast and token-efficient. I can set up automatic syncs
-> throughout the day. How many times per day would you like your vault synced?
-> (e.g. '3 times — noon, 5pm, 9pm' or 'just once at night')"
+> "Brain dumps are captured in real-time but synced to Obsidian in batches — fast and
+> token-efficient. I recommend syncing 3 times a day (morning, afternoon, evening) by
+> default. Want to keep that, or pick your own times?"
 
-| Answer                  | Action                                                |
-| ----------------------- | ----------------------------------------------------- |
-| Provides specific times | Create a cron job for each time using the `cron` tool |
-| Says "default" or skips | Create one default cron job at 21:00 (9 PM)           |
-| Doesn't want auto-sync  | Skip — user will trigger manually with "sync now"     |
+| Answer                  | Action                                                     |
+| ----------------------- | ---------------------------------------------------------- |
+| "Default" or skips      | Create 3 cron jobs: 08:00, 13:00, 21:00 in user's timezone |
+| Provides specific times | Create a cron job for each time                            |
+| "Manual only"           | Skip — user triggers sync with "sync now"                  |
 
 **Creating cron jobs:**
 
 For each sync time, create a cron job with:
-- **Schedule:** `cron` kind with appropriate expression (e.g. `0 12 * * *` for noon)
-- **Timezone:** User's timezone (from system or ask)
+- **Schedule:** cron expression (e.g. `0 8 * * *` for 08:00)
+- **Timezone:** user's timezone (ask if unknown)
 - **Session target:** `isolated`
-- **Delivery:** `announce` (so user sees sync results)
+- **Delivery:** `announce`
 - **Payload:** `agentTurn` with message:
   ```
-  Trigger a MemSpren sync now. Read the sync-buffer at {vault_path}/.second-brain/memory/sync-buffer.md
-  — if pending_sync is true, execute the full sync protocol: read Protocols/sync-protocol.md from
-  the memspren skill, follow all 11 steps (validate obsidian-cli, load state, process buffer, batch
-  create/update Obsidian entities, recalculate insights.md + goals.md + hot-memory.md, archive buffer,
-  clear buffer, log results). If pending_sync is false or buffer is empty, reply 'Nothing to sync.'
-  Vault: {vault_name}. Remember to export PATH to include /Applications/Obsidian.app/Contents/MacOS
-  before any obsidian-cli commands.
+  Trigger a MemSpren sync now. Run the Lobster pipeline:
+  lobster run workflows/sync.lobster --args-json '{"vault_path":"{vault_path}","vault_name":"{vault_name}","config_path":"{vault_path}/.second-brain/config.md"}'
+  Follow Protocols/sync-protocol.md for approval gate handling. If the pipeline reports nothing to sync, reply 'Nothing to sync.'
   ```
 
 **Store sync schedule in config.md:**
 
-Add to config.md during Step 8 (file creation):
 ```yaml
 sync_mode: batch
-sync_interval_cron: [list of times, e.g. "12:00, 17:00, 21:00"]
-sync_cron_job_ids: [list of cron job IDs returned from creation]
+sync_interval_cron: "08:00, 13:00, 21:00"
+sync_cron_job_ids: [list of cron job IDs]
 auto_sync_on_checkin_close: true
 buffer_max_tokens: 3000
 ```
 
-**Default (if user skips):**
-
-Create one cron job at 21:00 in user's timezone. Store in config.md.
-
 Say:
-> "I've set up automatic sync at [times]. Your vault will be updated with
-> everything captured during the day. You can also say 'sync now' anytime
-> to trigger it manually."
+> "Syncs scheduled for [times]. You can also say 'sync now' anytime to trigger manually."
 
 ---
 
@@ -213,208 +195,46 @@ Continue until user says they're done.
 
 ## Step 9: Create files and structure
 
-**Two locations are used:**
-- **Skill folder** → `.second-brain/` in the mounted folder root (always fixed)
-- **Vault content** → `vault_path` (set in Step 2)
-
-### Create .second-brain/ directory
-
-Create at workspace root (Write tool handles this).
-
-### Create vault folders using obsidian-cli
-
-For each folder below, use obsidian-cli to verify/create structure:
+Run the idempotent scaffold command. This creates all missing folders, seed files,
+`.second-brain/` structure, memory stubs, `.gitignore`, and initializes git.
+It never overwrites anything that already exists.
 
 ```bash
-obsidian vault="[vault_name]" files path=Vision
-obsidian vault="[vault_name]" files path=Strategy
-obsidian vault="[vault_name]" files path=Work/Projects
-obsidian vault="[vault_name]" files path=Work/Ideas
-obsidian vault="[vault_name]" files path=People
-obsidian vault="[vault_name]" files path=Life/Lifestyle
-obsidian vault="[vault_name]" files path=Tasks
-obsidian vault="[vault_name]" files path=Inbox
-obsidian vault="[vault_name]" files path=Log/Daily
-obsidian vault="[vault_name]" files path=Log/Weekly
-obsidian vault="[vault_name]" files path=Log/Analysis
-obsidian vault="[vault_name]" files path=Notes/Learnings
-obsidian vault="[vault_name]" files path=Notes/Resources
-obsidian vault="[vault_name]" files path=Notes/Reference
-obsidian vault="[vault_name]" files path=Archive/Vision
-obsidian vault="[vault_name]" files path=Archive/Strategy
-obsidian vault="[vault_name]" files path=Archive/Projects
-obsidian vault="[vault_name]" files path=Archive/Ideas
-obsidian vault="[vault_name]" files path=Archive/People
-obsidian vault="[vault_name]" files path=Archive/Lifestyle
-obsidian vault="[vault_name]" files path=Archive/Tasks
-obsidian vault="[vault_name]" files path=Archive/Inbox
-obsidian vault="[vault_name]" files path=Archive/Log
-obsidian vault="[vault_name]" files path=Archive/Notes
-obsidian vault="[vault_name]" files path=Logs
+uv run scripts/memcli.py setup \
+  --vault-path "[vault_path]" \
+  --vault-name "[vault_name]"
 ```
 
-(Obsidian will create missing folders automatically when files are written.)
+The command returns JSON confirming what was created. Tell the user:
+> "I've set up your vault structure and initialized git for version control.
+> Every file I modify gets a safety snapshot so nothing is ever lost."
 
-### Create seed files using obsidian-cli
-
-```bash
-# Core values
-obsidian vault="[vault_name]" create \
-  path=Vision/core-values.md \
-  content="---\nnode_type: vision\ncreated: [TODAY]\nstatus: active\nconnected: []\ntags: []\nlast_modified: [TODAY]\n---\n\n# Core Values\n\n[Placeholder — add your values]"
-
-# Guiding principles
-obsidian vault="[vault_name]" create \
-  path=Vision/guiding-principles.md \
-  content="---\nnode_type: vision\ncreated: [TODAY]\nstatus: active\nconnected: []\ntags: []\nlast_modified: [TODAY]\n---\n\n# Guiding Principles\n\n[Placeholder — add your principles]"
-
-# Life philosophy
-obsidian vault="[vault_name]" create \
-  path=Vision/life-philosophy.md \
-  content="---\nnode_type: vision\ncreated: [TODAY]\nstatus: active\nconnected: []\ntags: []\nlast_modified: [TODAY]\n---\n\n# Life Philosophy\n\n[Placeholder — add your philosophy]"
-
-# Quarterly goals
-obsidian vault="[vault_name]" create \
-  path=Strategy/quarterly-goals.md \
-  content="---\nnode_type: strategy\ncreated: [TODAY]\nstatus: active\nconnected: []\ntags: []\nlast_modified: [TODAY]\n---\n\n# Quarterly Goals\n\n## This Quarter\n\n[Placeholder — add your goals]"
-
-# Tasks inbox
-obsidian vault="[vault_name]" create \
-  path=Tasks/tasks-inbox.md \
-  content="---\nnode_type: tasks-inbox\ncreated: [TODAY]\nstatus: active\nconnected: []\ntags: []\n---\n\n# Tasks Inbox\n\n## Active Tasks\n\n## Completed (last 2 weeks)"
-```
-
-### Create .second-brain/config.md
-
-Write to `.second-brain/config.md` using the Write tool:
+**Then write `.second-brain/config.md`** (create-only if it doesn't exist):
 
 ```yaml
-vault_path: "[from Step 2]"
-check_in_time: "[from Step 3]"
+vault_path: "[from Step 3]"
+vault_name: "[from Step 3]"
+check_in_time: "[from Step 4]"
 project_idle_threshold_days: 7
 task_archive_after_days: 14
 log_retention_days: 90
 moc_suggestion_link_threshold: 8
 auto_archive_enabled: true
+sync_mode: batch
+sync_interval_cron: "[from Step 6]"
+auto_sync_on_checkin_close: true
+buffer_max_tokens: 3000
+agents:
+  heavy: memspren-heavy
+  light: memspren-light
+  default: main
+logging:
+  verbosity: INFO
+  max_log_bytes: 2097152
+  keep_lines: 2000
+lobster:
+  resume_token_ttl_hours: 24
 setup_complete: false
-```
-
-### Create .second-brain/memory/hot-memory.md
-
-Write using the Write tool:
-
-```
-LAST_UPDATED: [TODAY]
-
-ACTIVE_PROJECTS [max 3]
-
-OPEN_THREADS
-
-EVIDENCE_TRAIL
-
-KEY_INSIGHTS
-
-IDEAS_PARKED
-```
-
-### Create .second-brain/memory/insights.md
-
-Write using the Write tool:
-
-```
-LAST_UPDATED: [TODAY]
-
-WHAT_MATTERS_NOW
-[To be populated after first check-in]
-
-RECENT_CHALLENGES
-
-PATTERNS_OBSERVED
-
-STRATEGIES_WORKING
-
-STRATEGIES_NOT_WORKING
-
-ENERGY_STATE
-
-MINDSET_STATE
-
-VISION_ALIGNMENT
-```
-
-### Create .second-brain/memory/goals.md
-
-Write using the Write tool:
-
-```
-LAST_UPDATED: [TODAY]
-
-LEAD_DOMINO
-[To be populated after first check-in]
-
-TOP_3
-
-WHAT_TO_AVOID
-
-HEALTH_PRIORITY
-
-EMOTIONAL_CHECK
-
-WEEKLY_MICRO_GOALS
-
-QUARTERLY_GOALS
-```
-
-### Create .second-brain/memory/sync-buffer.md
-
-Write using the Write tool:
-
-```
----
-node_type: sync-buffer
-last_updated: [TODAY]
-pending_sync: false
-entry_count: 0
----
-```
-
-### Create .second-brain/memory/sync-archive/ directory
-
-Create the directory for archived sync buffers.
-
-### Initialize git in the vault
-
-```bash
-python3 scripts/git_commit.py --vault-path "[vault_path]" --init
-```
-
-Tell user:
-> "I've initialized git in your vault for version control. Every time I modify
-> a file, I'll commit the previous version first so nothing is ever lost."
-
-### Create .second-brain/memory/system-state.md
-
-Write using the Write tool:
-
-```markdown
----
-node_type: system-state
-setup_complete: false
-last_updated: [TODAY]
----
-# System State
-
-## Setup
-vault_path: [vault_path]
-check_in_time: [check_in_time]
-
-## Active Protocols
-
-## Behavioral Flags
-journaling: false
-lifestyle_tracking: false
-auto_archive: true
-moc_suggestions: true
 ```
 
 ---

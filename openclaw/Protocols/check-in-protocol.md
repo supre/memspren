@@ -7,8 +7,7 @@ Read `.second-brain/memory/insights.md`, `.second-brain/memory/goals.md`,
 and `.second-brain/memory/hot-memory.md` before starting.
 These are your ONLY context sources during conversation — do NOT read vault files.
 
-Read `Protocols/entity-protocol.md` only during sync (not during conversation).
-Read `Protocols/linking-protocol.md` only during sync (not during conversation).
+Entity extraction and vault writes are handled by the Lobster sync pipeline — do not interact with the vault during conversation.
 
 ---
 
@@ -128,11 +127,13 @@ Stop follow-up when all gaps are covered or user signals they're done.
 
 ## Step 6: Extract and buffer entities
 
-This is where the old protocol wrote directly to Obsidian.
-**NEW: Write to sync-buffer.md instead.**
+For everything the user shared, append a DETAILED entry to the active sync buffer.
 
-For everything the user shared, append a DETAILED entry to
-`.second-brain/memory/sync-buffer.md` using the Write/Edit tool.
+First, get the active buffer path:
+```bash
+uv run -m scripts.memcli get-active-buffer --vault-path "{vault_path}"
+```
+Use the returned `path` to append the entry. If `rotated: true`, a new buffer was started.
 
 **Entry format:**
 ```markdown
@@ -168,8 +169,6 @@ More detail is ALWAYS better than less.]
 - Be DETAILED — full context preserved (this is what Obsidian entities are built from later)
 - Include emotional context, not just facts
 - Include user's exact words where significant (quotes matter for patterns)
-- Update `entry_count` and `last_updated` in buffer frontmatter
-- Set `pending_sync: true` in buffer frontmatter
 
 **Also update insights.md and goals.md in-place** if a significant shift was detected:
 - Major mindset change (spiral, breakthrough, inner critic episode)

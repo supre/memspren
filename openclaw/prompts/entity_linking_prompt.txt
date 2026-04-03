@@ -12,6 +12,7 @@ Apply linking protocol rules:
 4. For ideas/learnings/patterns: use the folder-relative path without extension
 5. Only add a wikilink if the entity is meaningfully referenced (not just mentioned in passing)
 6. Quality over quantity — 2-5 strong links is better than 10 weak ones
+7. Prefer at least 1 link per entity when possible; for rich entities (projects, people, daily logs) aim for 2-3. This is a soft preference — zero links is acceptable if no meaningful connections exist.
 
 connected_additions: vault-relative paths (WITH .md extension) whose connected: arrays should gain a reference back to this entity. These are the files on the OTHER SIDE of the link.
 

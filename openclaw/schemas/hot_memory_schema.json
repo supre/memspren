@@ -7,9 +7,7 @@
   "properties": {
     "content": {
       "type": "string",
-      "description": "Complete replacement hot-memory.md text. Must stay under ~500 tokens (approx 2000 chars). Facts only — no behavioral inference.",
-      "minLength": 1,
-      "maxLength": 2500
+      "description": "Complete replacement hot-memory.md text. Must stay under ~500 tokens (approx 2000 chars). Facts only — no behavioral inference."
     }
   }
 }

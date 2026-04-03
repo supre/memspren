@@ -36,7 +36,7 @@ It returns a `resumeToken`.
 | 4a    | Frontmatter scan      | Batch reads YAML frontmatter from classifier-scoped vault folders               |
 | 4b    | Entity plan           | Single heavy llm-task generates the full vault write plan                       |
 | 4d    | **Approval gate**     | Pipeline pauses — agent presents write plan to user, waits for approval         |
-| 4c    | Entity writes         | Per-entity: content directive → linking directive → write (parallel)            |
+| 4c    | Entity writes         | Per-entity: content directive → write; then linking step runs after all writes  |
 | 5     | Metrics + cleanup     | metrics.json, buffer archive, system-state.md, system-log, lock release         |
 
 Full step-by-step spec is in `workflows/sync.lobster`.
@@ -110,12 +110,6 @@ Two named agents must exist in OpenClaw before the pipeline can run:
 | `memspren-light` | Goals, tasks, hot-memory, content, linking | Haiku or Sonnet |
 
 ```bash
-python scripts/create_agents.py
-```
-
-The script runs `openclaw agents add` for each agent and OpenClaw opens an interactive panel to set the model. Or add them manually:
-
-```bash
 openclaw agents add memspren-heavy
 openclaw agents add memspren-light
 ```
@@ -152,7 +146,7 @@ Each of the 4 parallel refinement jobs is independent:
 
 ## Telemetry
 
-Every step writes to `.second-brain/memory/sync-telemetry.log`. Log format:
+Every step writes to `.second-brain/logs/sync-telemetry.log`. Log format:
 
 ```
 [ISO ts] [LEVEL] [runner] action=<step> result=OK|FAIL|TIMEOUT detail=<...>
@@ -180,7 +174,7 @@ If Stage 2 had fallbacks:
 ## Filesystem fallback path
 
 When obsidian-cli is unavailable, the pipeline uses direct filesystem writes.
-Output is identical. The git_commit.py safety snapshot runs regardless of write path.
+Output is identical. A git safety snapshot runs before any vault write, regardless of write path.
 
 After a filesystem-mode sync, allow Obsidian to complete its rescan on next launch
 before triggering another sync (Obsidian reconciles its index against changed files).

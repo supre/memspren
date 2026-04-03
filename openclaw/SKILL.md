@@ -1,37 +1,37 @@
 ---
 name: memspren
-description: Manages a Zettelkasten-based second brain and personal knowledge graph in Obsidian using obsidian-cli and a deterministic Lobster sync pipeline. Use when the user mentions their second brain, Obsidian vault, daily check-in, PKM, brain dump, check-in, new project, new idea, met someone, task, or anything they want to capture. Also use when the user asks what they're working on, what to focus on, or wants to review their knowledge graph. Also triggers on "sync", "sync now", "push to obsidian" for vault synchronization.
+description: Manages a Zettelkasten-based second brain and personal knowledge graph in Obsidian using a deterministic Lobster sync pipeline. Use when the user mentions their second brain, Obsidian vault, daily check-in, PKM, brain dump, check-in, new project, new idea, met someone, task, or anything they want to capture. Also use when the user asks what they're working on, what to focus on, or wants to review their knowledge graph. Also triggers on "sync", "sync now", "push to obsidian" for vault synchronization.
 ---
 
 # memspren
 
 Zettelkasten-powered knowledge graph in Obsidian. Every entity is a node. Every connection is a `[[link]]`. The agent is the thinking partner — not just a storage system.
 
-## Architecture: memory + Buffer + Sync
+## Architecture: Memory + Buffer + Sync
 
 Three-layer system optimized for token efficiency:
 
-**Layer 1 — Active memory** (read every session, stays in context ~2000 tokens total):
+**Layer 1 — Active memory** (read every session, stays in context):
 
-- `insights.md` (700 tokens) — inference about user: patterns, energy, mindset, what works/doesn't
-- `goals.md` (500 tokens) — immediate priorities + weekly/quarterly micro-goal tracking
-- `hot-memory.md` (500 tokens) — project/task state only
-- `system-state.md` (~300 tokens) — config, flags, inventory
+- `insights.md` — inference about user: patterns, energy, mindset, what works/doesn't
+- `goals.md` — immediate priorities + weekly/quarterly micro-goal tracking
+- `tasks.md` — open tasks, recently completed, blocked
+- `hot-memory.md` — project/task state only
+- `system-state.md` — config, flags, inventory
 
 **Layer 2 — Rotating Sync Buffers** (write-only during conversation, NEVER read):
 
-- `sync-buffer.md` — detailed append-only log of conversation context. Only read during sync.
+- `sync-buffer-NNN.md` — detailed append-only log of conversation context. Only read during sync.
 
 **Layer 3 — Obsidian Vault** (synced at intervals or user trigger):
 
 - Full detailed entities with YAML frontmatter, `[[wiki links]]`, proper interlinking.
-- Created from brain dump log during sync. Rich, contextual, properly linked.
+- Created from buffer during sync by the Lobster pipeline.
 
 ### Key Rules
 
 - During conversation: read ONLY Layer 1 memory. Write to Layer 2 buffer. ZERO Obsidian interaction.
 - During sync: Lobster pipeline reads Layer 2 buffer → batch create/update Layer 3 vault entities → recalculate Layer 1 memory → archive buffer.
-- Vault entities are DETAILED with full context, proper wiki links, rich content.
 
 ## Sync pipeline
 
@@ -72,24 +72,12 @@ openclaw agents add memspren-light
 
 If neither exists, all directives fall back to the `default` agent.
 
-## Prerequisites
-
-Install and configure Obsidian CLI before first sync (obsidian-cli is optional — filesystem fallback activates automatically when it's unavailable):
-
-```bash
-brew install --cask obsidian
-# Enable CLI in Obsidian: Settings → General → Enable CLI (requires 1.12.4+)
-export PATH="$PATH:/Applications/Obsidian.app/Contents/MacOS"
-```
-
-Verify: `python scripts/check_cli.py --vault "<vault_name>"`
-
 ## Session start
 
 Every session, in this order:
 
 1. **Check workspace root for `.memspren-config`** — contains vault_path + setup_complete flag
-   - If exists → use vault_path from this file
+   - If exists → verify vault_path is accessible (`.second-brain/config.md` must exist)
    - If not exists → run setup (user provides vault path, then create `.memspren-config`)
 
 2. Read `{vault_path}/.second-brain/config.md` — vault-specific settings
@@ -98,40 +86,46 @@ Every session, in this order:
 
 4. Load `{vault_path}/.second-brain/memory/goals.md` — immediate priorities + tracking
 
-5. Load `{vault_path}/.second-brain/memory/hot-memory.md` — project/task state
+5. Load `{vault_path}/.second-brain/memory/tasks.md` — open tasks, blocked, recently done
 
-6. Load `{vault_path}/.second-brain/memory/system-state.md` — active protocols and flags
+6. Load `{vault_path}/.second-brain/memory/hot-memory.md` — project/task state
 
-7. Check `{vault_path}/.second-brain/memory/sync-buffer.md` — if `pending_sync: true`:
-   - Notify user: "You have [X] unsynced entries. Want me to sync now or continue?"
+7. Load `{vault_path}/.second-brain/memory/system-state.md` — active protocols and flags
+
+8. Check for unsynced buffer content:
+   ```bash
+   uv run -m scripts.memcli get-active-buffer --vault-path "{vault_path}"
+   ```
+   If `entry_count > 0` → notify user: "You have [X] unsynced entries. Want me to sync now or continue?"
 
 If setup hasn't run yet (no `.memspren-config` at workspace root), start setup protocol.
 
 ## Intent detection
 
-| User says                                           | Action                                                        |
-| --------------------------------------------------- | ------------------------------------------------------------- |
-| Check-in / how was my day / brain dump / end of day | Read `Protocols/check-in-protocol.md`                         |
-| New project / working on something                  | Read `Protocols/entity-protocol.md` → Project                 |
-| New idea / thought / realization                    | Read `Protocols/entity-protocol.md` → Idea                    |
-| Met someone / talked to someone                     | Read `Protocols/entity-protocol.md` → Person                  |
-| Task / reminder / need to do                        | Read `Protocols/entity-protocol.md` → Task                    |
-| Something I learned / read / figured out            | Read `Protocols/entity-protocol.md` → Learning                |
-| What am I working on / status                       | Use active memory (insights + goals + hot-memory) → summarize |
-| What should I focus on                              | Use goals.md + insights.md → advise                           |
-| Sync now / push to obsidian / sync my vault         | Read `Protocols/sync-protocol.md` → invoke Lobster pipeline   |
-| Matches a custom_protocol trigger in config.md      | Load custom protocol from `.second-brain/Protocols/`          |
+| User says                                                                     | Action                                                        |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Check-in / how was my day / brain dump / end of day                           | Read `Protocols/check-in-protocol.md`                         |
+| New project / working on / new idea / met someone / task / learned something  | Capture to sync buffer (append entry to active buffer)        |
+| What am I working on / status                                                 | Use active memory (insights + goals + hot-memory) → summarize |
+| What should I focus on                                                        | Use goals.md + insights.md → advise                           |
+| Sync now / push to obsidian / sync my vault                                   | Read `Protocols/sync-protocol.md` → invoke Lobster pipeline   |
+| Matches a custom_protocol trigger in config.md                                | Load custom protocol from `.second-brain/Protocols/`          |
 
 ## Conversation flow (during brain dumps and check-ins)
 
 1. User shares brain dump / check-in / update
 2. Agent responds conversationally using Layer 1 memory for context
-3. Agent appends DETAILED entry to `sync-buffer.md` (WRITE only — full context, not condensed)
-4. If significant mindset/energy shift detected, update `insights.md` and `goals.md` in-place
-5. Conversation continues — repeat steps 1-4
-6. Synthesis tells user what was CAPTURED: "Captured: project update for X, interaction with Y. These will sync to your vault on next sync."
+3. Before appending, get the active buffer path:
+   ```bash
+   uv run -m scripts.memcli get-active-buffer --vault-path "{vault_path}"
+   ```
+   Use the returned `path` to append the entry. If `rotated: true`, a new buffer was created — note it.
+4. Agent appends DETAILED entry to the active buffer (WRITE only — full context, not condensed)
+5. If significant mindset/energy shift detected, update `insights.md` and `goals.md` in-place
+6. Conversation continues — repeat steps 1–5
+7. Synthesis tells user what was captured: "Captured: project update for X, interaction with Y. These will sync to your vault on next sync."
 
-**Never read sync-buffer.md during conversation. Never interact with Obsidian during conversation.**
+**Never read sync buffers during conversation. Never interact with Obsidian during conversation.**
 
 ## Sync triggers
 
@@ -144,42 +138,13 @@ If setup hasn't run yet (no `.memspren-config` at workspace root), start setup p
 
 When sync triggers → read `Protocols/sync-protocol.md` and invoke the Lobster pipeline.
 
-## Bundled scripts
-
-| Script                          | Status             | Purpose                                                            |
-| ------------------------------- | ------------------ | ------------------------------------------------------------------ |
-| `scripts/check_cli.py`          | Existing (updated) | Verify obsidian-cli; resolve write mode (--json flag for pipeline) |
-| `scripts/rotate_buffer.py`      | Existing (updated) | Buffer rotation; --sync-check mode for pipeline pre-flight         |
-| `scripts/runner.py`             | New                | Enforce JSON-only stdout contract for all Lobster script steps     |
-| `scripts/memcli.py`             | New                | Dispatch commands through runner (single entry point)              |
-| `scripts/write_lock.py`         | New                | Acquire/release sync.lock; prune stale Lobster resume tokens       |
-| `scripts/clean_exit.py`         | New                | Clean exit signal when nothing to sync                             |
-| `scripts/vault_diff_scanner.py` | New                | Git diff since last_sync → manually changed vault files            |
-| `scripts/task_inbox_scanner.py` | New                | Parse + deduplicate tasks-inbox.md                                 |
-| `scripts/read_frontmatter.py`   | New                | Classifier-scoped batch frontmatter read for merge detection       |
-| `scripts/parallel_memory.py`    | New                | ThreadPoolExecutor dispatcher for Stage 2 parallel refinement      |
-| `scripts/merge.py`              | New                | Collect + validate Stage 2 outputs + write Layer 1 memory files    |
-| `scripts/entity_pipeline.py`    | New                | Per-entity content directive, linking directive, and vault write   |
-| `scripts/metrics_writer.py`     | New                | Write metrics.json, archive buffers, update system-state.md        |
-| `scripts/git_commit.py`         | Existing           | Pre-modification git snapshot (nothing ever lost)                  |
-| `scripts/update_connected.py`   | Existing           | Safe connected: array updates                                      |
-| `scripts/scan_descriptions.py`  | Existing           | Merge decision support                                             |
-
-**Critical stdout contract:** every script run by Lobster must emit ONLY valid JSON to stdout.
-Always invoke scripts via `python -m scripts.runner scripts/memcli.py <command> --arg value` —
-the runner enforces the JSON contract while memcli keeps a single dispatch path.
-Global locking is handled by `scripts/write_lock.py` (Stage 0 + Stage 5).
-Never run scripts directly from a Lobster step.
-
 ## Protocol files (load only when needed)
 
-| File                             | Load when                                         |
-| -------------------------------- | ------------------------------------------------- |
-| `Protocols/setup-protocol.md`    | `setup_complete: false`                           |
-| `Protocols/check-in-protocol.md` | User initiates a check-in                         |
-| `Protocols/entity-protocol.md`   | During sync — creating or updating vault entities |
-| `Protocols/linking-protocol.md`  | During sync — writing or updating vault files     |
-| `Protocols/sync-protocol.md`     | Sync triggered (user, cron, or auto)              |
+| File                             | Load when                            |
+| -------------------------------- | ------------------------------------ |
+| `Protocols/setup-protocol.md`    | `setup_complete: false`              |
+| `Protocols/check-in-protocol.md` | User initiates a check-in            |
+| `Protocols/sync-protocol.md`     | Sync triggered (user, cron, or auto) |
 
 **Custom protocols** (user's vault — `.second-brain/Protocols/`):
 Loaded from `custom_protocols` section in config.md. Agent checks triggers at intent detection time.
@@ -189,7 +154,7 @@ Never load all protocol files at once.
 
 ## config.md required fields
 
-The following fields must exist in `.second-brain/config.md` for the new pipeline:
+The following fields must exist in `.second-brain/config.md` for the pipeline:
 
 ```yaml
 # Agent routing
@@ -209,103 +174,42 @@ lobster:
   resume_token_ttl_hours: 24
 ```
 
-## Two file locations — never mix them
+## File locations
 
-| Location         | What lives here                                                                                               | Access method                                 |
-| ---------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `.second-brain/` | config.md, memory/ (insights, goals, hot-memory, system-state, sync-buffer, metrics.json, sync-telemetry.log) | Write/Read/Edit tools directly                |
-| `vault_path`     | All content: Work/, People/, Log/, Notes/, Tasks/, Inbox/, Archive/, Logs/                                    | obsidian-cli or filesystem (ONLY during sync) |
-
-## Skill folder structure
-
-```
-openclaw/
-├── SKILL.md
-├── Protocols/
-│   ├── sync-protocol.md       ← invocation + approval gate reference
-│   ├── check-in-protocol.md
-│   ├── entity-protocol.md
-│   ├── linking-protocol.md
-│   └── setup-protocol.md
-├── workflows/
-│   └── sync.lobster           ← full pipeline spec (6 stages)
-├── schemas/
-│   ├── extraction_schema.json
-│   ├── insights_schema.json
-│   ├── goals_schema.json
-│   ├── tasks_schema.json
-│   ├── hot_memory_schema.json
-│   ├── entity_plan_schema.json
-│   ├── entity_content_schema.json
-│   └── entity_linking_schema.json
-├── prompts/
-│   ├── extraction_prompt.txt
-│   ├── insights_prompt.txt
-│   ├── goals_prompt.txt
-│   ├── tasks_prompt.txt
-│   ├── hot_memory_prompt.txt
-│   ├── entity_plan_prompt.txt
-│   ├── entity_content_prompt.txt
-│   └── entity_linking_prompt.txt
-└── scripts/
-    ├── runner.py              ← JSON stdout enforcer (wrap ALL Lobster script calls)
-    ├── write_lock.py
-    ├── clean_exit.py
-    ├── vault_diff_scanner.py
-    ├── task_inbox_scanner.py
-    ├── read_frontmatter.py
-    ├── parallel_memory.py
-    ├── merge.py
-    ├── entity_pipeline.py
-    ├── metrics_writer.py
-    ├── check_cli.py           ← updated with --json flag
-    ├── rotate_buffer.py       ← updated with --sync-check flag
-    ├── git_commit.py
-    ├── update_connected.py
-    ├── scan_descriptions.py
-    ├── run_extraction.py
-    ├── run_entity_plan.py
-    └── create_agents.py        ← one-time setup: adds memspren-heavy/light agents
-```
+| Location                   | What lives here                                                                | Access                                   |
+| -------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------- |
+| `.second-brain/memory/`    | insights.md, goals.md, tasks.md, hot-memory.md, system-state.md, metrics.json | Write/Read/Edit tools directly           |
+| `.second-brain/buffers/`   | sync-buffer-NNN.md (rotating, append-only during conversation)                 | Write/Edit tools directly                |
+| `.second-brain/run/`       | Pipeline run artifacts (buffer-content.txt, state files)                       | Written by memcli, not by agent directly |
+| `.second-brain/logs/`      | sync-telemetry.log, pipeline logs                                              | Written by memcli                        |
+| `.second-brain/config.md`  | Vault-specific settings, agent routing, sync schedule                          | Read tool                                |
+| `vault_path` (content)     | Work/, People/, Log/, Notes/, Tasks/, Inbox/, Archive/, Logs/                  | Lobster pipeline only (never during conversation) |
 
 ## Entity quick reference
 
-| Entity             | Vault path                       | Notes                       |
-| ------------------ | -------------------------------- | --------------------------- |
-| Project            | `Work/Projects/[name].md`        | —                           |
-| Idea               | `Work/Ideas/[name].md`           | —                           |
-| Person             | `People/[firstname-lastname].md` | —                           |
-| Task               | `Tasks/tasks-inbox.md`           | Append only, not a new file |
-| Learning           | `Notes/Learnings/[topic].md`     | —                           |
-| Daily log          | `Log/Daily/YYYY-MM-DD.md`        | Created during sync         |
-| Knowledge Transfer | `Work/KT/[topic].md`             | —                           |
+| Entity             | Vault path                                      | Notes                       |
+| ------------------ | ----------------------------------------------- | --------------------------- |
+| Project            | `Work/Projects/[name].md`                       | —                           |
+| Idea               | `Work/Ideas/[name].md`                          | —                           |
+| Person             | `People/[firstname-lastname].md`                | —                           |
+| Task               | `Tasks/tasks-inbox.md`                          | Append only, not a new file |
+| Learning           | `Notes/Learnings/[category]/[topic].md`         | e.g. `business/pricing-strategy.md` |
+| Pattern            | `Notes/Patterns/[name].md`                      | —                           |
+| Daily log          | `Log/Daily/YYYY-MM-DD.md`                       | Created during sync         |
+| Knowledge Transfer | `Work/KT/[topic].md`                            | —                           |
 
 ## Critical rules
 
 - Nothing gets deleted — archive instead
-- Every vault file gets YAML frontmatter + at least one `[[link]]`
-- Every vault file gets a `description` field in frontmatter (merge detection key)
-- One idea per note — atomize brain dumps
-- Load files surgically — never all at once
 - Always forward slashes in paths
-- `connected:` arrays → always use `scripts/update_connected.py`
-- insights.md stays under 700 tokens
-- goals.md stays under 500 tokens
-- hot-memory.md stays under 500 tokens
 - Sync buffers are WRITE-ONLY during conversation, READ-ONLY during sync
 - Brain dump entries must be DETAILED with full context (not condensed)
-- Vault entities created during sync must be DETAILED with proper wiki links
-- All Lobster script steps must use `python -m scripts.runner` — never raw script invocation
 
 ## What never happens
 
 - Deleting any vault file (archive it instead)
-- Saving a note without YAML frontmatter
-- Saving a note without a `description` field in frontmatter
-- Saving a note without at least one `[[link]]`
-- Loading all protocol files in a single session
 - Reading sync buffers during conversation
 - Interacting with the vault during conversation (only during sync)
-- Windows-style backslash paths
+- Loading all protocol files in a single session
 - Writing config.md or memory files into vault content folders
-- Emitting non-JSON text to stdout from any Lobster script step
+- Windows-style backslash paths

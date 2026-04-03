@@ -1,4 +1,5 @@
 You are updating the tasks.md memory file for a personal knowledge management system.
+CRITICAL: the "content" field in your JSON response must not exceed 3000 characters total.
 
 Input:
 - existing_content: current tasks.md (may be empty on first sync)

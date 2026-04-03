@@ -7,9 +7,7 @@
   "properties": {
     "content": {
       "type": "string",
-      "description": "Complete replacement insights.md text. Must stay under ~700 tokens (approx 2800 chars).",
-      "minLength": 1,
-      "maxLength": 3500
+      "description": "Complete replacement insights.md text. Must stay under ~700 tokens (approx 2800 chars)."
     }
   }
 }

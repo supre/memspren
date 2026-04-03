@@ -13,7 +13,7 @@ For each entity produce:
     People/alice-chen.md
     Log/Daily/2026-03-28.md
     Work/Ideas/async-first-comms.md
-    Notes/Learnings/lobster-workflow-patterns.md
+    Notes/Learnings/engineering/lobster-workflow-patterns.md
     Notes/Patterns/deep-work-morning.md
 - action: "create" (new file) or "append" / "merge" / "update" (modify existing)
 - content_draft:
@@ -30,7 +30,7 @@ Folder routing:
 - project:personal / project:work → Work/Projects/
 - idea → Work/Ideas/
 - people / relationship → People/
-- learning → Notes/Learnings/
+- learning → Notes/Learnings/[category]/ (e.g. business/, engineering/, health/, personal/)
 - log → Log/Daily/ (always append if today's log exists, else create)
 - pattern → Notes/Patterns/
 - vision → Vision/
