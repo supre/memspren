@@ -115,7 +115,7 @@ class MemcliCommandFlowTests(unittest.TestCase):
                 "--manual-edits-file",
                 str(self.manual_file),
                 "--agent",
-                "memspren-heavy",
+                "main",
                 "--vault-path",
                 str(self.vault_path),
             ]

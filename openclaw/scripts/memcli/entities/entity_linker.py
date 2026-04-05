@@ -19,7 +19,7 @@ from ..log import Logger
 from ..scanning.read_frontmatter import read_frontmatter
 
 MAX_WORKERS = 4
-LINK_TIMEOUT = 60
+LINK_TIMEOUT = 600
 
 
 def _link_via_llm(entity_content: str, path: str, all_entities: list[dict],
@@ -51,7 +51,7 @@ def _link_via_llm(entity_content: str, path: str, all_entities: list[dict],
                 "path": path,
             },
             "schema": schema,
-            "agent": "memspren-light",
+            "agent": "main",
             "timeoutMs": LINK_TIMEOUT * 1000,
         },
     }

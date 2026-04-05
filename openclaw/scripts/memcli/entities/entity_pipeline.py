@@ -9,15 +9,15 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from .. import gateway_client
+from ..gateway import post_json, get_gateway_token, get_gateway_endpoint
 from .. import PROMPTS_DIR, SCHEMAS_DIR
 from ..gateway import get_gateway_token, get_gateway_endpoint
 from ..log import Logger
 from ..vault.git_commit import commit_file as _git_commit_file
 
 MAX_WORKERS = 4
-CONTENT_TASK_TIMEOUT = 90
-LINK_TASK_TIMEOUT = 60
+CONTENT_TASK_TIMEOUT = 600
+LINK_TASK_TIMEOUT = 600
 
 
 def run_llm_task(
@@ -46,7 +46,7 @@ def run_llm_task(
     log.debug(f"llm-task {prompt_file}", endpoint=endpoint, input_keys=list(input_data.keys()))
 
     try:
-        result = gateway_client.post_json(endpoint, payload, token=gateway_token, timeout=timeout)
+        result = post_json(endpoint, payload, token=gateway_token, timeout=timeout)
     except Exception as e:
         log.error(f"llm-task failed: {prompt_file}", error=str(e))
         return None
@@ -171,7 +171,7 @@ def process_entity(entity, vault_path, vault_name, write_mode, log):
     content_result = run_llm_task(
         "entity_content_prompt.txt",
         {"content_draft": draft, "action": action, "path": path},
-        "entity_content_schema.json", "memspren-light",
+        "entity_content_schema.json", "main",
         timeout=CONTENT_TASK_TIMEOUT, log=log,
     )
     if not content_result:
@@ -194,7 +194,7 @@ def process_entity(entity, vault_path, vault_name, write_mode, log):
     linking_result = run_llm_task(
         "entity_linking_prompt.txt",
         {"entity_content": full_content, "existing_content": existing_snippet, "path": path},
-        "entity_linking_schema.json", "memspren-light",
+        "entity_linking_schema.json", "main",
         timeout=LINK_TASK_TIMEOUT, log=log,
     )
 

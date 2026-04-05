@@ -240,12 +240,16 @@ def sync_check(buffers_dir: str, run_path: str) -> dict:
         "entry_count": 0,
     }
 
-    # Seal active buffer if it has content
+    # Seal active buffer if it has actual content — read the file directly rather than
+    # trusting frontmatter counts, which may not be updated when entries are appended.
     buf = find_active_buffer(buffers_dir)
-    if buf and buf["word_count"] > 0 and buf["entry_count"] > 0:
-        seal_buffer(buffers_dir, buf["buffer_id"])
-        new_id = next_buffer_id(buf["buffer_id"])
-        create_buffer(buffers_dir, new_id)
+    if buf and os.path.exists(buf["path"]):
+        with open(buf["path"], "r", encoding="utf-8") as f:
+            raw = f.read()
+        if count_words(raw) > 0:
+            seal_buffer(buffers_dir, buf["buffer_id"])
+            new_id = next_buffer_id(buf["buffer_id"])
+            create_buffer(buffers_dir, new_id)
 
     sealed = list_sealed(buffers_dir)
     if not sealed:
@@ -306,10 +310,11 @@ def run(
     if sync_check_mode:
         log.info("sync-check mode")
         result = sync_check(bd, str(paths.run))
-        if result.get("sealed_buffers"):
-            state.write_state(str(paths.run), {
-                "rotate_buffer_sealed_buffers": result["sealed_buffers"],
-            })
+        # Always write both fields — clears stale data from previous runs
+        state.write_state(str(paths.run), {
+            "rotate_buffer_has_content": result["has_content"],
+            "rotate_buffer_sealed_buffers": result["sealed_buffers"],
+        })
         log.debug("sync-check result", has_content=result["has_content"], entry_count=result["entry_count"])
         return result
     if check:

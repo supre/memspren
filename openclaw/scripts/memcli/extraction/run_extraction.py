@@ -18,7 +18,7 @@ def run(
     buffer_content_file: Path,
     manual_edits_file: Path,
     agent: str = "main",
-    timeout: int = 120,
+    timeout: int = 600,
     log: Logger,
 ) -> dict:
     paths = VaultPaths(vault_path)

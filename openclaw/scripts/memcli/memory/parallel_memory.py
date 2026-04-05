@@ -21,7 +21,7 @@ except ImportError:
 JOBS = [
     {
         "name": "insights",
-        "agent": "memspren-heavy",
+        "agent": "main",
         "prompt_file": "insights_prompt.txt",
         "schema_file": "insights_schema.json",
         "memory_file": "insights.md",
@@ -30,7 +30,7 @@ JOBS = [
     },
     {
         "name": "goals",
-        "agent": "memspren-light",
+        "agent": "main",
         "prompt_file": "goals_prompt.txt",
         "schema_file": "goals_schema.json",
         "memory_file": "goals.md",
@@ -39,7 +39,7 @@ JOBS = [
     },
     {
         "name": "tasks",
-        "agent": "memspren-light",
+        "agent": "main",
         "prompt_file": "tasks_prompt.txt",
         "schema_file": "tasks_schema.json",
         "memory_file": "tasks.md",
@@ -48,7 +48,7 @@ JOBS = [
     },
     {
         "name": "hot_memory",
-        "agent": "memspren-light",
+        "agent": "main",
         "prompt_file": "hot_memory_prompt.txt",
         "schema_file": "hot_memory_schema.json",
         "memory_file": "hot-memory.md",
@@ -117,13 +117,13 @@ def run_job(
     payload = {
         "tool": "llm-task",
         "action": "invoke",
-        "args": {"prompt": prompt, "input": job_input, "schema": schema_obj, "timeoutMs": 120000},
+        "args": {"prompt": prompt, "input": job_input, "schema": schema_obj, "timeoutMs": 600000},
     }
 
     endpoint = get_gateway_endpoint()
 
     try:
-        result = post_json(endpoint, payload, token=gateway_token, timeout=130)
+        result = post_json(endpoint, payload, token=gateway_token, timeout=610)
     except RuntimeError as exc:
         log.error(f"gateway error for {name}", error=str(exc))
         return name, {"ok": False, "content": "", "error": str(exc)}

@@ -83,6 +83,19 @@ def clean_exit_cmd(vault_path, message, release_lock, verbosity):
           vault_path=Path(vault_path), message=message, release_lock=release_lock)
 
 
+@cli.command("sync-gate")
+@click.option("--vault-path", required=True, type=click.Path())
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def sync_gate_cmd(vault_path, verbosity):
+    """Halt the pipeline if rotate-buffer found nothing to sync. Exits 1 (clean) if nothing to do."""
+    from .preflight.sync_gate import run
+    from .paths import VaultPaths
+    log = make_logger("sync-gate", verbosity=verbosity, log_dir=_log_dir(vault_path))
+    paths = VaultPaths(vault_path)
+    paths.ensure()
+    run(vault_path=vault_path, log=log)
+
+
 # ── Stage 1: Buffer management ─────────────────────────────────────────────
 
 @cli.command("rotate-buffer")
@@ -186,7 +199,7 @@ def read_frontmatter_cmd(vault_path, classifiers, verbosity):
 @click.option("--buffer-content-file", required=True, type=click.Path())
 @click.option("--manual-edits-file", required=True, type=click.Path())
 @click.option("--agent", default="main")
-@click.option("--timeout", type=int, default=120)
+@click.option("--timeout", type=int, default=600)
 @click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
 def run_extraction_cmd(vault_path, buffer_content_file, manual_edits_file, agent, timeout, verbosity):
     """Call LLM extraction via OpenClaw Gateway."""
@@ -249,8 +262,8 @@ def merge_layer1_cmd(vault_path, verbosity):
 @click.option("--buffer-content-file", required=True, type=click.Path())
 @click.option("--manual-edits-file", required=True, type=click.Path())
 @click.option("--frontmatter-file", default="")
-@click.option("--agent", default="memspren-heavy")
-@click.option("--timeout", type=int, default=180)
+@click.option("--agent", default="main")
+@click.option("--timeout", type=int, default=600)
 @click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
 def entity_plan_cmd(vault_path, buffer_content_file, manual_edits_file,
                     frontmatter_file, agent, timeout, verbosity):
@@ -301,6 +314,16 @@ def metrics_cmd(vault_path, write_mode, vault_name, verbosity):
     from .finalize.metrics_writer import run
     _exec("metrics", run, _log_dir(vault_path), verbosity,
           vault_path=Path(vault_path), write_mode=write_mode, vault_name=vault_name)
+
+
+@cli.command("archive-run")
+@click.option("--vault-path", required=True, type=click.Path())
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def archive_run_cmd(vault_path, verbosity):
+    """Move all run/ artifacts to run/archive/ with a timestamp suffix."""
+    from .finalize.archive_run import run
+    _exec("archive-run", run, _log_dir(vault_path), verbosity,
+          vault_path=Path(vault_path))
 
 
 def main() -> None:

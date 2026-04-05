@@ -18,7 +18,7 @@ from ..paths import VaultPaths
 from ..vault.git_commit import commit_file as _git_commit_file
 
 MAX_WORKERS = 4
-MERGE_TIMEOUT = 90
+MERGE_TIMEOUT = 600
 
 
 def _git_snapshot(vault_path: Path, rel_path: str) -> None:
@@ -75,7 +75,7 @@ def _merge_via_llm(existing_content: str, new_content: str,
                 "path": path,
             },
             "schema": schema,
-            "agent": "memspren-light",
+            "agent": "main",
             "timeoutMs": MERGE_TIMEOUT * 1000,
         },
     }
@@ -136,15 +136,24 @@ def _process_entity(
 ) -> dict:
     path = entity.get("path", "")
     action = entity.get("action", "create")
-    content_draft = entity.get("content_draft", "")
+    raw_draft = entity.get("content_draft", "")
+    # Normalize: accept array of bullets or plain string
+    if isinstance(raw_draft, list):
+        content_draft = "\n".join(str(item) for item in raw_draft)
+    else:
+        content_draft = str(raw_draft) if raw_draft else ""
     full_path = vault_path / path
 
     log.debug(f"processing entity: {path}", action=action)
 
     if action == "create":
-        # content_draft is write-ready (frontmatter + body from entity plan)
+        # content_draft is brief notes — expand to full content via LLM
+        final_content = _merge_via_llm("", content_draft, "create", path, log)
+        if final_content is None:
+            log.warn(f"LLM content generation failed for {path}, writing notes as-is")
+            final_content = content_draft
         try:
-            _write_file(vault_path, vault_name, path, content_draft, write_mode)
+            _write_file(vault_path, vault_name, path, final_content, write_mode)
             log.info(f"created entity: {path}")
             return {"path": path, "ok": True, "action": action}
         except Exception as e:
@@ -154,8 +163,9 @@ def _process_entity(
     # append/merge/update — need LLM refinement with existing content
     if not full_path.exists():
         log.warn(f"existing file not found for {action}: {path}, treating as create")
+        final_content = _merge_via_llm("", content_draft, "create", path, log) or content_draft
         try:
-            _write_file(vault_path, vault_name, path, content_draft, write_mode)
+            _write_file(vault_path, vault_name, path, final_content, write_mode)
             log.info(f"created entity (fallback from {action}): {path}")
             return {"path": path, "ok": True, "action": "create"}
         except Exception as e:

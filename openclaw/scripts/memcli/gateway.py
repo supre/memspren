@@ -10,8 +10,8 @@ import time
 import urllib.error
 import urllib.request
 
-MAX_RETRIES = 3
-RETRY_DELAY = 5  # seconds
+MAX_RETRIES = 5
+RETRY_DELAY = 30  # seconds
 
 
 def get_gateway_url() -> str:
@@ -26,7 +26,7 @@ def get_gateway_endpoint() -> str:
     return get_gateway_url().rstrip("/") + "/tools/invoke"
 
 
-def post_json(url: str, payload: dict, token: str = "", timeout: int = 120, retries: int = MAX_RETRIES) -> dict:
+def post_json(url: str, payload: dict, token: str = "", timeout: int = 600, retries: int = MAX_RETRIES) -> dict:
     """POST JSON payload to the given URL and return the decoded JSON response.
 
     Retries on HTTP 500 errors up to `retries` times with a delay between attempts.

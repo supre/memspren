@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .. import gateway_client
+from ..gateway import post_json, get_gateway_token, get_gateway_endpoint
 from .. import PROMPTS_DIR, SCHEMAS_DIR
 from ..gateway import get_gateway_token, get_gateway_endpoint
 from ..log import Logger
@@ -23,8 +23,8 @@ def run(
     buffer_content_file: Path,
     manual_edits_file: Path,
     frontmatter_file: str = "",
-    agent: str = "memspren-heavy",
-    timeout: int = 180,
+    agent: str = "main",
+    timeout: int = 600,
     log: Logger,
 ) -> dict:
     # Read raw buffer content
@@ -33,8 +33,8 @@ def run(
     buffer_content = buffer_content_file.read_text(encoding="utf-8")
     log.debug("read buffer content", length=len(buffer_content))
 
-    # Read manual edits (cap at 20KB to stay within LLM context limits)
-    MAX_EDITS_CHARS = 20000
+    # Read manual edits (cap at 6KB — keeps entity-plan payload manageable for the LLM)
+    MAX_EDITS_CHARS = 6000
     manual_edits = ""
     if manual_edits_file.exists():
         raw_edits = manual_edits_file.read_text(encoding="utf-8")
@@ -45,11 +45,13 @@ def run(
             manual_edits = raw_edits
     log.debug("read manual edits", length=len(manual_edits))
 
-    # Read existing frontmatter
+    # Read existing frontmatter (cap at 50 items for merge detection — keeps payload manageable)
+    MAX_FRONTMATTER = 50
     frontmatter: list = []
     if frontmatter_file:
         try:
-            frontmatter = json.loads(Path(frontmatter_file).read_text(encoding="utf-8"))
+            all_fm = json.loads(Path(frontmatter_file).read_text(encoding="utf-8"))
+            frontmatter = all_fm[:MAX_FRONTMATTER]
         except Exception:
             frontmatter = []
     log.debug("read frontmatter", count=len(frontmatter))
@@ -92,7 +94,7 @@ def run(
     log.debug("entity plan payload keys", payload_keys=list(payload["args"]["input"].keys()))
 
     try:
-        result = gateway_client.post_json(endpoint, payload, token=gateway_token, timeout=timeout)
+        result = post_json(endpoint, payload, token=gateway_token, timeout=timeout)
     except RuntimeError as exc:
         log.error("entity plan gateway call failed", error=str(exc))
         raise

@@ -31,11 +31,18 @@
             ]
           },
           "content_draft": {
-            "type": "string",
-            "description": "Draft content for this entity. No wikilinks \u2014 linking directive adds those."
+            "description": "Draft content for this entity — string or array of bullet strings.",
+            "oneOf": [
+              {"type": "string"},
+              {"type": "array", "items": {"type": "string"}}
+            ]
           },
           "node_type": {
             "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "description": "One-line description for merge detection"
           }
         }
       }

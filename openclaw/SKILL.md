@@ -138,6 +138,24 @@ If setup hasn't run yet (no `.memspren-config` at workspace root), start setup p
 
 When sync triggers → read `Protocols/sync-protocol.md` and invoke the Lobster pipeline.
 
+## memcli — sync engine
+
+`memcli` is the CLI that drives the Lobster sync pipeline. It is installed as a standalone command.
+
+**Running memcli:**
+- Execute directly: `memcli <command> [args]`
+- If the `memcli` command is not found, it has not been installed — do not try `uv run -m scripts.memcli` as a fallback; tell the user to run the install step.
+
+**Logs:**
+- All memcli output is logged to `/tmp/memcli/memcli-YYYY-MM-DD.log` (daily rotation)
+- To check what happened during the last sync: read today's log at `/tmp/memcli/memcli-$(date +%Y-%m-%d).log`
+- Logs include DEBUG, INFO, WARN, ERROR entries — scan for ERROR/WARN lines when diagnosing failures
+
+**Common memcli commands:**
+- `memcli check-cli --vault-path <path> --vault <name> --json` — verify obsidian-cli works
+- `memcli vault-diff --vault-path <path>` — show recent vault changes
+- `memcli rotate-buffer --vault-path <path> --sync-check` — rotate/check buffer state
+
 ## Protocol files (load only when needed)
 
 | File                             | Load when                            |
@@ -181,7 +199,8 @@ lobster:
 | `.second-brain/memory/`    | insights.md, goals.md, tasks.md, hot-memory.md, system-state.md, metrics.json | Write/Read/Edit tools directly           |
 | `.second-brain/buffers/`   | sync-buffer-NNN.md (rotating, append-only during conversation)                 | Write/Edit tools directly                |
 | `.second-brain/run/`       | Pipeline run artifacts (buffer-content.txt, state files)                       | Written by memcli, not by agent directly |
-| `.second-brain/logs/`      | sync-telemetry.log, pipeline logs                                              | Written by memcli                        |
+| `.second-brain/logs/`      | sync-telemetry.log (Lobster envelope trace)                                    | Written by Lobster runner                |
+| `/tmp/memcli/`             | memcli-YYYY-MM-DD.log (daily rotation, detailed step logs)                     | Written by memcli                        |
 | `.second-brain/config.md`  | Vault-specific settings, agent routing, sync schedule                          | Read tool                                |
 | `vault_path` (content)     | Work/, People/, Log/, Notes/, Tasks/, Inbox/, Archive/, Logs/                  | Lobster pipeline only (never during conversation) |
 
