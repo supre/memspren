@@ -3,8 +3,8 @@
 Triggered when user says "check in", "let's do my daily check-in",
 "end of day", or anything signaling they want to log their day.
 
-Read `.second-brain/Memory/insights.md`, `.second-brain/Memory/goals.md`,
-and `.second-brain/Memory/hot-memory.md` before starting.
+Read `.second-brain/memory/insights.md`, `.second-brain/memory/goals.md`,
+and `.second-brain/memory/hot-memory.md` before starting.
 These are your ONLY context sources during conversation — do NOT read vault files.
 
 Read `Protocols/entity-protocol.md` only during sync (not during conversation).
@@ -46,7 +46,7 @@ Do not ask structured questions yet. Let the user set the tone.
 
 ## Step 2: Check for missed days
 
-**Read** `.second-brain/Memory/system-state.md` to get `last_checkin_date`.
+**Read** `.second-brain/memory/system-state.md` to get `last_checkin_date`.
 
 Compare today's date against `last_checkin_date`.
 
@@ -129,42 +129,15 @@ Stop follow-up when all gaps are covered or user signals they're done.
 ## Step 6: Extract and buffer entities
 
 This is where the old protocol wrote directly to the vault.
-**NEW: Write to the active rotating sync buffer instead.**
+**Write to the active rotating sync buffer using `memcli append-buffer`.**
 
-### Identify the active buffer
+### Compose the entry
 
-1. Read `.second-brain/Memory/sync-buffer-active.txt` to get the active buffer ID
-2. Read `.second-brain/Memory/sync-buffer-[ID].md`
-3. Check the `word_count` in frontmatter
-
-### Rotate if needed
-
-If word count >= 1500:
-1. Edit the current buffer's frontmatter: set `state: sealed`, `sealed_at: [ISO timestamp]`
-2. Calculate the next buffer ID (increment: `001` → `002`)
-3. Create a new buffer file `sync-buffer-[new_ID].md` with empty frontmatter:
-   ```yaml
-   ---
-   node_type: sync-buffer
-   buffer_id: "[new_ID]"
-   state: active
-   created: [ISO timestamp]
-   sealed_at: null
-   word_count: 0
-   entry_count: 0
-   ---
-   ```
-4. Write `[new_ID]` to `sync-buffer-active.txt`
-
-### Append entry to active buffer
-
-For everything the user shared, append a DETAILED entry to the active buffer using the Edit tool.
+Write the entry content to a temp file at `/tmp/checkin-entry.txt`. Use the Write tool.
 
 **Entry format:**
 ```markdown
----
-
-## Entry [N] | [YYYY-MM-DD HH:MM TZ] | check-in
+## Entry | [YYYY-MM-DD HH:MM TZ] | check-in
 
 ### Full Context
 [DETAILED capture of everything the user said. NOT condensed, NOT summarized.
@@ -189,9 +162,20 @@ More detail is ALWAYS better than less.]
 - [file A] ↔ [file B] | [reason for link]
 ```
 
-**After appending, update the buffer frontmatter:**
-- Increment `entry_count`
-- Update `word_count` (estimate based on content added)
+### Append to the buffer
+
+Run via Bash:
+```bash
+memcli append-buffer \
+  --vault-path "[vault_path]" \
+  --content-file /tmp/checkin-entry.txt
+```
+
+`memcli append-buffer` handles everything: finding the active buffer, rotating it if
+it has hit the 1500-word limit, appending the entry, and updating `word_count`,
+`entry_count`, and `last_updated` in frontmatter. No manual frontmatter editing needed.
+
+The command returns JSON — check that `"ok": true` before continuing.
 
 **Rules for buffer entries:**
 - Append only — never edit previous entries
@@ -211,7 +195,7 @@ For minor updates, let the sync recalculation handle it.
 
 ## Step 7: Journaling (if enabled)
 
-**Read** `.second-brain/Memory/system-state.md` → check `journaling: true/false`
+**Read** `.second-brain/memory/system-state.md` → check `journaling: true/false`
 
 If false → skip this step entirely.
 
@@ -225,7 +209,7 @@ Capture answers in the sync buffer entry (append to the current entry's Full Con
 
 ## Step 8: Lifestyle check-in (if enabled)
 
-**Read** `.second-brain/Memory/system-state.md` → check `lifestyle_tracking: true/false`
+**Read** `.second-brain/memory/system-state.md` → check `lifestyle_tracking: true/false`
 
 If false → skip this step entirely.
 
@@ -292,10 +276,10 @@ last_checkin_summary: [one line summary]
 
 ## Error handling
 
-| Problem                                  | Action                                                                             |
-| ---------------------------------------- | ---------------------------------------------------------------------------------- |
-| User is very brief, gives minimal info   | Ask one open follow-up: *"Anything else on your mind today?"* — don't push further |
-| User wants to skip check-in              | Respect it. Note in buffer: `CHECK-IN SKIPPED` with date.                          |
-| User contradicts something in insights   | Trust the user. Update insights.md immediately.                                    |
-| User seems stressed or overwhelmed       | Acknowledge it first before any capture. Don't push through the checklist.         |
-| Buffer write fails                       | Fall back to updating insights.md and goals.md directly. Log the failure.          |
+| Problem                                | Action                                                                             |
+| -------------------------------------- | ---------------------------------------------------------------------------------- |
+| User is very brief, gives minimal info | Ask one open follow-up: *"Anything else on your mind today?"* — don't push further |
+| User wants to skip check-in            | Respect it. Note in buffer: `CHECK-IN SKIPPED` with date.                          |
+| User contradicts something in insights | Trust the user. Update insights.md immediately.                                    |
+| User seems stressed or overwhelmed     | Acknowledge it first before any capture. Don't push through the checklist.         |
+| Buffer write fails                     | Fall back to updating insights.md and goals.md directly. Log the failure.          |

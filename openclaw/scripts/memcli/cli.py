@@ -123,6 +123,28 @@ def rotate_buffer_cmd(vault_path, sync_check_mode, check, rotate_mode,
           cleanup=cleanup, buffer_id=buffer_id, archive=archive, max_words=max_words)
 
 
+@cli.command("append-buffer")
+@click.option("--vault-path", required=True, type=click.Path())
+@click.option("--content", default="", help="Entry text to append (use --content-file for multi-line content).")
+@click.option("--content-file", default=None, type=click.Path(), help="Path to a file containing the entry text.")
+@click.option("--max-words", type=int, default=1500)
+@click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
+def append_buffer_cmd(vault_path, content, content_file, max_words, verbosity):
+    """Append an entry to the active sync buffer.
+
+    Finds the active buffer, auto-rotates if over the word limit, appends the
+    entry, and updates word_count, entry_count, and last_updated in frontmatter.
+
+    Output: {"ok": true, "buffer_id": "...", "entry_count": N, "word_count": N, "rotated": bool}
+    """
+    from .buffer.append_buffer import run
+    _exec("append-buffer", run, _log_dir(vault_path), verbosity,
+          vault_path=vault_path,
+          content=content,
+          content_file=Path(content_file) if content_file else None,
+          max_words=max_words)
+
+
 @cli.command("get-active-buffer")
 @click.option("--vault-path", required=True, type=click.Path())
 @click.option("--max-words", type=int, default=1500)

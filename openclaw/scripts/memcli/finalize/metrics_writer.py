@@ -129,6 +129,11 @@ def run(
     if not do_archive:
         log.info("buffer archival skipped — entity writes did not succeed")
 
+    if archive_count > 0:
+        from ..buffer.rotate_buffer import reset_active_to_001
+        reset_result = reset_active_to_001(str(paths.buffers))
+        log.debug("buffer id reset check", **reset_result)
+
     ts = datetime.datetime.utcnow().isoformat() + "Z"
 
     # Check which memory files exist to determine what was written

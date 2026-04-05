@@ -3,13 +3,42 @@
 Governs batch synchronization from rotating sync buffers to Obsidian vault.
 Triggered by: user explicit ("sync now"), cron interval, end of check-in, or buffer overflow.
 
-Read `Protocols/entity-protocol.md` and `Protocols/linking-protocol.md` before creating/updating vault files.
+---
 
-All vault operations use the Read/Write/Edit tools. Vault content paths are prefixed with `vault_path` from `.second-brain/config.md`. Skill operational files (Memory, config) are at `.second-brain/` — not in the vault.
+## Primary path: Lobster workflow
+
+**Always trigger sync via the Lobster workflow first.** The workflow handles every step
+deterministically — locking, extraction, entity writing, memory refinement, archiving, and cleanup.
+
+Read `.second-brain/config.md` to get `vault_path`, `vault_name`, and `config_path`, then run:
+
+```bash
+lobster run \
+  --file ~/.openclaw/skills/memspren/workflows/sync.lobster \
+  --args-json '{
+    "vault_path": "[vault_path]",
+    "vault_name": "[vault_name]",
+    "config_path": "[vault_path]/.second-brain/config.md"
+  }'
+```
+
+Wait for the workflow to complete. On success it will output a metrics summary.
+Confirm to the user: "Synced. [summary from metrics output]."
+
+**If the workflow completes successfully, stop here — do not execute the manual steps below.**
 
 ---
 
-## Checklist
+## Fallback: manual execution
+
+Only proceed with the steps below if Lobster is unavailable or the workflow fails.
+Each step maps directly to a `memcli` command. Execute them in order.
+
+Read `Protocols/entity-protocol.md` and `Protocols/linking-protocol.md` before Step 4.
+
+All vault operations use the Read/Write/Edit tools. Vault content paths are prefixed with `vault_path` from `.second-brain/config.md`. Skill operational files (memory, config) are at `.second-brain/`.
+
+### Checklist
 
 Copy and track:
 ```
@@ -46,14 +75,14 @@ Verify vault is accessible by reading a known file:
 
 Read these files (all are `.second-brain/` files — use Read tool directly):
 
-1. `.second-brain/Memory/insights.md` — previous user understanding
-2. `.second-brain/Memory/goals.md` — previous goals (check: were they met?)
-3. `.second-brain/Memory/hot-memory.md` — current project state
-4. `.second-brain/Memory/system-state.md` — config flags, last sync timestamp
+1. `.second-brain/memory/insights.md` — previous user understanding
+2. `.second-brain/memory/goals.md` — previous goals (check: were they met?)
+3. `.second-brain/memory/hot-memory.md` — current project state
+4. `.second-brain/memory/system-state.md` — config flags, last sync timestamp
 
 **Identify sealed buffers:**
-5. Read `.second-brain/Memory/sync-buffer-active.txt` — get active buffer ID
-6. Use Glob to find all `.second-brain/Memory/sync-buffer-*.md` files
+5. Read `.second-brain/memory/sync-buffer-active.txt` — get active buffer ID
+6. Use Glob to find all `.second-brain/memory/sync-buffer-*.md` files
 7. Read frontmatter of each buffer file — find those with `state: sealed`
 8. Sort sealed buffers by buffer ID (process oldest first)
 
@@ -64,11 +93,11 @@ Read these files (all are `.second-brain/` files — use Read tool directly):
 **If sealed buffers exist:** Read the **oldest sealed buffer** (lowest buffer ID with `state: sealed`). This is the primary data source for this sync.
 
 **If no sealed buffers exist:** Check the active buffer:
-- If active buffer has entries (`entry_count > 0`), seal it first:
-  - Edit its frontmatter: set `state: sealed`, `sealed_at: [ISO timestamp]`
-  - Create a new active buffer with the next ID
-  - Update `sync-buffer-active.txt` with the new ID
-  - Then read the now-sealed buffer
+- If active buffer has entries (`entry_count > 0`), seal it first via Bash:
+  ```bash
+  memcli rotate-buffer --vault-path "[vault_path]" --rotate
+  ```
+  This seals the current active buffer and creates the next one. Then read the now-sealed buffer.
 
 **If no buffers have entries:** Skip sync, notify user "Nothing to sync."
 
@@ -108,16 +137,16 @@ Read `Protocols/linking-protocol.md` now.
 
 **Scope rules for scanning:**
 
-| node_type | Scan folder | Merge aggressiveness |
-|---|---|---|
-| vision | `Vision/` | Aggressive — few files, merge readily |
-| strategy | `Strategy/` | Aggressive — few files |
-| idea | `Work/Ideas/` | Moderate — similar ideas should consolidate |
-| learning | `Notes/Learnings/` | Moderate — same topic = same file |
-| pattern | `Notes/Patterns/` | Conservative — patterns are distinct |
-| project | `Work/Projects/` | No scan — always distinct |
-| person | `People/` | No scan — always distinct |
-| log-entry | `Log/Daily/` | Date-based — same date = append |
+| node_type | Scan folder        | Merge aggressiveness                        |
+| --------- | ------------------ | ------------------------------------------- |
+| vision    | `Vision/`          | Aggressive — few files, merge readily       |
+| strategy  | `Strategy/`        | Aggressive — few files                      |
+| idea      | `Work/Ideas/`      | Moderate — similar ideas should consolidate |
+| learning  | `Notes/Learnings/` | Moderate — same topic = same file           |
+| pattern   | `Notes/Patterns/`  | Conservative — patterns are distinct        |
+| project   | `Work/Projects/`   | No scan — always distinct                   |
+| person    | `People/`          | No scan — always distinct                   |
+| log-entry | `Log/Daily/`       | Date-based — same date = append             |
 
 Process entities in this order:
 
@@ -328,17 +357,25 @@ last_sync_summary: [one line summary of what was synced]
 
 ## Step 9: Archive and clean up buffer
 
-1. **Archive:** Copy the processed sealed buffer's content to `.second-brain/Memory/sync-archive/YYYY-MM-DD-HHMMSS-[buffer_id].md`
-   - Use Write tool (this is a `.second-brain/` file)
+Run via Bash:
+```bash
+memcli rotate-buffer \
+  --vault-path "[vault_path]" \
+  --cleanup \
+  --buffer-id "[processed_buffer_id]" \
+  --archive
+```
 
-2. **Delete processed buffer:** Remove the sealed buffer file that was just processed.
-   - Run `rm "{vault_path}/.second-brain/Memory/sync-buffer-[ID].md"` via Bash
+This archives the sealed buffer to `.second-brain/buffers/sync-archive/`, deletes the
+original, and resets the active buffer ID back to `001` if no sealed buffers remain
+(so the counter doesn't keep incrementing across sync cycles).
 
-3. **Check for remaining sealed buffers:**
-   - If more sealed buffers remain, notify user: "Synced buffer [ID]. [X] more sealed buffers to process — say 'sync now' to continue."
-   - If no sealed buffers remain, reset buffer IDs:
-     - Read the active buffer, rename it to `sync-buffer-001.md` (update `buffer_id` in frontmatter)
-     - Update `sync-buffer-active.txt` to `001`
+**Check for remaining sealed buffers** after cleanup:
+```bash
+memcli rotate-buffer --vault-path "[vault_path]" --list-sealed
+```
+- If sealed buffers remain: notify user "Synced buffer [ID]. [X] more sealed buffers to process — say 'sync now' to continue."
+- If none remain: buffer ID has been reset to `001` automatically.
 
 ---
 
@@ -377,12 +414,12 @@ If sealed buffers remain:
 
 ## Error handling
 
-| Problem | Action |
-| --- | --- |
-| Vault path not accessible | Notify user. Buffer is safe — retry on next sync trigger. |
-| File read/write error on specific file | Log error, skip that file, continue with remaining entities. Report skipped files in confirmation. |
-| Buffer is empty | "Nothing to sync." — no action needed. |
-| Entity already exists (duplicate detection) | Append to existing, do not create duplicate. |
-| insights.md exceeds 700 tokens after recalc | Compress: drop oldest details first, keep pattern names + dates, prioritize sections per Step 5. |
-| Sync interrupted mid-process | Buffer NOT archived/deleted until Step 9. Safe to retry — buffer still has all data. |
-| Git not available | Skip safety checkpoints. Proceed with sync normally. |
+| Problem                                     | Action                                                                                             |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Vault path not accessible                   | Notify user. Buffer is safe — retry on next sync trigger.                                          |
+| File read/write error on specific file      | Log error, skip that file, continue with remaining entities. Report skipped files in confirmation. |
+| Buffer is empty                             | "Nothing to sync." — no action needed.                                                             |
+| Entity already exists (duplicate detection) | Append to existing, do not create duplicate.                                                       |
+| insights.md exceeds 700 tokens after recalc | Compress: drop oldest details first, keep pattern names + dates, prioritize sections per Step 5.   |
+| Sync interrupted mid-process                | Buffer NOT archived/deleted until Step 9. Safe to retry — buffer still has all data.               |
+| Git not available                           | Skip safety checkpoints. Proceed with sync normally.                                               |

@@ -99,6 +99,7 @@ created: {now}
 sealed_at: null
 word_count: 0
 entry_count: 0
+last_updated: null
 ---
 """
     path = _buf_path(buffers_dir, buffer_id)
@@ -229,6 +230,38 @@ def cleanup_buffer(buffers_dir: str, buffer_id: str, archive_dir: str = None) ->
                     f.write(content)
                 os.remove(old_path)
     return {"action": "cleaned", "buffer_id": buffer_id}
+
+
+def reset_active_to_001(buffers_dir: str) -> dict:
+    """Reset the active buffer ID back to 001 when no sealed buffers remain.
+
+    Called after archiving sealed buffers so the ID counter doesn't keep
+    incrementing across sync cycles. Safe to call unconditionally — does
+    nothing if sealed buffers still exist or the active buffer is already 001.
+    """
+    if list_sealed(buffers_dir):
+        return {"reset": False, "reason": "sealed buffers still present"}
+
+    buf = find_active_buffer(buffers_dir)
+    if not buf:
+        return {"reset": False, "reason": "no active buffer"}
+    if int(buf["buffer_id"]) <= 1:
+        return {"reset": False, "reason": "already at 001"}
+
+    old_path = buf["path"]
+    new_path = _buf_path(buffers_dir, "001")
+    if not os.path.exists(old_path):
+        return {"reset": False, "reason": "active buffer file not found"}
+    if old_path == new_path:
+        return {"reset": False, "reason": "already at 001"}
+
+    with open(old_path, "r") as f:
+        content = f.read()
+    content = re.sub(r'buffer_id:\s*"\d+"', 'buffer_id: "001"', content)
+    with open(new_path, "w") as f:
+        f.write(content)
+    os.remove(old_path)
+    return {"reset": True, "from": buf["buffer_id"], "to": "001"}
 
 
 def sync_check(buffers_dir: str, run_path: str) -> dict:
