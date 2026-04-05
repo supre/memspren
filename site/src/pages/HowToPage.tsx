@@ -157,15 +157,18 @@ export default function HowToPage() {
             <p className="text-on-surface/60 text-sm leading-relaxed mb-2">
               Uses Claude's native file tools to read and write directly to your vault. No external CLI, no Python environment, no configuration files.
             </p>
-            <p className="text-on-surface/40 text-xs leading-relaxed mb-6">
-              Paused at v0.3 to reduce overhead.{' '}
-              <button
-                onClick={() => setModalUpdate(v03Update)}
-                className="text-primary/60 hover:text-primary underline underline-offset-2 transition-colors cursor-pointer bg-transparent border-none p-0 text-xs"
-              >
-                Details
-              </button>
-            </p>
+            <div className="glass-card rounded-xl px-5 py-3 flex items-center gap-3 mb-6 border border-primary/30">
+              <span className="material-symbols-outlined text-primary/70 text-base shrink-0">pause_circle</span>
+              <p className="text-on-surface/80 text-sm font-semibold italic leading-relaxed">
+                Paused at v0.3 to reduce overhead.{' '}
+                <button
+                  onClick={() => setModalUpdate(v03Update)}
+                  className="text-primary hover:brightness-125 underline underline-offset-2 transition-colors cursor-pointer bg-transparent border-none p-0 text-sm font-semibold italic"
+                >
+                  Details
+                </button>
+              </p>
+            </div>
             <div className="space-y-4 mb-6">
               <Step num="01">Open Claude Code in <strong className="text-on-surface/80">Cowork mode</strong> and point it at your Obsidian vault folder as the working directory.</Step>
               <Step num="02">Load the skill file: <Code>memspren.skill</Code> from the <Code>claude/</Code> folder in the repo.</Step>

@@ -1,6 +1,22 @@
 # MemSpren — Claude Skill
 
+> **Paused at v0.3.** This skill is functional but not receiving new features. Active development has shifted to the [OpenClaw skill](../openclaw/). See below for why.
+
 A [Claude](https://claude.ai/) skill that turns Claude into a thinking partner for managing a Zettelkasten-based second brain in Obsidian.
+
+## Status
+
+This skill is paused at v0.3. It works, but it won't be getting new features for the foreseeable future.
+
+The core friction was in the Claude/Telegram integration. When Claude prompts for file permissions, the request appears both in Telegram and in the terminal — but granting it from Telegram doesn't unblock the terminal, so the session stalls until someone manually approves it at the console. That breaks the "send from phone, done" workflow entirely.
+
+Beyond that: Cowork runs in a sandbox that makes the skill feel constrained rather than natural, and the single-conversation model means there's no way to run parallel threads. A daily log conversation, a vision document session, and an artifact-generating run can't coexist. That kind of multi-threaded, project-scoped environment is exactly what a second brain needs.
+
+Maintaining two parallel systems wasn't sustainable either. The OpenClaw skill and this one share architectural intent, but keeping them in sync adds overhead without adding value.
+
+The longer bet is that Claude's tooling improves: Telegram integration gets less buggy, Cowork gets proper project threads, the UX gets out of the way. When that happens, the patterns from the OpenClaw skill will be worth bringing back here. Until then, OpenClaw gets the investment.
+
+---
 
 ## What it does
 
@@ -25,10 +41,10 @@ You talk. MemSpren extracts entities, builds connections, and syncs everything t
 
 The skill keeps its operational files separate from your vault content:
 
-| Location | What lives here |
-| --- | --- |
-| `.second-brain/` | `config.md`, `Memory/` — Claude's state files. Hidden from Obsidian by default (dot-prefix). |
-| `vault_path/` | All note content: `Work/`, `People/`, `Log/`, etc. This is your Obsidian vault. |
+| Location         | What lives here                                                                              |
+| ---------------- | -------------------------------------------------------------------------------------------- |
+| `.second-brain/` | `config.md`, `memory/` — Claude's state files. Hidden from Obsidian by default (dot-prefix). |
+| `vault_path/`    | All note content: `Work/`, `People/`, `Log/`, etc. This is your Obsidian vault.              |
 
 If you select your vault as the Cowork folder, both locations are inside the same folder — that's fine. `.second-brain/` is still separate from the vault content and won't clutter Obsidian's graph.
 
@@ -130,15 +146,15 @@ Claude reads sealed sync buffers and batch-creates/updates vault entities with f
 
 ## Entity types
 
-| Entity | Vault path | Description |
-|---|---|---|
-| Project | `Work/Projects/[name].md` | Deadline-driven work with goals and progress notes |
-| Idea | `Work/Ideas/[name].md` | Atomic thoughts, seeds for future projects |
-| Person | `People/[name].md` | Interaction logs, connections to projects |
-| Task | `Tasks/tasks-inbox.md` | Unified inbox, appended not created |
-| Learning | `Notes/Learnings/[topic].md` | Things learned, connected to active work |
-| Pattern | `Notes/Patterns/[name].md` | Recurring behavioral themes with evidence |
-| Daily log | `Log/Daily/YYYY-MM-DD.md` | One note per day, hub of all entities |
+| Entity    | Vault path                   | Description                                        |
+| --------- | ---------------------------- | -------------------------------------------------- |
+| Project   | `Work/Projects/[name].md`    | Deadline-driven work with goals and progress notes |
+| Idea      | `Work/Ideas/[name].md`       | Atomic thoughts, seeds for future projects         |
+| Person    | `People/[name].md`           | Interaction logs, connections to projects          |
+| Task      | `Tasks/tasks-inbox.md`       | Unified inbox, appended not created                |
+| Learning  | `Notes/Learnings/[topic].md` | Things learned, connected to active work           |
+| Pattern   | `Notes/Patterns/[name].md`   | Recurring behavioral themes with evidence          |
+| Daily log | `Log/Daily/YYYY-MM-DD.md`    | One note per day, hub of all entities              |
 
 ---
 
@@ -163,7 +179,7 @@ Claude reads sealed sync buffers and batch-creates/updates vault entities with f
 
 .second-brain/       — skill state (hidden from Obsidian)
 ├── config.md        — vault path, check-in time, sync settings
-└── Memory/
+└── memory/
     ├── insights.md          — user patterns, energy, mindset (~700 tokens)
     ├── goals.md             — priorities, weekly/quarterly goals (~500 tokens)
     ├── hot-memory.md        — active project/task state (~500 tokens)
@@ -192,7 +208,7 @@ Claude reads sealed sync buffers and batch-creates/updates vault entities with f
 
 **Claude can't find vault files** — Confirm `vault_path` in `.second-brain/config.md` matches your actual vault location and that the vault folder is selected in Cowork.
 
-**Memory not persisting between sessions** — Make sure the vault folder is selected in Cowork before starting a session. `.second-brain/` must be inside the mounted folder.
+**memory not persisting between sessions** — Make sure the vault folder is selected in Cowork before starting a session. `.second-brain/` must be inside the mounted folder.
 
 **Sync not running automatically** — Cron jobs are session-scoped and must be re-created each session. Check that the session start flow loaded config.md and re-created cron jobs. Say "sync now" to trigger manually.
 
