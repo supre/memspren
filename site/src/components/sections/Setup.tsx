@@ -48,7 +48,7 @@ export default function Setup() {
               </li>
               <li className="flex items-start gap-3">
                 <span className="font-label text-primary font-bold text-xs mt-0.5">02</span>
-                <span>Load <code className="text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded text-xs">managing-second-brain.skill</code> from the <code className="text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded text-xs">claude/</code> folder</span>
+                <span>Load <code className="text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded text-xs">memspren.skill</code> from the <code className="text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded text-xs">claude/</code> folder</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="font-label text-primary font-bold text-xs mt-0.5">03</span>

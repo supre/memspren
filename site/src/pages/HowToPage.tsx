@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
+import UpdateModal from '@/components/updates/UpdateModal'
+import updatesData from '@/data/updates.json'
+import type { Update } from '@/lib/updates'
+
+const v03Update = (updatesData as Update[]).find(u => u.id === '2026-03-26-v03-direction') ?? null
 
 const sections = [
   { id: 'setup', label: 'Installation & Setup' },
   { id: 'openclaw-setup', label: 'OpenClaw Setup' },
-  { id: 'create-agent', label: 'Create an Agent' },
   { id: 'telegram', label: 'Telegram with Claude' },
-  { id: 'architecture', label: 'Architecture' },
 ]
 
 function useActiveSection() {
@@ -77,6 +80,7 @@ function SubHeading({ children }: { children: React.ReactNode }) {
 export default function HowToPage() {
   const active = useActiveSection()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [modalUpdate, setModalUpdate] = useState<Update | null>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
 
   return (
@@ -90,7 +94,7 @@ export default function HowToPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-8 flex gap-12 relative">
-        {/* Sidebar — sticky on desktop, collapsible on mobile */}
+        {/* Sidebar, sticky on desktop, collapsible on mobile */}
         <aside className="hidden lg:block w-52 shrink-0">
           <nav className="sticky top-28 space-y-1">
             <p className="font-label text-[0.6rem] uppercase tracking-[0.2em] text-on-surface/30 mb-4">On this page</p>
@@ -139,48 +143,57 @@ export default function HowToPage() {
         {/* Main content */}
         <main className="flex-1 min-w-0 pb-32">
 
-          {/* ── SETUP ─────────────────────────────────────── */}
+          {/* SETUP */}
           <DocSection id="setup" title="Installation & Setup">
             <p className="text-on-surface/60 text-base leading-relaxed mb-8">
-              MemSpren runs as a skill inside an AI agent platform. Pick the one that matches your setup — both produce the same Obsidian vault output.
+              MemSpren runs as a skill inside an AI agent platform. Pick the one that matches your setup. Both produce the same Obsidian vault output.
             </p>
 
             <Note>
               You need <a href="https://obsidian.md" target="_blank" rel="noopener noreferrer" className="text-primary hover:brightness-125 no-underline">Obsidian</a> installed with a vault already created, and Git installed for version-safe sync. That's it.
             </Note>
 
-            <SubHeading>Option A — Claude Skill (Claude Code users)</SubHeading>
-            <p className="text-on-surface/60 text-sm leading-relaxed mb-6">
+            <SubHeading>Option A: Claude Skill (Claude Code users)</SubHeading>
+            <p className="text-on-surface/60 text-sm leading-relaxed mb-2">
               Uses Claude's native file tools to read and write directly to your vault. No external CLI, no Python environment, no configuration files.
+            </p>
+            <p className="text-on-surface/40 text-xs leading-relaxed mb-6">
+              Paused at v0.3 to reduce overhead.{' '}
+              <button
+                onClick={() => setModalUpdate(v03Update)}
+                className="text-primary/60 hover:text-primary underline underline-offset-2 transition-colors cursor-pointer bg-transparent border-none p-0 text-xs"
+              >
+                Details
+              </button>
             </p>
             <div className="space-y-4 mb-6">
               <Step num="01">Open Claude Code in <strong className="text-on-surface/80">Cowork mode</strong> and point it at your Obsidian vault folder as the working directory.</Step>
-              <Step num="02">Load the skill file: <Code>managing-second-brain.skill</Code> from the <Code>claude/</Code> folder in the repo.</Step>
-              <Step num="03">Start a conversation. On first use Claude will walk you through vault initialisation — creating the folder structure and your personal profile note.</Step>
+              <Step num="02">Load the skill file: <Code>memspren.skill</Code> from the <Code>claude/</Code> folder in the repo.</Step>
+              <Step num="03">Start a conversation. On first use Claude will walk you through vault initialisation, creating the folder structure and your personal profile note.</Step>
               <Step num="04">Send your first brain dump. Any raw thought, note, or summary. Claude processes it, extracts entities, and writes the linked notes into your vault.</Step>
             </div>
             <a href="https://github.com/supre/memspren/tree/main/claude" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary font-bold text-[0.65rem] uppercase tracking-widest hover:brightness-125 transition-all group no-underline w-fit">
               Claude skill repo <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_outward</span>
             </a>
 
-            <SubHeading>Option B — OpenClaw Skill (local-first AI)</SubHeading>
+            <SubHeading>Option B: OpenClaw Skill (local-first AI)</SubHeading>
             <p className="text-on-surface/60 text-sm leading-relaxed mb-6">
               Runs entirely on your machine. OpenClaw has browser control and file access built in, which enables batch sync and background processing.
             </p>
             <div className="space-y-4 mb-6">
               <Step num="01" color="cyan">Copy the <Code>openclaw/</Code> folder from the repo into <Code>~/.openclaw/skills/</Code>.</Step>
               <Step num="02" color="cyan">Restart OpenClaw to load the skill.</Step>
-              <Step num="03" color="cyan">Point it to your Obsidian vault path — OpenClaw walks you through the rest in about two minutes.</Step>
+              <Step num="03" color="cyan">Point it to your Obsidian vault path. OpenClaw walks you through the rest in about two minutes.</Step>
             </div>
             <a href="https://github.com/supre/memspren/tree/main/openclaw" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-accent-cyan font-bold text-[0.65rem] uppercase tracking-widest hover:brightness-125 transition-all group no-underline w-fit">
               OpenClaw skill repo <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_outward</span>
             </a>
           </DocSection>
 
-          {/* ── OPENCLAW SETUP ────────────────────────────── */}
+          {/* OPENCLAW SETUP */}
           <DocSection id="openclaw-setup" title="OpenClaw Setup">
             <p className="text-on-surface/60 text-base leading-relaxed mb-8">
-              The OpenClaw skill uses a deterministic Lobster pipeline for sync — all vault writes happen in a structured, reviewable pipeline rather than ad-hoc LLM calls. This section covers everything you need to get it running.
+              The OpenClaw skill uses a deterministic Lobster pipeline for sync. All vault writes happen in a structured, reviewable pipeline rather than ad-hoc LLM calls. This section covers everything you need to get it running.
             </p>
 
             <Note>
@@ -190,16 +203,16 @@ export default function HowToPage() {
             <SubHeading>Prerequisites</SubHeading>
             <div className="space-y-4 mb-8">
               <Step num="01" color="cyan">
-                Install <strong className="text-on-surface/80">uv</strong> — manages Python versions and packages:
+                Install <strong className="text-on-surface/80">uv</strong>, which manages Python versions and packages:
                 {' '}<Code>brew install uv</Code> or follow the{' '}
                 <a href="https://docs.astral.sh/uv/getting-started/installation/" target="_blank" rel="noopener noreferrer" className="text-accent-cyan hover:brightness-125">uv install guide</a>.
               </Step>
               <Step num="02" color="cyan">
-                Install <strong className="text-on-surface/80">Git</strong> — required for version-safe vault snapshots:{' '}
+                Install <strong className="text-on-surface/80">Git</strong>, required for version-safe vault snapshots:{' '}
                 <Code>xcode-select --install</Code> or <Code>brew install git</Code>.
               </Step>
               <Step num="03" color="cyan">
-                Have an <strong className="text-on-surface/80">Obsidian vault</strong> on your machine. A new empty vault works fine — the setup command creates all the structure.
+                Have an <strong className="text-on-surface/80">Obsidian vault</strong> on your machine. A new empty vault works fine; the setup command creates all the structure.
               </Step>
             </div>
 
@@ -221,16 +234,16 @@ export default function HowToPage() {
             <SubHeading>Install the skill</SubHeading>
             <div className="space-y-4 mb-8">
               <Step num="01" color="cyan">
-                Clone the repo and copy the <Code>openclaw/</Code> folder into your OpenClaw skills directory — OpenClaw will not load the skill unless it lives here:
+                Clone the repo and copy the <Code>openclaw/</Code> folder into your OpenClaw skills directory. OpenClaw will not load the skill unless it lives here:
                 <div className="mt-2 font-mono text-xs bg-surface/20 border border-white/5 rounded-lg px-4 py-3 text-on-surface/70">
                   cp -r openclaw/ ~/.openclaw/skills/memspren/
                 </div>
               </Step>
               <Step num="02" color="cyan">
-                Install <Code>memcli</Code> — the Python CLI that drives every pipeline step. Install it as a global uv tool so Lobster can call it from any directory:
+                Install <Code>memcli</Code>, the Python CLI that drives every pipeline step. Install it as a global uv tool so Lobster can call it from any directory:
                 <div className="mt-2 font-mono text-xs bg-surface/20 border border-white/5 rounded-lg px-4 py-3 text-on-surface/70 space-y-1">
                   <p>cd ~/.openclaw/skills/memspren/</p>
-                  <p className="mt-1"><span className="text-on-surface/30"># install globally — editable mode picks up code changes without reinstalling</span></p>
+                  <p className="mt-1"><span className="text-on-surface/30"># install globally; editable mode picks up code changes without reinstalling</span></p>
                   <p>uv tool install --editable .</p>
                   <p className="mt-2"><span className="text-on-surface/30"># verify</span></p>
                   <p>memcli --help</p>
@@ -251,7 +264,7 @@ export default function HowToPage() {
             </div>
 
             <Note>
-              <Code>uv tool install</Code> places <Code>memcli</Code> in <Code>~/.local/bin/</Code> — globally accessible. If you update the source code, the editable install picks up changes automatically. If you add or change dependencies in <Code>pyproject.toml</Code>, reinstall with <Code>uv tool install --reinstall --editable .</Code>
+              <Code>uv tool install</Code> places <Code>memcli</Code> in <Code>~/.local/bin/</Code>, globally accessible. If you update the source code, the editable install picks up changes automatically. If you add or change dependencies in <Code>pyproject.toml</Code>, reinstall with <Code>uv tool install --reinstall --editable .</Code>
             </Note>
 
             <SubHeading>Run the tests</SubHeading>
@@ -263,79 +276,25 @@ export default function HowToPage() {
               <p>uv run pytest scripts/memcli/tests/ -v</p>
             </div>
             <p className="text-on-surface/50 text-xs mt-3 leading-relaxed">
-              All tests create throwaway vaults under <Code>/tmp</Code> — nothing touches your real vault.
+              All tests create throwaway vaults under <Code>/tmp</Code>, nothing touches your real vault.
             </p>
-
-            <SubHeading>What setup creates</SubHeading>
-            <p className="text-on-surface/60 text-sm leading-relaxed mb-4">
-              The setup command scaffolds your vault idempotently — safe to re-run, never overwrites existing content:
-            </p>
-            <div className="glass-card rounded-2xl p-6 font-mono text-xs text-on-surface/60 leading-relaxed">
-              <p className="text-primary/70 mb-1">vault/</p>
-              <p className="ml-4">Work/Projects/    <span className="text-on-surface/30">← deadline-driven work</span></p>
-              <p className="ml-4">Work/Ideas/       <span className="text-on-surface/30">← lightweight captures</span></p>
-              <p className="ml-4">People/           <span className="text-on-surface/30">← everyone you interact with</span></p>
-              <p className="ml-4">Log/Daily/        <span className="text-on-surface/30">← daily notes</span></p>
-              <p className="ml-4">Notes/Learnings/  <span className="text-on-surface/30">← things learned, connected to active work</span></p>
-              <p className="ml-4">Notes/Patterns/   <span className="text-on-surface/30">← recurring behavioral observations</span></p>
-              <p className="ml-4">Vision/           <span className="text-on-surface/30">← values, long-term aspirations</span></p>
-              <p className="ml-4">Strategy/         <span className="text-on-surface/30">← quarterly goals</span></p>
-              <p className="ml-4">Tasks/            <span className="text-on-surface/30">← unified task inbox</span></p>
-              <p className="ml-4">Inbox/            <span className="text-on-surface/30">← unsorted captures</span></p>
-              <p className="ml-4">Archive/          <span className="text-on-surface/30">← nothing ever deleted</span></p>
-              <p className="ml-4">.second-brain/    <span className="text-on-surface/30">← memory, buffers, run artifacts, config</span></p>
-            </div>
           </DocSection>
 
-          {/* ── CREATE AN AGENT ───────────────────────────── */}
-          <DocSection id="create-agent" title="Create an Agent">
-            <p className="text-on-surface/60 text-base leading-relaxed mb-8">
-              The sync pipeline routes all LLM work through a single agent named <Code>main</Code>. This agent needs the <Code>lobster</Code> and <Code>llm-task</Code> tools enabled.
-            </p>
-
-            <SubHeading>The pipeline agent</SubHeading>
-            <div className="space-y-4 mb-8">
-              <div className="glass-card rounded-2xl p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0 mt-0.5">
-                    <span className="material-symbols-outlined text-primary text-base">model_training</span>
-                  </div>
-                  <div>
-                    <p className="font-label font-bold text-sm text-primary mb-1">main</p>
-                    <p className="text-on-surface/60 text-sm leading-relaxed">Handles every pipeline step — extraction, memory refinement, entity planning, content writing, and linking. Set the model to whatever is available and capable in your OpenClaw setup. The pipeline is tested with <Code>moonshotai/kimi-k2.5</Code> via OpenRouter.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <SubHeading>Configure the agent in OpenClaw</SubHeading>
-            <div className="space-y-4 mb-8">
-              <Step num="01" color="cyan">Open OpenClaw and go to the Agents panel.</Step>
-              <Step num="02" color="cyan">Create or confirm an agent with id <Code>main</Code>. Enable the <Code>lobster</Code> and <Code>llm-task</Code> tools on it.</Step>
-              <Step num="03" color="cyan">Set the model. Any capable model works — pick one you have access to via your configured provider (Anthropic, OpenRouter, etc.).</Step>
-              <Step num="04" color="cyan">The vault's <Code>.second-brain/config.md</Code> has an <Code>agents:</Code> section mapping <Code>heavy</Code>, <Code>light</Code>, and <Code>default</Code> to agent names — all three should point to <Code>main</Code>.</Step>
-            </div>
-
-            <Note>
-              LLM calls in this pipeline can take 2–5 minutes per step depending on model and load. The pipeline is designed to wait — all steps have a 600-second timeout. If a call fails, it retries up to 5 times with a 30-second delay between attempts.
-            </Note>
-          </DocSection>
-
-          {/* ── TELEGRAM ──────────────────────────────────── */}
+          {/* TELEGRAM */}
           <DocSection id="telegram" title="Telegram with Claude">
             <p className="text-on-surface/60 text-base leading-relaxed mb-8">
               Claude Code can receive Telegram messages directly, which means you can send brain dumps from your phone without opening a laptop. The setup uses a Telegram bot and Claude's MCP Telegram plugin.
             </p>
 
             <Note>
-              This works with the Claude Skill path only. You need an active Claude Code session running — the Telegram bot routes messages into it.
+              This works with the Claude Skill path only. You need an active Claude Code session running. The Telegram bot routes messages into it.
             </Note>
 
             <SubHeading>Create a Telegram bot</SubHeading>
             <div className="space-y-4 mb-8">
               <Step num="01">Open Telegram and start a conversation with <strong className="text-on-surface/80">@BotFather</strong>.</Step>
-              <Step num="02">Send <Code>/newbot</Code> and follow the prompts — give it a name and username.</Step>
-              <Step num="03">BotFather returns a bot token. Copy it — you'll need it in the next step.</Step>
+              <Step num="02">Send <Code>/newbot</Code> and follow the prompts. Give it a name and username.</Step>
+              <Step num="03">BotFather returns a bot token. Copy it, you'll need it in the next step.</Step>
             </div>
 
             <SubHeading>Configure the Claude Code Telegram channel</SubHeading>
@@ -347,103 +306,19 @@ export default function HowToPage() {
             </div>
 
             <Note>
-              The Telegram channel runs through Claude Code's MCP server. Messages from approved users arrive as context in Claude's conversation — it can read, respond, and write files all from a single Telegram message.
+              The Telegram channel runs through Claude Code's MCP server. Messages from approved users arrive as context in Claude's conversation. It can read, respond, and write files all from a single Telegram message.
             </Note>
 
             <SubHeading>Sending brain dumps from Telegram</SubHeading>
             <p className="text-on-surface/60 text-sm leading-relaxed">
-              Once configured, just message your bot with any brain dump — a meeting note, a stray thought, a to-do, or a longer reflection. Claude processes it with the MemSpren skill loaded and writes the linked notes into your vault automatically. You don't need to be at your computer.
+              Once configured, just message your bot with any brain dump: a meeting note, a stray thought, a to-do, or a longer reflection. Claude processes it with the MemSpren skill loaded and writes the linked notes into your vault automatically. You don't need to be at your computer.
             </p>
-          </DocSection>
-
-          {/* ── ARCHITECTURE ──────────────────────────────── */}
-          <DocSection id="architecture" title="Architecture">
-            <p className="text-on-surface/60 text-base leading-relaxed mb-8">
-              MemSpren is not an app — it's a set of protocols that run inside an AI agent. Understanding the layers helps you know what's happening when you send a brain dump.
-            </p>
-
-            <SubHeading>The three layers</SubHeading>
-            <div className="space-y-6 mb-10">
-              <div className="glass-card rounded-2xl p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-                    <span className="material-symbols-outlined text-primary text-base">psychology</span>
-                  </span>
-                  <h4 className="font-headline italic text-primary text-lg">1. memory Layer</h4>
-                </div>
-                <p className="text-on-surface/60 text-sm leading-relaxed">
-                  The skill's persistent context: your personal profile, entity extraction rules, relationship types, and the running knowledge graph in Obsidian. This is what makes every session aware of prior context — Claude isn't starting from scratch each time.
-                </p>
-              </div>
-
-              <div className="glass-card rounded-2xl p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-                    <span className="material-symbols-outlined text-primary text-base">swap_horiz</span>
-                  </span>
-                  <h4 className="font-headline italic text-primary text-lg">2. Buffer Layer</h4>
-                </div>
-                <p className="text-on-surface/60 text-sm leading-relaxed">
-                  A rotating in-session buffer that accumulates brain dumps before syncing. Batching inputs reduces vault write frequency and lets the extraction pass see multiple related inputs at once, improving link quality.
-                </p>
-              </div>
-
-              <div className="glass-card rounded-2xl p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-                    <span className="material-symbols-outlined text-primary text-base">sync</span>
-                  </span>
-                  <h4 className="font-headline italic text-primary text-lg">3. Sync Layer</h4>
-                </div>
-                <p className="text-on-surface/60 text-sm leading-relaxed">
-                  Manages writing extracted entities and relationships into Obsidian markdown files. Handles merge conflicts when both the vault and the buffer have updated the same note, using field-level merging rather than last-write-wins.
-                </p>
-              </div>
-            </div>
-
-            <SubHeading>What happens on a brain dump</SubHeading>
-            <div className="space-y-3 mb-8">
-              <div className="flex items-start gap-3">
-                <span className="entity-arrow mt-1 text-sm">→</span>
-                <p className="text-on-surface/60 text-sm leading-relaxed">Input lands in the buffer (Telegram message, conversation, or direct text)</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="entity-arrow mt-1 text-sm">→</span>
-                <p className="text-on-surface/60 text-sm leading-relaxed">Extraction pass: people, concepts, projects, and events are identified and typed</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="entity-arrow mt-1 text-sm">→</span>
-                <p className="text-on-surface/60 text-sm leading-relaxed">Relationship pass: links between extracted entities are built and typed (e.g. <em>person ↔ project</em>, <em>concept ↔ concept</em>)</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="entity-arrow mt-1 text-sm">→</span>
-                <p className="text-on-surface/60 text-sm leading-relaxed">Sync writes entity notes and updates the daily log in the vault, preserving prior content</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="entity-arrow mt-1 text-sm">→</span>
-                <p className="text-on-surface/60 text-sm leading-relaxed">Obsidian graph view reflects the new connections immediately</p>
-              </div>
-            </div>
-
-            <SubHeading>Vault structure</SubHeading>
-            <p className="text-on-surface/60 text-sm leading-relaxed mb-4">
-              MemSpren writes to a predictable folder hierarchy inside your Obsidian vault:
-            </p>
-            <div className="glass-card rounded-2xl p-6 font-mono text-xs text-on-surface/60 leading-relaxed">
-              <p className="text-primary/70 mb-1">vault/</p>
-              <p className="ml-4">Work/Projects/   <span className="text-on-surface/30">← deadline-driven work</span></p>
-              <p className="ml-4">Work/Ideas/      <span className="text-on-surface/30">← lightweight captures</span></p>
-              <p className="ml-4">People/          <span className="text-on-surface/30">← everyone you interact with</span></p>
-              <p className="ml-4">Log/Daily/       <span className="text-on-surface/30">← daily notes, created during sync</span></p>
-              <p className="ml-4">Notes/Learnings/ <span className="text-on-surface/30">← resources, reference material</span></p>
-              <p className="ml-4">Tasks/           <span className="text-on-surface/30">← unified task inbox</span></p>
-              <p className="ml-4">Archive/         <span className="text-on-surface/30">← nothing ever deleted</span></p>
-              <p className="ml-4">.second-brain/   <span className="text-on-surface/30">← memory, buffers, config (hidden)</span></p>
-            </div>
           </DocSection>
 
         </main>
       </div>
+
+      <UpdateModal update={modalUpdate} onClose={() => setModalUpdate(null)} />
     </div>
   )
 }
