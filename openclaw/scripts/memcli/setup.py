@@ -13,6 +13,7 @@ from pathlib import Path
 
 from .log import Logger
 from .paths import VaultPaths
+from .gateway import get_gateway_token, get_gateway_url
 
 TODAY = date.today().isoformat()
 
@@ -219,11 +220,16 @@ def run(
         except Exception as e:
             log.warn(f"git init failed: {e}")
 
+    gateway_url = get_gateway_url()
+    gateway_token = get_gateway_token()
+
     log.info(
         "setup complete",
         folders_created=len(created_folders),
         files_created=len(created_files),
         git_initialized=git_initialized,
+        gateway_url=gateway_url,
+        gateway_token_present=bool(gateway_token),
     )
 
     return {

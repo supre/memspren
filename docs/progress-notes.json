@@ -1,6 +1,30 @@
 [
   {
     "date": "2026-04-05",
+    "title": "Cache gateway bootstrap config and avoid default-only config writes",
+    "content": "Updated memcli gateway bootstrap to cache resolved gateway config at module scope so URL/token lookups do not reread files on every call. Also changed persistence logic so ~/.memspren-config is only written when real values are discovered from env or ~/.openclaw/openclaw.json, avoiding writes driven solely by the default loopback URL.",
+    "tags": [
+      "memspren",
+      "gateway",
+      "performance",
+      "config",
+      "auth"
+    ]
+  },
+  {
+    "date": "2026-04-05",
+    "title": "Restore gateway bootstrap in canonical openclaw/scripts memcli",
+    "content": "Reapplied the .memspren-config / ~/.openclaw/openclaw.json gateway bootstrap logic into the canonical openclaw/scripts/memcli package after repo cleanup, ensuring the main MemSpren package no longer relies on environment-only gateway auth.",
+    "tags": [
+      "memspren",
+      "gateway",
+      "auth",
+      "cleanup",
+      "canonical"
+    ]
+  },
+  {
+    "date": "2026-04-05",
     "title": "Consolidate memcli packaging to openclaw/scripts",
     "content": "Removed the redundant top-level scripts tree and made openclaw/scripts/memcli the canonical packaging source. Updated setuptools package discovery, pytest paths, and colocated prompts/schemas under the packaged memcli tree to eliminate drift between the skill copy and the main repo.",
     "tags": [
