@@ -243,10 +243,9 @@ export default function HowToPage() {
                 </div>
               </Step>
               <Step num="02" color="cyan">
-                Install <Code>memcli</Code>, the Python CLI that drives every pipeline step. Install it as a global uv tool so Lobster can call it from any directory:
+                Install <Code>memcli</Code>, the Python CLI that drives every pipeline step. Run from the <strong className="text-on-surface/80">repo root</strong> — that's where <Code>pyproject.toml</Code> lives:
                 <div className="mt-2 font-mono text-xs bg-surface/20 border border-white/5 rounded-lg px-4 py-3 text-on-surface/70 space-y-1">
-                  <p>cd ~/.openclaw/skills/memspren/</p>
-                  <p className="mt-1"><span className="text-on-surface/30"># install globally; editable mode picks up code changes without reinstalling</span></p>
+                  <p><span className="text-on-surface/30"># from the repo root (not openclaw/)</span></p>
                   <p>uv tool install --editable .</p>
                   <p className="mt-2"><span className="text-on-surface/30"># verify</span></p>
                   <p>memcli --help</p>
@@ -275,8 +274,8 @@ export default function HowToPage() {
               Verify the pipeline is wired correctly before your first sync:
             </p>
             <div className="glass-card rounded-2xl p-6 font-mono text-xs text-on-surface/60 leading-relaxed space-y-1">
-              <p><span className="text-on-surface/30"># from openclaw/</span></p>
-              <p>uv run pytest scripts/memcli/tests/ -v</p>
+              <p><span className="text-on-surface/30"># from repo root</span></p>
+              <p>uv run pytest</p>
             </div>
             <p className="text-on-surface/50 text-xs mt-3 leading-relaxed">
               All tests create throwaway vaults under <Code>/tmp</Code>, nothing touches your real vault.

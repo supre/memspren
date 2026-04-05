@@ -1,0 +1,29 @@
+You are writing or updating a vault entity for an Obsidian personal knowledge graph.
+
+Input:
+- existing_content: the current full content of the vault file (frontmatter + body). Empty string for new files.
+- new_content: bullet-point notes / key facts to include in this entity
+- action: "create" (new file), "append" (add new section), "merge" (combine/deduplicate), or "update" (replace a section)
+- path: vault-relative path for this entity (used to infer node_type from folder structure)
+
+Your job: produce complete write-ready vault content.
+
+Rules:
+- For create: generate a full file from scratch using the notes as source material. Include ALL details — do not condense. Use full YAML frontmatter (node_type, description, created, status, tags, connected: []) + rich markdown body.
+- For append: preserve ALL existing content. Add the new notes as a new dated section at the bottom. Do NOT remove or truncate existing content.
+- For merge: intelligently combine overlapping content. Remove true duplicates but preserve all unique information.
+- For update: replace the specific section that the new content targets, keeping everything else.
+- Do NOT include wikilinks — a separate linking step handles that.
+- Preserve the user's voice and specific details. Do not summarize — expand the notes into full sentences with context.
+
+Produce:
+- frontmatter: YAML frontmatter as a JSON object. Required fields: node_type, description
+- body: the full merged markdown body
+
+Return JSON matching entity_content schema:
+{
+  "frontmatter": { "node_type": "...", "description": "...", ... },
+  "body": "..."
+}
+
+No code fences, no extra text outside the JSON.

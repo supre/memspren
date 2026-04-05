@@ -42,13 +42,13 @@ steps:
 
   - id: lock
     command: >
-      uv run -m scripts.memcli
+      memcli
       write-lock
       --vault-path "${vault_path}"
 
   - id: check_cli
     command: >
-      uv run -m scripts.memcli
+      memcli
       check-cli
       --vault-path "${vault_path}"
       --vault "${vault_name}"
@@ -56,26 +56,26 @@ steps:
 
   - id: vault_diff
     command: >
-      uv run -m scripts.memcli
+      memcli
       vault-diff
       --vault-path "${vault_path}"
 
   - id: task_inbox
     command: >
-      uv run -m scripts.memcli
+      memcli
       task-inbox
       --vault-path "${vault_path}"
 
   - id: rotate_buffer
     command: >
-      uv run -m scripts.memcli
+      memcli
       rotate-buffer
       --vault-path "${vault_path}"
       --sync-check
 
   - id: sync_gate
     command: >
-      uv run -m scripts.memcli
+      memcli
       sync-gate
       --vault-path "${vault_path}"
 
@@ -83,7 +83,7 @@ steps:
 
   - id: extraction
     command: >
-      uv run -m scripts.memcli
+      memcli
       run-extraction
       --vault-path "${vault_path}"
       --buffer-content-file "${vault_path}/.second-brain/run/buffer-content.txt"
@@ -93,7 +93,7 @@ steps:
 
   - id: parallel_refinement
     command: >
-      uv run -m scripts.memcli
+      memcli
       parallel-memory
       --vault-path "${vault_path}"
       --extraction-file "${vault_path}/.second-brain/run/extraction-output.json"
@@ -103,7 +103,7 @@ steps:
 
   - id: merge_layer1
     command: >
-      uv run -m scripts.memcli
+      memcli
       merge-layer1
       --vault-path "${vault_path}"
     stdin: $parallel_refinement.stdout
@@ -112,7 +112,7 @@ steps:
 
   - id: read_frontmatter
     command: >
-      uv run -m scripts.memcli
+      memcli
       read-frontmatter
       --vault-path "${vault_path}"
       --classifiers "${vault_path}/.second-brain/run/extraction-output.json"
@@ -122,7 +122,7 @@ steps:
 
   - id: entity_plan
     command: >
-      uv run -m scripts.memcli
+      memcli
       entity-plan
       --vault-path "${vault_path}"
       --buffer-content-file "${vault_path}/.second-brain/run/buffer-content.txt"
@@ -134,7 +134,7 @@ steps:
 
   - id: entity_writes
     command: >
-      uv run -m scripts.memcli
+      memcli
       entity-write
       --plan "${vault_path}/.second-brain/run/entity-plan.json"
       --vault-path "${vault_path}"
@@ -147,7 +147,7 @@ steps:
 
   - id: entity_links
     command: >
-      uv run -m scripts.memcli
+      memcli
       entity-link
       --vault-path "${vault_path}"
       --written-entities "${vault_path}/.second-brain/run/entity-write-result.json"
@@ -156,7 +156,7 @@ steps:
 
   - id: metrics
     command: >
-      uv run -m scripts.memcli
+      memcli
       metrics
       --vault-path "${vault_path}"
       --write-mode "filesystem"
@@ -164,13 +164,13 @@ steps:
 
   - id: archive_run
     command: >
-      uv run -m scripts.memcli
+      memcli
       archive-run
       --vault-path "${vault_path}"
 
   - id: release_lock
     command: >
-      uv run -m scripts.memcli
+      memcli
       write-lock
       --vault-path "${vault_path}"
       --release

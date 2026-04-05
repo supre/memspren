@@ -94,7 +94,7 @@ Every session, in this order:
 
 8. Check for unsynced buffer content:
    ```bash
-   uv run -m scripts.memcli get-active-buffer --vault-path "{vault_path}"
+   memcli get-active-buffer --vault-path "{vault_path}"
    ```
    If `entry_count > 0` → notify user: "You have [X] unsynced entries. Want me to sync now or continue?"
 
@@ -117,7 +117,7 @@ If setup hasn't run yet (no `.memspren-config` at workspace root), start setup p
 2. Agent responds conversationally using Layer 1 memory for context
 3. Before appending, get the active buffer path:
    ```bash
-   uv run -m scripts.memcli get-active-buffer --vault-path "{vault_path}"
+   memcli get-active-buffer --vault-path "{vault_path}"
    ```
    Use the returned `path` to append the entry. If `rotated: true`, a new buffer was created — note it.
 4. Agent appends DETAILED entry to the active buffer (WRITE only — full context, not condensed)

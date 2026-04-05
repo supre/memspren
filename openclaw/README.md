@@ -36,12 +36,10 @@ openclaw gateway restart
 
 ### 2. Install memcli
 
-`memcli` is the Python CLI that drives every sync pipeline step. Install it as a global uv tool from inside the `openclaw/` directory:
+`memcli` is the Python CLI that drives every sync pipeline step. Install it as a global uv tool from the **repo root** (where `pyproject.toml` lives):
 
 ```bash
-cd openclaw/
-
-# Install memcli globally — editable mode means code changes are picked up immediately
+# From the repo root — pyproject.toml is here, not inside openclaw/
 uv tool install --editable .
 
 # Verify — should print all available commands
@@ -72,13 +70,15 @@ memcli setup \
 
 This creates all folders, seed files, and `.second-brain/config.md` idempotently — safe to re-run.
 
+`memcli setup` also bootstraps your OpenClaw gateway credentials. It reads the URL and token from `~/.openclaw/openclaw.json` (written by OpenClaw on first run) and persists them to `~/.memspren-config` so every subsequent `memcli` invocation resolves them without any extra configuration. Environment variables `OPENCLAW_URL` and `OPENCLAW_TOKEN` take precedence if set.
+
 ### 5. Verify the pipeline
 
 Run the tests to confirm everything is wired correctly:
 
 ```bash
-cd openclaw/
-uv run pytest scripts/memcli/tests/ -v
+# From the repo root
+uv run pytest
 ```
 
 All tests create throwaway vaults under `/tmp` — nothing touches your real vault.
@@ -135,7 +135,10 @@ If a sync fails, check this file first. Each step logs at DEBUG level with struc
 ## Troubleshooting
 
 **`memcli: command not found`**  
-Run `uv tool install --editable .` from the `openclaw/` directory. If installed but not found, ensure `~/.local/bin/` is in your `PATH`.
+Run `uv tool install --editable .` from the repo root. If installed but not found, ensure `~/.local/bin/` is in your `PATH`.
+
+**Gateway authentication errors / empty token**  
+Run `memcli setup --vault-path /path/to/vault` once to bootstrap credentials from `~/.openclaw/openclaw.json` into `~/.memspren-config`. If OpenClaw isn't installed yet, set `OPENCLAW_URL` and `OPENCLAW_TOKEN` as environment variables instead.
 
 **Gateway HTTP 500 errors**  
 The LLM call failed. Check `/tmp/openclaw/openclaw-YYYY-MM-DD.log` for the root cause — common causes are model rate limits, timeouts, or the OpenClaw gateway process needing a restart.
@@ -166,32 +169,33 @@ No content in the active buffer — there is nothing to sync. This is normal and
 ## File structure
 
 ```
-openclaw/
-├── SKILL.md                              # Skill definition (loaded by OpenClaw)
-├── README.md                             # This file
-├── pyproject.toml                        # memcli package definition + deps
-├── workflows/
-│   └── sync.lobster                      # Lobster workflow — full sync pipeline
-├── prompts/                              # LLM prompts for each pipeline step
-├── schemas/                              # JSON schemas for LLM output validation
-├── Protocols/
-│   ├── check-in-protocol.md
-│   ├── setup-protocol.md
-│   └── sync-protocol.md
-└── scripts/
-    └── memcli/                           # Python CLI package
-        ├── cli.py                        # Click command dispatcher
-        ├── gateway.py                    # OpenClaw gateway HTTP client
-        ├── paths.py                      # VaultPaths — shared path constants
-        ├── preflight/                    # Stage 0: lock, check-cli, sync-gate
-        ├── buffer/                       # Stage 0: rotate-buffer
-        ├── scanning/                     # Stage 0/4a: vault-diff, task-inbox, frontmatter
-        ├── extraction/                   # Stage 1: run-extraction
-        ├── memory/                       # Stage 2-3: parallel-memory, merge
-        ├── entities/                     # Stage 4b-d: entity-plan, write, link
-        ├── finalize/                     # Stage 5: metrics, archive-run
-        ├── vault/                        # Git commit + connected: helpers
-        └── tests/                        # Integration + unit tests
+memspren/                                 # Repo root
+├── pyproject.toml                        # memcli package definition + deps (install from here)
+└── openclaw/
+    ├── SKILL.md                          # Skill definition (loaded by OpenClaw)
+    ├── README.md                         # This file
+    ├── workflows/
+    │   └── sync.lobster                  # Lobster workflow — full sync pipeline
+    ├── Protocols/
+    │   ├── check-in-protocol.md
+    │   ├── setup-protocol.md
+    │   └── sync-protocol.md
+    └── scripts/
+        └── memcli/                       # Python CLI package
+            ├── cli.py                    # Click command dispatcher
+            ├── gateway.py                # OpenClaw gateway HTTP client
+            ├── paths.py                  # VaultPaths — shared path constants
+            ├── prompts/                  # LLM prompts for each pipeline step
+            ├── schemas/                  # JSON schemas for LLM output validation
+            ├── preflight/                # Stage 0: lock, check-cli, sync-gate
+            ├── buffer/                   # Stage 0: rotate-buffer
+            ├── scanning/                 # Stage 0/4a: vault-diff, task-inbox, frontmatter
+            ├── extraction/               # Stage 1: run-extraction
+            ├── memory/                   # Stage 2-3: parallel-memory, merge
+            ├── entities/                 # Stage 4b-d: entity-plan, write, link
+            ├── finalize/                 # Stage 5: metrics, archive-run
+            ├── vault/                    # Git commit + connected: helpers
+            └── tests/                    # Integration + unit tests
 ```
 
 ## Vault structure (created by setup)

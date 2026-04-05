@@ -170,7 +170,8 @@ def get_active_buffer_cmd(vault_path, max_words, verbosity):
 @click.option("--vault-name", default="")
 @click.option("--verbosity", default="debug", type=VERBOSITY_CHOICES)
 def setup_cmd(vault_path, vault_name, verbosity):
-    """Idempotent vault scaffold — creates missing folders, seed files, memory stubs, and git repo.
+    """Idempotent vault scaffold — creates missing folders, seed files, memory stubs, git repo,
+    and bootstraps OpenClaw gateway URL/token into ~/.memspren-config.
 
     Safe to call at any time. Never overwrites existing content.
     """
