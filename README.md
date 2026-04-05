@@ -46,7 +46,7 @@ Every plugin follows this pattern:
 
 | Location                | What lives here                              |
 | ----------------------- | -------------------------------------------- |
-| **Skill/Plugin folder** | `config.md`, Memory/, operational files      |
+| **Skill/Plugin folder** | `config.md`, memory/, operational files      |
 | **Vault**               | All note content: Work/, People/, Log/, etc. |
 
 This separation keeps your knowledge graph clean while giving the AI system predictable places to store state.
