@@ -91,7 +91,6 @@ All plugins implement:
 - **Slack integration** — capture ideas and tasks from Slack, sync to vault
 - **Calendar sync** — link daily logs to calendar events
 - **Web clipper** — capture learnings from web articles
-- **CLI tool** — command-line interface for vault queries and updates
 
 ---
 
