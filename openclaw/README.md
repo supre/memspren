@@ -70,6 +70,8 @@ memcli setup \
 
 This creates all folders, seed files, and `.second-brain/config.md` idempotently — safe to re-run.
 
+`memcli setup` also bootstraps your OpenClaw gateway credentials. It reads the URL and token from `~/.openclaw/openclaw.json` (written by OpenClaw on first run) and persists them to `~/.memspren-config` so every subsequent `memcli` invocation resolves them without any extra configuration. Environment variables `OPENCLAW_URL` and `OPENCLAW_TOKEN` take precedence if set.
+
 ### 5. Verify the pipeline
 
 Run the tests to confirm everything is wired correctly:
@@ -133,7 +135,10 @@ If a sync fails, check this file first. Each step logs at DEBUG level with struc
 ## Troubleshooting
 
 **`memcli: command not found`**  
-Run `uv tool install --editable .` from the `openclaw/` directory. If installed but not found, ensure `~/.local/bin/` is in your `PATH`.
+Run `uv tool install --editable .` from the repo root. If installed but not found, ensure `~/.local/bin/` is in your `PATH`.
+
+**Gateway authentication errors / empty token**  
+Run `memcli setup --vault-path /path/to/vault` once to bootstrap credentials from `~/.openclaw/openclaw.json` into `~/.memspren-config`. If OpenClaw isn't installed yet, set `OPENCLAW_URL` and `OPENCLAW_TOKEN` as environment variables instead.
 
 **Gateway HTTP 500 errors**  
 The LLM call failed. Check `/tmp/openclaw/openclaw-YYYY-MM-DD.log` for the root cause — common causes are model rate limits, timeouts, or the OpenClaw gateway process needing a restart.
