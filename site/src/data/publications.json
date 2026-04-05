@@ -1,5 +1,14 @@
 [
   {
+    "title": "Built (almost) a structured Lobster pipeline on OpenClaw to solve AI non-determinism",
+    "medium": "dev.to",
+    "type": "article",
+    "context": "A friction log from building a deterministic AI pipeline for MemSpren using Lobster on OpenClaw. Week of debugging: permissions overhaul broke autonomous execution, silent install failures, LLMs ignoring schema constraints causing 500 errors buried in logs, and Anthropic pulling Claude support. The pipeline runs now, but the 'AI will replace humans' narrative is hollow — this stuff is high-maintenance, not autonomous. The fight for reliability continues.",
+    "url": "https://dev.to/supreet_s/built-almost-a-structured-lobster-pipeline-on-openclaw-to-solve-ai-non-determinism-3c5j",
+    "date": "2026-04-04",
+    "tags": ["lobster", "openclaw", "non-determinism", "memspren", "friction-log", "debugging"]
+  },
+  {
     "title": "I Built an AI Assistant and Named Her Agatha. She Runs My Life Now.",
     "medium": "Substack",
     "type": "article",

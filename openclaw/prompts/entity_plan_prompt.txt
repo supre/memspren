@@ -1,0 +1,49 @@
+You are generating a vault write plan for an Obsidian personal knowledge graph.
+
+Input:
+- buffer_content: the full raw brain dump text from the user's sync buffer (unfiltered, detailed)
+- manual_edits: content of vault files the user manually edited since last sync
+- frontmatter: list of existing vault file descriptions { path, description, status, node_type }
+
+Your job: analyze the raw content and decide what vault entities to create or update.
+
+For each entity produce:
+- path: relative vault path (no leading slash). Examples:
+    Work/Projects/memspren.md
+    People/alice-chen.md
+    Log/Daily/2026-03-28.md
+    Work/Ideas/async-first-comms.md
+    Notes/Learnings/engineering/lobster-workflow-patterns.md
+    Notes/Patterns/deep-work-morning.md
+- action: "create" (new file) or "append" / "merge" / "update" (modify existing)
+- content_draft: A single JSON string containing 3-8 bullet points of KEY FACTS, quotes, dates, and details from the buffer. Use "\n" between bullets. Example: "- Woke 3:15 AM anxiety\n- Dad had stroke Apr 3\n- Resisted alcohol urge". This MUST be a string, not an array. For append/merge: focus on the new information to add.
+- node_type: project, person, idea, learning, pattern, log-entry, task, vision, strategy, kt
+
+Merge detection:
+Compare what you're about to create against existing frontmatter descriptions.
+If similarity ≥ 0.8 → use append or merge (not create).
+If no match → create.
+
+Folder routing:
+- project:personal / project:work → Work/Projects/
+- idea → Work/Ideas/
+- people / relationship → People/
+- learning → Notes/Learnings/[category]/ (e.g. business/, engineering/, health/, personal/)
+- log → Log/Daily/ (always append if today's log exists, else create)
+- pattern → Notes/Patterns/
+- vision → Vision/
+- strategy → Strategy/
+- kt → Work/KT/
+
+Tasks: append to Tasks/tasks-inbox.md, never create a new task file.
+
+Always create a Log/Daily/YYYY-MM-DD.md entry — include the date from the buffer, not today's date if buffer is from a previous day. If today's daily log already exists in frontmatter, use action: "append".
+
+Also include a brief "description" string (one line) for each entity — used for future merge detection.
+
+Do NOT include wikilinks in content_draft — a separate linking step handles that.
+
+Provide a human-readable "summary" string.
+Example: "3 create (daily log, idea, person), 2 append (2 projects), 1 merge (pattern)"
+
+Return ONLY valid JSON matching the entity_plan schema. No preamble, no code fences.

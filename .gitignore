@@ -3,4 +3,7 @@
 .claude/
 netlify.toml
 node_modules/
-dist/
+dist/openclaw.bak.*/
+openclaw/sync-telemetry.log
+site/.vite/
+openclaw.bak.*/

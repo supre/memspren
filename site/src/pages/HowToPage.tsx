@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 
 const sections = [
   { id: 'setup', label: 'Installation & Setup' },
+  { id: 'openclaw-setup', label: 'OpenClaw Setup' },
+  { id: 'create-agent', label: 'Create an Agent' },
   { id: 'telegram', label: 'Telegram with Claude' },
   { id: 'architecture', label: 'Architecture' },
 ]
@@ -175,6 +177,150 @@ export default function HowToPage() {
             </a>
           </DocSection>
 
+          {/* ── OPENCLAW SETUP ────────────────────────────── */}
+          <DocSection id="openclaw-setup" title="OpenClaw Setup">
+            <p className="text-on-surface/60 text-base leading-relaxed mb-8">
+              The OpenClaw skill uses a deterministic Lobster pipeline for sync — all vault writes happen in a structured, reviewable pipeline rather than ad-hoc LLM calls. This section covers everything you need to get it running.
+            </p>
+
+            <Note>
+              Currently macOS only. The sync pipeline uses shell tools and paths that assume a Mac environment.
+            </Note>
+
+            <SubHeading>Prerequisites</SubHeading>
+            <div className="space-y-4 mb-8">
+              <Step num="01" color="cyan">
+                Install <strong className="text-on-surface/80">uv</strong> — manages Python versions and packages:
+                {' '}<Code>brew install uv</Code> or follow the{' '}
+                <a href="https://docs.astral.sh/uv/getting-started/installation/" target="_blank" rel="noopener noreferrer" className="text-accent-cyan hover:brightness-125">uv install guide</a>.
+              </Step>
+              <Step num="02" color="cyan">
+                Install <strong className="text-on-surface/80">Git</strong> — required for version-safe vault snapshots:{' '}
+                <Code>xcode-select --install</Code> or <Code>brew install git</Code>.
+              </Step>
+              <Step num="03" color="cyan">
+                Have an <strong className="text-on-surface/80">Obsidian vault</strong> on your machine. A new empty vault works fine — the setup command creates all the structure.
+              </Step>
+            </div>
+
+            <SubHeading>Install OpenClaw plugins</SubHeading>
+            <p className="text-on-surface/60 text-sm leading-relaxed mb-4">
+              The sync pipeline requires two OpenClaw plugins: <strong className="text-on-surface/70">Lobster</strong> (the workflow runner) and <strong className="text-on-surface/70">llm-task</strong> (the LLM invocation primitive). Install and enable both:
+            </p>
+            <div className="glass-card rounded-2xl p-6 font-mono text-xs text-on-surface/60 leading-relaxed space-y-1 mb-4">
+              <p><span className="text-on-surface/30"># install the plugins</span></p>
+              <p>openclaw plugins install lobster</p>
+              <p>openclaw plugins install llm-task</p>
+              <p className="mt-2"><span className="text-on-surface/30"># enable them</span></p>
+              <p>openclaw plugins enable lobster</p>
+              <p>openclaw plugins enable llm-task</p>
+              <p className="mt-2"><span className="text-on-surface/30"># restart the gateway to load the plugins</span></p>
+              <p>openclaw gateway restart</p>
+            </div>
+
+            <SubHeading>Install the skill</SubHeading>
+            <div className="space-y-4 mb-8">
+              <Step num="01" color="cyan">
+                Clone the repo and copy the <Code>openclaw/</Code> folder into your OpenClaw skills directory — OpenClaw will not load the skill unless it lives here:
+                <div className="mt-2 font-mono text-xs bg-surface/20 border border-white/5 rounded-lg px-4 py-3 text-on-surface/70">
+                  cp -r openclaw/ ~/.openclaw/skills/memspren/
+                </div>
+              </Step>
+              <Step num="02" color="cyan">
+                Install <Code>memcli</Code> — the Python CLI that drives every pipeline step. Install it as a global uv tool so Lobster can call it from any directory:
+                <div className="mt-2 font-mono text-xs bg-surface/20 border border-white/5 rounded-lg px-4 py-3 text-on-surface/70 space-y-1">
+                  <p>cd ~/.openclaw/skills/memspren/</p>
+                  <p className="mt-1"><span className="text-on-surface/30"># install globally — editable mode picks up code changes without reinstalling</span></p>
+                  <p>uv tool install --editable .</p>
+                  <p className="mt-2"><span className="text-on-surface/30"># verify</span></p>
+                  <p>memcli --help</p>
+                </div>
+              </Step>
+              <Step num="03" color="cyan">
+                Scaffold your vault. Run once to create folders, seed files, and the config file:
+                <div className="mt-2 font-mono text-xs bg-surface/20 border border-white/5 rounded-lg px-4 py-3 text-on-surface/70">
+                  memcli setup --vault-path /path/to/vault --vault-name "Vault Name"
+                </div>
+              </Step>
+              <Step num="04" color="cyan">
+                Restart the OpenClaw gateway to load the skill:
+                <div className="mt-2 font-mono text-xs bg-surface/20 border border-white/5 rounded-lg px-4 py-3 text-on-surface/70">
+                  openclaw gateway restart
+                </div>
+              </Step>
+            </div>
+
+            <Note>
+              <Code>uv tool install</Code> places <Code>memcli</Code> in <Code>~/.local/bin/</Code> — globally accessible. If you update the source code, the editable install picks up changes automatically. If you add or change dependencies in <Code>pyproject.toml</Code>, reinstall with <Code>uv tool install --reinstall --editable .</Code>
+            </Note>
+
+            <SubHeading>Run the tests</SubHeading>
+            <p className="text-on-surface/60 text-sm leading-relaxed mb-4">
+              Verify the pipeline is wired correctly before your first sync:
+            </p>
+            <div className="glass-card rounded-2xl p-6 font-mono text-xs text-on-surface/60 leading-relaxed space-y-1">
+              <p><span className="text-on-surface/30"># from openclaw/</span></p>
+              <p>uv run pytest scripts/memcli/tests/ -v</p>
+            </div>
+            <p className="text-on-surface/50 text-xs mt-3 leading-relaxed">
+              All tests create throwaway vaults under <Code>/tmp</Code> — nothing touches your real vault.
+            </p>
+
+            <SubHeading>What setup creates</SubHeading>
+            <p className="text-on-surface/60 text-sm leading-relaxed mb-4">
+              The setup command scaffolds your vault idempotently — safe to re-run, never overwrites existing content:
+            </p>
+            <div className="glass-card rounded-2xl p-6 font-mono text-xs text-on-surface/60 leading-relaxed">
+              <p className="text-primary/70 mb-1">vault/</p>
+              <p className="ml-4">Work/Projects/    <span className="text-on-surface/30">← deadline-driven work</span></p>
+              <p className="ml-4">Work/Ideas/       <span className="text-on-surface/30">← lightweight captures</span></p>
+              <p className="ml-4">People/           <span className="text-on-surface/30">← everyone you interact with</span></p>
+              <p className="ml-4">Log/Daily/        <span className="text-on-surface/30">← daily notes</span></p>
+              <p className="ml-4">Notes/Learnings/  <span className="text-on-surface/30">← things learned, connected to active work</span></p>
+              <p className="ml-4">Notes/Patterns/   <span className="text-on-surface/30">← recurring behavioral observations</span></p>
+              <p className="ml-4">Vision/           <span className="text-on-surface/30">← values, long-term aspirations</span></p>
+              <p className="ml-4">Strategy/         <span className="text-on-surface/30">← quarterly goals</span></p>
+              <p className="ml-4">Tasks/            <span className="text-on-surface/30">← unified task inbox</span></p>
+              <p className="ml-4">Inbox/            <span className="text-on-surface/30">← unsorted captures</span></p>
+              <p className="ml-4">Archive/          <span className="text-on-surface/30">← nothing ever deleted</span></p>
+              <p className="ml-4">.second-brain/    <span className="text-on-surface/30">← memory, buffers, run artifacts, config</span></p>
+            </div>
+          </DocSection>
+
+          {/* ── CREATE AN AGENT ───────────────────────────── */}
+          <DocSection id="create-agent" title="Create an Agent">
+            <p className="text-on-surface/60 text-base leading-relaxed mb-8">
+              The sync pipeline routes all LLM work through a single agent named <Code>main</Code>. This agent needs the <Code>lobster</Code> and <Code>llm-task</Code> tools enabled.
+            </p>
+
+            <SubHeading>The pipeline agent</SubHeading>
+            <div className="space-y-4 mb-8">
+              <div className="glass-card rounded-2xl p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0 mt-0.5">
+                    <span className="material-symbols-outlined text-primary text-base">model_training</span>
+                  </div>
+                  <div>
+                    <p className="font-label font-bold text-sm text-primary mb-1">main</p>
+                    <p className="text-on-surface/60 text-sm leading-relaxed">Handles every pipeline step — extraction, memory refinement, entity planning, content writing, and linking. Set the model to whatever is available and capable in your OpenClaw setup. The pipeline is tested with <Code>moonshotai/kimi-k2.5</Code> via OpenRouter.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <SubHeading>Configure the agent in OpenClaw</SubHeading>
+            <div className="space-y-4 mb-8">
+              <Step num="01" color="cyan">Open OpenClaw and go to the Agents panel.</Step>
+              <Step num="02" color="cyan">Create or confirm an agent with id <Code>main</Code>. Enable the <Code>lobster</Code> and <Code>llm-task</Code> tools on it.</Step>
+              <Step num="03" color="cyan">Set the model. Any capable model works — pick one you have access to via your configured provider (Anthropic, OpenRouter, etc.).</Step>
+              <Step num="04" color="cyan">The vault's <Code>.second-brain/config.md</Code> has an <Code>agents:</Code> section mapping <Code>heavy</Code>, <Code>light</Code>, and <Code>default</Code> to agent names — all three should point to <Code>main</Code>.</Step>
+            </div>
+
+            <Note>
+              LLM calls in this pipeline can take 2–5 minutes per step depending on model and load. The pipeline is designed to wait — all steps have a 600-second timeout. If a call fails, it retries up to 5 times with a 30-second delay between attempts.
+            </Note>
+          </DocSection>
+
           {/* ── TELEGRAM ──────────────────────────────────── */}
           <DocSection id="telegram" title="Telegram with Claude">
             <p className="text-on-surface/60 text-base leading-relaxed mb-8">
@@ -223,7 +369,7 @@ export default function HowToPage() {
                   <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
                     <span className="material-symbols-outlined text-primary text-base">psychology</span>
                   </span>
-                  <h4 className="font-headline italic text-primary text-lg">1. Memory Layer</h4>
+                  <h4 className="font-headline italic text-primary text-lg">1. memory Layer</h4>
                 </div>
                 <p className="text-on-surface/60 text-sm leading-relaxed">
                   The skill's persistent context: your personal profile, entity extraction rules, relationship types, and the running knowledge graph in Obsidian. This is what makes every session aware of prior context — Claude isn't starting from scratch each time.
@@ -285,11 +431,14 @@ export default function HowToPage() {
             </p>
             <div className="glass-card rounded-2xl p-6 font-mono text-xs text-on-surface/60 leading-relaxed">
               <p className="text-primary/70 mb-1">vault/</p>
-              <p className="ml-4">People/          <span className="text-on-surface/30">← person entities</span></p>
-              <p className="ml-4">Concepts/        <span className="text-on-surface/30">← ideas, frameworks</span></p>
-              <p className="ml-4">Projects/        <span className="text-on-surface/30">← active work</span></p>
-              <p className="ml-4">Daily/           <span className="text-on-surface/30">← timestamped brain dumps</span></p>
-              <p className="ml-4">_profile.md      <span className="text-on-surface/30">← your personal context note</span></p>
+              <p className="ml-4">Work/Projects/   <span className="text-on-surface/30">← deadline-driven work</span></p>
+              <p className="ml-4">Work/Ideas/      <span className="text-on-surface/30">← lightweight captures</span></p>
+              <p className="ml-4">People/          <span className="text-on-surface/30">← everyone you interact with</span></p>
+              <p className="ml-4">Log/Daily/       <span className="text-on-surface/30">← daily notes, created during sync</span></p>
+              <p className="ml-4">Notes/Learnings/ <span className="text-on-surface/30">← resources, reference material</span></p>
+              <p className="ml-4">Tasks/           <span className="text-on-surface/30">← unified task inbox</span></p>
+              <p className="ml-4">Archive/         <span className="text-on-surface/30">← nothing ever deleted</span></p>
+              <p className="ml-4">.second-brain/   <span className="text-on-surface/30">← memory, buffers, config (hidden)</span></p>
             </div>
           </DocSection>
 

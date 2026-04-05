@@ -1,0 +1,55 @@
+{
+  "description": "Stage 4b entity plan \u2014 structured vault write plan",
+  "type": "object",
+  "required": [
+    "entities",
+    "summary"
+  ],
+  "properties": {
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "action",
+          "content_draft"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative vault path, e.g. Work/Projects/memspren.md"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "append",
+              "merge",
+              "update"
+            ]
+          },
+          "content_draft": {
+            "description": "Draft content for this entity — string or array of bullet strings.",
+            "oneOf": [
+              {"type": "string"},
+              {"type": "array", "items": {"type": "string"}}
+            ]
+          },
+          "node_type": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "description": "One-line description for merge detection"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "string",
+      "description": "Human-readable summary for the approval gate, e.g. '2 create, 1 append, 1 merge'"
+    }
+  }
+}
