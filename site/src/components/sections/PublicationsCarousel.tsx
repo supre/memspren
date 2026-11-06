@@ -39,7 +39,7 @@ export default function PublicationsCarousel({ publications }: { publications: P
 
         <RevealWrapper>
           <div className="text-center mb-16">
-            <h2 className="text-5xl font-headline italic text-primary glow-text">Publications</h2>
+            <h2 className="text-5xl font-headline italic text-primary glow-text">Blog</h2>
             <p className="text-on-surface/50 mt-4 tracking-[0.2em] uppercase text-xs">Documenting the methodology as it's built</p>
           </div>
         </RevealWrapper>
@@ -47,7 +47,7 @@ export default function PublicationsCarousel({ publications }: { publications: P
         {/* Controls row */}
         <RevealWrapper className="flex items-center justify-between mb-8">
           <Link
-            to="/publications"
+            to="/blog"
             className="flex items-center gap-2 text-primary font-bold text-[0.65rem] uppercase tracking-widest hover:brightness-125 transition-all group"
           >
             All publications

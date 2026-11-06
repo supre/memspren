@@ -38,9 +38,22 @@ export default function UpdateCard({ update, onOpenModal }: UpdateCardProps) {
           </button>
         </>
       ) : (
-        <p className="text-on-surface/60 text-sm leading-relaxed font-light">
-          {update.details}
-        </p>
+        <>
+          <p className="text-on-surface/60 text-sm leading-relaxed font-light">
+            {update.details}
+          </p>
+          {update.link && (
+            <a
+              href={update.link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 inline-flex items-center gap-2 text-primary font-bold text-[0.65rem] uppercase tracking-widest hover:brightness-125 transition-all no-underline"
+            >
+              {update.link.label}
+              <span className="material-symbols-outlined text-sm">arrow_outward</span>
+            </a>
+          )}
+        </>
       )}
     </div>
   )

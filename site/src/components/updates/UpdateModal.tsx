@@ -42,6 +42,17 @@ export default function UpdateModal({ update, onClose }: UpdateModalProps) {
               <div id="update-details" className="text-on-surface/70 text-base leading-relaxed whitespace-pre-wrap font-light">
                 {update.details}
               </div>
+              {update.link && (
+                <a
+                  href={update.link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-8 inline-flex items-center gap-2 text-primary font-bold text-[0.65rem] uppercase tracking-widest hover:brightness-125 transition-all group no-underline"
+                >
+                  {update.link.label}
+                  <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_outward</span>
+                </a>
+              )}
             </>
           )}
         </Dialog.Content>

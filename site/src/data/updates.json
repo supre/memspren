@@ -1,5 +1,16 @@
 [
   {
+    "id": "2026-10-31-paused",
+    "date": "2026-11-06",
+    "title": "MemSpren is paused",
+    "summary": "MemSpren is on the back burner while I rethink it. The code and docs still work as described, with no new features for now.",
+    "details": "I stepped away in April 2026, after my father passed away. When I came back, a simpler system was working better for me than what I'd built. The idea behind MemSpren still holds, and I'm working out how to restart it from a different angle.",
+    "link": {
+      "label": "Read: How I gamified my grief and earned my life back",
+      "url": "https://innerodyssey.substack.com/p/how-i-gamified-my-grief-and-earned"
+    }
+  },
+  {
     "id": "2026-04-05-v04-pipeline",
     "date": "2026-04-05",
     "title": "v0.4: The Sync Pipeline is Real",

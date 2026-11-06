@@ -1,12 +1,34 @@
 [
   {
+    "title": "How I gamified my grief and earned my life back",
+    "medium": "Substack",
+    "type": "article",
+    "context": "After my father passed away in April 2026, I stopped moving, stopped building, and stopped caring about most things. This is how I climbed back with a points system built in Claude Code on top of my Obsidian notes: pricing leisure instead of banning it, rewarding the basics, and rebuilding self-trust one tracked day at a time.",
+    "url": "https://innerodyssey.substack.com/p/how-i-gamified-my-grief-and-earned",
+    "date": "2026-11-06",
+    "tags": [
+      "grief",
+      "points-system",
+      "momentum",
+      "claude-code",
+      "obsidian"
+    ]
+  },
+  {
     "title": "Built (almost) a structured Lobster pipeline on OpenClaw to solve AI non-determinism",
     "medium": "dev.to",
     "type": "article",
     "context": "A friction log from building a deterministic AI pipeline for MemSpren using Lobster on OpenClaw. Week of debugging: permissions overhaul broke autonomous execution, silent install failures, LLMs ignoring schema constraints causing 500 errors buried in logs, and Anthropic pulling Claude support. The pipeline runs now, but the 'AI will replace humans' narrative is hollow — this stuff is high-maintenance, not autonomous. The fight for reliability continues.",
     "url": "https://dev.to/supreet_s/built-almost-a-structured-lobster-pipeline-on-openclaw-to-solve-ai-non-determinism-3c5j",
     "date": "2026-04-04",
-    "tags": ["lobster", "openclaw", "non-determinism", "memspren", "friction-log", "debugging"]
+    "tags": [
+      "lobster",
+      "openclaw",
+      "non-determinism",
+      "memspren",
+      "friction-log",
+      "debugging"
+    ]
   },
   {
     "title": "I Built an AI Assistant and Named Her Agatha. She Runs My Life Now.",
@@ -15,7 +37,12 @@
     "context": "The origin story of Agatha — a personal AI assistant built after years of failed PKM systems. Traces the journey from manual journals to Obsidian to a protocol-driven AI partner who manages daily planning, goal tracking, and drift detection. The core shift: from being a librarian of your thoughts to being their architect.",
     "url": "https://innerodyssey.substack.com/p/i-built-an-ai-assistant-and-named",
     "date": "2026-02-27",
-    "tags": ["origin-story", "agatha", "pkm", "ai-assistant"]
+    "tags": [
+      "origin-story",
+      "agatha",
+      "pkm",
+      "ai-assistant"
+    ]
   },
   {
     "title": "I Open-Sourced My Second Brain. Here's How to Build Yours.",
@@ -24,7 +51,12 @@
     "context": "The 'why' behind MemSpren, told through a Telegram moment where Agatha recovered a forgotten tool name instantly. Explains in plain language how hot memory, a graph index, and evolvable protocol files make an AI knowledge partner feel like a colleague — not software. Links to the open-source GitHub repo and technical deep-dive.",
     "url": "https://innerodyssey.substack.com/p/i-open-sourced-my-second-brain-heres",
     "date": "2026-03-03",
-    "tags": ["memspren", "open-source", "architecture", "hot-memory"]
+    "tags": [
+      "memspren",
+      "open-source",
+      "architecture",
+      "hot-memory"
+    ]
   },
   {
     "title": "Memspren OpenClaw Skill is Live",
@@ -33,7 +65,12 @@
     "context": "A short-form video walkthrough announcing the live release of the MemSpren skill for OpenClaw. Demonstrates the system's core promise: one place that always knows where you are and what to do next. Setup instructions and the live site are linked in the description.",
     "url": "https://innerodyssey.substack.com/p/memspren-openclaw-skill-is-live",
     "date": "2026-03-07",
-    "tags": ["memspren", "openclaw", "release", "walkthrough"]
+    "tags": [
+      "memspren",
+      "openclaw",
+      "release",
+      "walkthrough"
+    ]
   },
   {
     "title": "We Don't Share Reality. We Just Share Vocabulary",
@@ -42,7 +79,12 @@
     "context": "A philosophical and technical essay on why human perception is a model, not reality — and what that means for how we capture and connect our thoughts. Introduces graph theory concepts (structural holes, centrality, weak ties) as a framework for mapping the self, and lays out the next evolution of MemSpren as a topology of the mind.",
     "url": "https://innerodyssey.substack.com/p/we-dont-share-reality-we-just-share",
     "date": "2026-03-11",
-    "tags": ["philosophy", "graph-theory", "perception", "memspren"]
+    "tags": [
+      "philosophy",
+      "graph-theory",
+      "perception",
+      "memspren"
+    ]
   },
   {
     "title": "Building MemSpren: A Claude Skill as a Second Brain — V1 Architecture Deep Dive",
@@ -51,7 +93,13 @@
     "context": "A deep technical breakdown of MemSpren's V1 architecture — using Claude as the intelligence layer and Obsidian as storage. Covers the three-tier memory system (hot memory, system state, on-demand loading), the session startup sequence, Zettelkasten node types with mandatory YAML frontmatter, and the hard invariants that keep the graph healthy over time.",
     "url": "https://dev.to/supreet_s/building-memspren-a-claude-skill-as-a-second-brain-v1-architecture-deep-dive-2p7o",
     "date": "2026-03-03",
-    "tags": ["memspren", "architecture", "claude-skill", "zettelkasten", "deep-dive"]
+    "tags": [
+      "memspren",
+      "architecture",
+      "claude-skill",
+      "zettelkasten",
+      "deep-dive"
+    ]
   },
   {
     "title": "I Wrote the Rules. My Agent Read Them. Then Did Whatever It Wanted.",
@@ -60,6 +108,13 @@
     "context": "Built MemSpren to run through Telegram + Claude Code. Setup worked, protocol was explicit, and the agent still didn't follow it. This is the non-determinism problem: models acknowledge instructions but don't always execute them. The article documents the governance experiments (cron syncs, redundant state, archive-on-edit invariants) that help manage consequences but don't eliminate causes. Next experiment: micro skills — small, single-purpose files that narrow scope and enable tighter verification. You can't prompt your way to determinism.",
     "url": "https://dev.to/supreet_s/i-wrote-the-rules-my-agent-read-them-then-did-whatever-it-wanted-1mc4",
     "date": "2026-03-24",
-    "tags": ["non-determinism", "protocol-drift", "governance", "micro-skills", "claude-code", "telegram"]
+    "tags": [
+      "non-determinism",
+      "protocol-drift",
+      "governance",
+      "micro-skills",
+      "claude-code",
+      "telegram"
+    ]
   }
 ]

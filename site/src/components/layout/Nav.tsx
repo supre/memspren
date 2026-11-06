@@ -10,7 +10,7 @@ const GitHubIcon = () => (
 const navLinks = [
   { label: 'Story', to: '/#story', homeAnchor: '#story' },
   { label: 'How-to', to: '/how-to' },
-  { label: 'Publications', to: '/publications' },
+  { label: 'Blog', to: '/blog' },
   { label: 'Updates', to: '/updates' },
 ]
 

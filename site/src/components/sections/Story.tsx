@@ -142,7 +142,7 @@ export default function Story() {
                   </div>
                   <h4 className="text-sm font-headline font-semibold text-primary mb-2 italic">Want proof it's real?</h4>
                   <p className="text-on-surface/50 text-xs leading-relaxed mb-4">Every article documenting the methodology.</p>
-                  <span className="flex items-center text-primary font-bold text-[0.6rem] uppercase tracking-widest gap-2">Publications <span className="material-symbols-outlined text-xs group-hover:translate-x-1 transition-transform">arrow_forward</span></span>
+                  <span className="flex items-center text-primary font-bold text-[0.6rem] uppercase tracking-widest gap-2">Blog <span className="material-symbols-outlined text-xs group-hover:translate-x-1 transition-transform">arrow_forward</span></span>
                 </a>
                 <a href="https://github.com/supre/memspren" target="_blank" rel="noopener noreferrer" className="glass-card glass-card-hover rounded-2xl p-6 transition-all duration-300 group no-underline block">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4 border border-primary/20">

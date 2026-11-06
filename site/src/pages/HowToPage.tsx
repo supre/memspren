@@ -160,7 +160,7 @@ export default function HowToPage() {
             <div className="glass-card rounded-xl px-5 py-3 flex items-center gap-3 mb-6 border border-primary/30">
               <span className="material-symbols-outlined text-primary/70 text-base shrink-0">pause_circle</span>
               <p className="text-on-surface/80 text-sm font-semibold italic leading-relaxed">
-                Paused at v0.3 to reduce overhead.{' '}
+                Claude skill paused at v0.3 to reduce overhead.{' '}
                 <button
                   onClick={() => setModalUpdate(v03Update)}
                   className="text-primary hover:brightness-125 underline underline-offset-2 transition-colors cursor-pointer bg-transparent border-none p-0 text-sm font-semibold italic"

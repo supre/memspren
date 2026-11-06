@@ -10,4 +10,5 @@ export interface Update {
   title: string
   summary: string
   details: string
+  link?: { label: string; url: string }
 }

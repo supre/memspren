@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import HomePage from '@/pages/HomePage'
 import UpdatesPage from '@/pages/UpdatesPage'
 import PublicationsPage from '@/pages/PublicationsPage'
@@ -6,6 +6,7 @@ import HowToPage from '@/pages/HowToPage'
 import Nav from '@/components/layout/Nav'
 import Footer from '@/components/layout/Footer'
 import ScrollToTop from '@/components/ui/ScrollToTop'
+import StatusBanner from '@/components/layout/StatusBanner'
 import metadata from '@/data/metadata.json'
 
 export default function App() {
@@ -16,10 +17,12 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/updates" element={<UpdatesPage />} />
-        <Route path="/publications" element={<PublicationsPage />} />
+        <Route path="/blog" element={<PublicationsPage />} />
+        <Route path="/publications" element={<Navigate to="/blog" replace />} />
         <Route path="/how-to" element={<HowToPage />} />
       </Routes>
       <Footer version={metadata.version} />
+      <StatusBanner />
     </div>
   )
 }

@@ -28,7 +28,7 @@ export default function Publications({ publications }: { publications: Publicati
 
         <RevealWrapper className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16">
           <div>
-            <h2 className="text-4xl md:text-5xl font-headline italic text-primary glow-text">Publications</h2>
+            <h2 className="text-4xl md:text-5xl font-headline italic text-primary glow-text">Blog</h2>
             <p className="text-on-surface/40 mt-3 text-sm font-light">Documenting the methodology as it's built.</p>
           </div>
           <div className="flex gap-6 mt-6 md:mt-0">

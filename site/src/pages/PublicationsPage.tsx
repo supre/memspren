@@ -27,7 +27,7 @@ export default function PublicationsPage() {
       <div className="max-w-5xl mx-auto px-8">
         <RevealWrapper>
           <div className="mb-6">
-            <h1 className="text-4xl md:text-5xl font-headline italic text-primary glow-text mb-3">Publications</h1>
+            <h1 className="text-4xl md:text-5xl font-headline italic text-primary glow-text mb-3">Blog</h1>
             <p className="text-on-surface/50 font-light">Every article and video documenting the methodology as it's built.</p>
           </div>
           <div className="flex gap-6 mb-12">
